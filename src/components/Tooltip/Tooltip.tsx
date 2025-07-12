@@ -1,0 +1,238 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { HelpCircle } from 'lucide-react';
+import styles from './Tooltip.module.css';
+
+export interface TooltipProps {
+  content: string | React.ReactNode;
+  children: React.ReactNode;
+  variant?: 'info' | 'warning' | 'success' | 'burn';
+  position?: 'top' | 'bottom' | 'left' | 'right' | 'auto';
+  disabled?: boolean;
+  trigger?: 'hover' | 'click' | 'both';
+  delay?: number;
+  className?: string;
+  showIcon?: boolean;
+  iconSize?: number;
+}
+
+export const Tooltip: React.FC<TooltipProps> = ({
+  content,
+  children,
+  variant = 'info',
+  position = 'auto',
+  disabled = false,
+  trigger = 'both',
+  delay = 300,
+  className = '',
+  showIcon = false,
+  iconSize = 16
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [calculatedPosition, setCalculatedPosition] = useState(position);
+  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const showTooltip = () => {
+    if (disabled || !content) return;
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+      calculatePosition();
+    }, isMobile ? 0 : delay);
+  };
+
+  const hideTooltip = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    if (!isMobile || trigger !== 'click') {
+      setIsVisible(false);
+    }
+  }, [isMobile, trigger]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled || !content) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isMobile || trigger === 'click' || trigger === 'both') {
+      if (isVisible) {
+        setIsVisible(false);
+      } else {
+        showTooltip();
+      }
+    }
+  };
+
+  const calculatePosition = useCallback(() => {
+    if (!triggerRef.current || !tooltipRef.current) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight
+    };
+
+    let finalPosition = position;
+    let top = 0;
+    let left = 0;
+
+    // Auto-calculate position if needed
+    if (position === 'auto') {
+      const spaceTop = triggerRect.top;
+      const spaceBottom = viewport.height - triggerRect.bottom;
+      const spaceLeft = triggerRect.left;
+
+      if (spaceTop >= tooltipRect.height + 10) {
+        finalPosition = 'top';
+      } else if (spaceBottom >= tooltipRect.height + 10) {
+        finalPosition = 'bottom';
+      } else if (spaceLeft >= tooltipRect.width + 10) {
+        finalPosition = 'left';
+      } else {
+        finalPosition = 'right';
+      }
+    }
+
+    // Calculate position based on final position
+    switch (finalPosition) {
+      case 'top':
+        top = triggerRect.top - tooltipRect.height - 10;
+        left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
+        break;
+      case 'bottom':
+        top = triggerRect.bottom + 10;
+        left = triggerRect.left + (triggerRect.width - tooltipRect.width) / 2;
+        break;
+      case 'left':
+        top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
+        left = triggerRect.left - tooltipRect.width - 10;
+        break;
+      case 'right':
+        top = triggerRect.top + (triggerRect.height - tooltipRect.height) / 2;
+        left = triggerRect.right + 10;
+        break;
+    }
+
+    // Ensure tooltip stays within viewport
+    left = Math.max(10, Math.min(left, viewport.width - tooltipRect.width - 10));
+    top = Math.max(10, Math.min(top, viewport.height - tooltipRect.height - 10));
+
+    setCalculatedPosition(finalPosition);
+    setTooltipStyle({
+      top: `${top}px`,
+      left: `${left}px`,
+      position: 'fixed'
+    });
+  }, [position]);
+
+  useEffect(() => {
+    if (isVisible) {
+      calculatePosition();
+    }
+  }, [isVisible, calculatePosition]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isVisible &&
+        tooltipRef.current &&
+        triggerRef.current &&
+        !tooltipRef.current.contains(event.target as Node) &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        setIsVisible(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isVisible) {
+        setIsVisible(false);
+      }
+    };
+
+    if (isVisible) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscape);
+      document.addEventListener('scroll', hideTooltip);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('scroll', hideTooltip);
+    };
+  }, [isVisible, hideTooltip]);
+
+  const tooltipElement = isVisible && content ? (
+    <div
+      ref={tooltipRef}
+      className={`${styles.tooltip} ${styles[variant]} ${styles[calculatedPosition]} ${className}`}
+      style={tooltipStyle}
+      role="tooltip"
+      aria-live="polite"
+    >
+      <div className={styles.tooltipContent}>
+        {typeof content === 'string' ? (
+          <span dangerouslySetInnerHTML={{ __html: content }} />
+        ) : (
+          content
+        )}
+      </div>
+      <div className={styles.tooltipArrow} />
+    </div>
+  ) : null;
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        className={`${styles.tooltipTrigger} ${showIcon ? styles.withIcon : ''}`}
+        onMouseEnter={!isMobile && (trigger === 'hover' || trigger === 'both') ? showTooltip : undefined}
+        onMouseLeave={!isMobile && (trigger === 'hover' || trigger === 'both') ? hideTooltip : undefined}
+        onFocus={!isMobile && (trigger === 'hover' || trigger === 'both') ? showTooltip : undefined}
+        onBlur={!isMobile && (trigger === 'hover' || trigger === 'both') ? hideTooltip : undefined}
+        onClick={handleClick}
+        aria-describedby={isVisible ? 'tooltip' : undefined}
+        tabIndex={0}
+      >
+        {showIcon ? (
+          <div className={styles.tooltipWithIcon}>
+            {children}
+            <HelpCircle 
+              size={iconSize} 
+              className={`${styles.tooltipIcon} ${styles[variant]}`}
+            />
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+      {tooltipElement && createPortal(tooltipElement, document.body)}
+    </>
+  );
+};
+
+export default Tooltip;

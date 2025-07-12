@@ -1,0 +1,19 @@
+/* Conservative performance optimizations that don't break existing functionality */
+
+/* Safe GPU acceleration - only for non-interactive elements */
+.safe-gpu-acceleration {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Touch optimization for better mobile experience */
+.touch-optimized {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Input field performance optimization */
+.optimized-input {
+  will-change: border-color;
+  transition: border-color 0.15s ease-out;
+}

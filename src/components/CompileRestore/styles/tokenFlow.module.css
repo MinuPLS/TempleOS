@@ -1,0 +1,316 @@
+/* Token Flow Visualization */
+.tokenFlow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 8px 0;
+  gap: 0;
+  overflow: visible;
+  z-index: 1;
+}
+
+.tokenItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  position: relative;
+}
+
+.tokenContainer {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  contain: layout;
+  will-change: transform;
+}
+
+.tokenLogo {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease;
+  position: relative;
+  z-index: 2;
+  user-select: none;
+}
+
+.tokenGlow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  transition: box-shadow 0.3s ease-out, opacity 0.3s ease-out;
+  pointer-events: none;
+  will-change: opacity, box-shadow;
+}
+
+/* Active states with prominent selection effects */
+.sourceActive .tokenLogo {
+  filter: brightness(1.15) saturate(1.2);
+  animation: logoPulse 2s ease-in-out infinite;
+}
+
+.sourceActive .tokenGlow {
+  opacity: 1;
+  animation: sourcePulse 2s ease-in-out infinite;
+}
+
+.targetActive .tokenLogo {
+  animation: targetFadeColor 2.5s ease-in-out infinite;
+}
+
+.targetActive .tokenContainer {
+  animation: targetBreathe 2.5s ease-in-out infinite;
+}
+
+@keyframes targetBreathe {
+  0%,
+  100% {
+    box-shadow: 0 0 10px 2px transparent;
+  }
+  50% {
+    box-shadow: 0 0 15px 4px var(--glow-color);
+  }
+}
+
+@keyframes targetFadeColor {
+  0%,
+  100% {
+    filter: brightness(0.8) saturate(0.7);
+  }
+  50% {
+    filter: brightness(0.95) saturate(1);
+  }
+}
+
+.targetActive .tokenGlow {
+  opacity: 0;
+}
+
+/* Pulsing animations for particle absorption */
+@keyframes sourcePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 25px 8px var(--glow-color);
+  }
+  50% {
+    box-shadow: 0 0 35px 12px var(--glow-color);
+  }
+}
+
+@keyframes logoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+/* Token-specific styles */
+.holyCToken {
+  --glow-color: rgba(59, 130, 246, 0.6);
+}
+
+.jitToken {
+  --glow-color: rgba(245, 158, 11, 0.6);
+}
+
+.holyCToken .tokenName {
+  color: #3b82f6;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+  letter-spacing: 1px;
+}
+
+
+.holyCToken.targetActive .tokenGlow {
+  box-shadow: none;
+  opacity: 0;
+}
+
+.jitToken .tokenName {
+  color: #f59e0b;
+  font-size: 22px;
+  font-weight: 800;
+  text-shadow: 0 0 15px rgba(245, 158, 11, 0.8);
+  letter-spacing: 1px;
+}
+
+
+.jitToken.targetActive .tokenGlow {
+  box-shadow: none;
+  opacity: 0;
+}
+
+/* New classes for refactored inline styles */
+.svgPathContainer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.particleContainer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* overflow: hidden; */ /* Removed to allow particles to escape bounds */
+}
+
+.tokenRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+.centralArea {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  margin: 0 -35px;
+  z-index: 3;
+  overflow: visible;
+}
+
+.vortex {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  filter: blur(4px);
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.arrowButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(10, 20, 40, 0.5);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  z-index: 4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.arrowSvg {
+  filter: drop-shadow(0 0 5px var(--glow-color));
+}
+
+.arrowButton:hover {
+  transform: scale(1.1);
+  background: rgba(10, 10, 10, 0.95);
+}
+
+.tokenName {
+  font-size: 18px;
+  font-weight: 700;
+  transition: transform 0.2s ease;
+  text-align: center;
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  will-change: transform;
+}
+
+.sourceActive .tokenName {
+  animation: namePulse 2s ease-in-out infinite;
+}
+
+@keyframes namePulse {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(2px);
+  }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .tokenFlow {
+    gap: 24px;
+    padding: 12px 0;
+    max-width: 350px;
+  }
+
+  .tokenLogo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .tokenContainer {
+    width: 80px;
+    height: 80px;
+  }
+
+  .tokenName {
+    font-size: 14px;
+  }
+
+  .centralArea {
+    margin: 0 -15px; /* Reduced negative margin for mobile */
+    width: 80px;
+    height: 80px;
+  }
+
+  .arrowButton {
+    width: 48px;
+    height: 48px;
+    background: rgba(10, 20, 40, 0.8) !important;
+  }
+
+  .arrowSvg {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .arrowSvg path {
+    stroke-width: 4 !important;
+    opacity: 1 !important;
+    fill: none;
+    stroke-dasharray: 100 0 !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .arrowSvg defs linearGradient stop {
+    stop-opacity: 1 !important;
+  }
+}

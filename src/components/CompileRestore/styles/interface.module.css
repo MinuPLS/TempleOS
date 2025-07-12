@@ -1,0 +1,320 @@
+/* Main Interface Styles */
+.compilerInterface {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  background: var(--gradient-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: 24px;
+  padding: 24px;
+  backdrop-filter: blur(10px); /* Reduced from 20px for better performance */
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: visible;
+}
+
+.topRightTooltip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+.interfaceHeader {
+  margin-bottom: 20px;
+  padding: 16px;
+  border-radius: 16px;
+  transition: all 0.4s ease;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.interfaceHeader.compileMode {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.15) 0%, 
+    rgba(30, 58, 138, 0.12) 30%,
+    rgba(30, 30, 46, 0.4) 70%, 
+    rgba(45, 45, 65, 0.3) 100%);
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(59, 130, 246, 0.15),
+    0 20px 60px rgba(59, 130, 246, 0.1),
+    inset 0 1px 0 rgba(147, 197, 253, 0.2);
+}
+
+.interfaceHeader.restoreMode {
+  background: linear-gradient(135deg, 
+    rgba(245, 158, 11, 0.15) 0%, 
+    rgba(217, 119, 6, 0.12) 30%,
+    rgba(30, 30, 46, 0.4) 70%, 
+    rgba(45, 45, 65, 0.3) 100%);
+  border: 2px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 
+    0 8px 32px rgba(245, 158, 11, 0.15),
+    0 20px 60px rgba(245, 158, 11, 0.1),
+    inset 0 1px 0 rgba(251, 191, 36, 0.2);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.headerSection {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
+.modeToggleContainer {
+  display: flex;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 6px;
+  gap: 6px;
+  backdrop-filter: blur(5px); /* Reduced blur for better performance */
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.modeToggle {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease; /* Reduced from 0.3s for snappier feel */
+  position: relative;
+  overflow: visible;
+}
+
+.compileMode .modeToggle.active {
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  box-shadow: 
+    0 4px 16px rgba(59, 130, 246, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.restoreMode .modeToggle.active {
+  background: linear-gradient(135deg, #b45309, #f59e0b);
+  color: white;
+  box-shadow: 
+    0 4px 16px rgba(245, 158, 11, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.modeToggle:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.processExplanation {
+  padding: 2px 16px;
+  text-align: center;
+  margin-top: 4px;
+  width: 100%;
+  position: relative;
+}
+
+.explanationText {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.compileText {
+  color: #93c5fd;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+.restoreText {
+  color: #fcd34d;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.3);
+}
+
+.explanationSubText {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 4px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .compilerInterface {
+    max-width: 100%;
+    margin: 16px;
+    padding: 24px;
+  }
+
+  .interfaceHeader {
+    padding: 20px 16px;
+  }
+
+  .headerContent {
+    gap: 20px;
+  }
+
+  .modeToggle {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .explanationText {
+    font-size: 12px;
+  }
+}
+
+/* Header Info Section Styles */
+.headerInfoSection {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+
+.expandIcon {
+  font-size: 18px;
+  color: rgba(168, 85, 247, 0.9);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(0deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  border-radius: 50%;
+  background: rgba(168, 85, 247, 0.05);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+}
+
+.expandIcon:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: rgba(168, 85, 247, 1);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+}
+
+.expandIcon.expanded {
+  transform: rotate(180deg);
+  color: rgba(168, 85, 247, 1);
+  background: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.expandableContent {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  width: 380px;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.expandableContent.expanded {
+  max-height: 450px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.expandableContent .explanationText {
+  font-size: 12px;
+  color: rgba(161, 161, 170, 0.9);
+  line-height: 1.6;
+  background: rgba(20, 20, 35, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-left: 3px solid rgba(99, 102, 241, 0.4);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(99, 102, 241, 0.1);
+  margin-bottom: 8px;
+}
+
+.expandableContent .explanationText p {
+  margin: 0;
+}
+
+.explanationTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  padding-bottom: 8px;
+}
+
+/* Color coding for explanation content */
+.tooltipBlue {
+  color: rgba(147, 197, 253, 0.95);
+  font-weight: 600;
+}
+
+.tooltipAmber {
+  color: rgba(251, 191, 36, 0.9);
+  font-weight: 600;
+}
+
+.tooltipGreen {
+  color: rgba(34, 197, 94, 0.9);
+  font-weight: 600;
+}
+
+.tooltipRed {
+  color: rgba(248, 113, 113, 0.95);
+  font-weight: 600;
+}
+
+.tooltipIndigo {
+  color: rgba(99, 102, 241, 0.9);
+  font-weight: 600;
+}
+
+.tooltipPurple {
+  color: rgba(168, 85, 247, 0.9);
+  font-weight: 600;
+}
+
+/* Mobile adjustments for header info section */
+@media (max-width: 768px) {
+  .headerInfoSection {
+    bottom: 5px;
+    right: 5px;
+  }
+  
+  .expandableContent {
+    width: calc(100vw - 40px);
+    max-width: 340px;
+    right: -10px;
+  }
+  
+  .expandableContent .explanationText {
+    font-size: 11px;
+    padding: 12px;
+  }
+  
+  .explanationTitle {
+    font-size: 13px;
+  }
+}
