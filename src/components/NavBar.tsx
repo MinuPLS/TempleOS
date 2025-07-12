@@ -1,17 +1,22 @@
 
 import { useAccount, useBalance } from 'wagmi'
 import { formatEther } from 'viem'
-import { useState, useEffect } from 'react'
-import { HelpCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { HOLY_C_ADDRESS, JIT_ADDRESS } from '../config/contracts'
 import { WalletConnect } from './WalletConnect'
 import { Tooltip } from './Tooltip'
 import { GuideModal } from './GuideModal'
+import { throttle } from '../lib/performanceOptimizer'
 
 export function NavBar() {
   const { address, isConnected } = useAccount()
   const [isGuideOpen, setIsGuideOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeTimeoutRef = useRef<number | null>(null)
+  
   const { data: holyCBalance, refetch: refetchHolyCBalance } = useBalance({
     address,
     token: HOLY_C_ADDRESS,
@@ -20,6 +25,38 @@ export function NavBar() {
     address,
     token: JIT_ADDRESS,
   })
+
+  useEffect(() => {
+    const checkMobile = throttle(() => {
+      setIsMobile(window.innerWidth <= 900) // Unified breakpoint
+    }, 16) // ~1 frame for 60fps
+
+    const handleResizeStart = () => {
+      setIsResizing(true)
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
+      resizeTimeoutRef.current = window.setTimeout(() => {
+        setIsResizing(false)
+      }, 150) // Short delay after resize stops
+    }
+
+    const handleResize = () => {
+      handleResizeStart()
+      checkMobile()
+    }
+
+    // Initial check
+    checkMobile()
+    
+    window.addEventListener('resize', handleResize, { passive: true })
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const handleBalancesUpdated = () => {
@@ -49,72 +86,143 @@ export function NavBar() {
     return num.toFixed(2)
   }
 
+  const formatCompactAddress = (address: string) => {
+    return `${address.slice(0, 8)}...${address.slice(-6)}`
+  }
+
+  const fullAddress = "0x57909025ACE10D5dE114d96E3EC84F282895870c";
+  const compactAddress = formatCompactAddress(fullAddress);
+
+
   return (
     <nav className="navbar">
-      <div className="navbar-content">
-        <div className="title-container">
-          <a href="https://t.me/HolyCPulse" target="_blank" rel="noopener noreferrer" className="app-title-link">
-            <h1 className="app-title">
-              <span className="temple-os">TempleOS</span>
-              <span className="separator">:</span>
-              <span className="jit-compiler">JustInTimeCompiler</span>
-            </h1>
-          </a>
-          <div className="contract-address" onClick={handleCopyAddress}>
-            0x57909025ACE10D5dE114d96E3EC84F282895870c
-          </div>
-          {copyFeedback && <div className="copy-feedback">Copied!</div>}
+      <motion.div 
+        className="navbar-content" 
+        layout={!isResizing}
+        transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
+      >
+        <motion.div
+          className="title-container"
+          layout={!isResizing}
+          transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
+          <Tooltip 
+            content="Open up the official telegram group in a new tab" 
+            variant="info"
+            position="bottom"
+            disabled={isMobile}
+          >
+            <a href="https://t.me/HolyCPulse" target="_blank" rel="noopener noreferrer" className="app-title-link">
+              <h1 className="app-title">
+                <span className="temple-os">TempleOS</span>
+                <motion.span
+                  layout={!isResizing ? "position" : false}
+                  initial="hidden"
+                  animate={!isMobile ? "visible" : "hidden"}
+                  variants={{
+                    visible: { opacity: 1, scaleX: 1, width: 'auto' },
+                    hidden: { opacity: 0, scaleX: 0, width: 0 }
+                  }}
+                  transition={{
+                    type: 'tween',
+                    ease: [0.4, 0, 0.2, 1],
+                    duration: 0.4
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', transformOrigin: 'left', overflow: 'hidden' }}
+                >
+                  <span className="separator">:</span>
+                  <span className="jit-compiler">JustInTimeCompiler</span>
+                </motion.span>
+              </h1>
+            </a>
+          </Tooltip>
+          <Tooltip 
+            content="The JustInTime Compiler contract this dApp is interating with, verified and opensource" 
+            variant="info"
+            position="bottom"
+            disabled={isMobile}
+          >
+            <motion.div
+              layout={!isResizing}
+              transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
+              className="contract-address"
+              onClick={handleCopyAddress}
+            >
+              <AnimatePresence initial={false} mode="wait">
+                <motion.span
+                  key={isMobile ? 'compact' : 'full'}
+                  initial={{ opacity: 0, scaleX: 0 }}
+                  animate={{ opacity: 1, scaleX: 1 }}
+                  exit={{ opacity: 0, scaleX: 0 }}
+                  transition={{
+                    type: 'tween',
+                    ease: [0.4, 0, 0.2, 1],
+                    duration: 0.4
+                  }}
+                  style={{ display: 'inline-block', transformOrigin: 'left', willChange: 'transform, opacity' }}
+                >
+                  {isMobile ? compactAddress : fullAddress}
+                </motion.span>
+              </AnimatePresence>
+            </motion.div>
+          </Tooltip>
+          {!isMobile && copyFeedback && <div className="copy-feedback">Copied!</div>}
+        </motion.div>
+
+        <div className="balance-section-wrapper">
+          <motion.div
+            className="balance-section"
+            animate={{
+              opacity: isConnected && !isMobile ? 1 : 0,
+              scale: isConnected && !isMobile ? 1 : 0.95,
+            }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            <div className="balance-item">
+              <Tooltip content="Your balance of HolyC, the foundational, tax-free reserve asset" variant="info">
+                <div className="token-info">
+                  <span className="balance-label">HolyC</span>
+                  <span className="balance-value holyc-balance">
+                    {holyCBalance ? formatBalance(formatEther(holyCBalance.value)) : '...'}
+                  </span>
+                </div>
+              </Tooltip>
+            </div>
+            <div className="balance-divider" />
+            <div className="balance-item">
+              <Tooltip content="Your balance of JIT, the deflationary utility token with a 2% transfer burn" variant="burn">
+                <div className="token-info">
+                  <span className="balance-label">JIT</span>
+                  <span className="balance-value jit-balance">
+                    {jitBalance ? formatBalance(formatEther(jitBalance.value)) : '...'}
+                  </span>
+                </div>
+              </Tooltip>
+            </div>
+          </motion.div>
         </div>
-        
-        <div className="navbar-right">
+
+        <motion.div 
+          className="navbar-right" 
+          layout={!isResizing}
+          transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
+        >
           <Tooltip
             content="Open the complete guide to understand the TempleOS ecosystem, tokenomics, and arbitrage strategies"
             variant="info"
+            disabled={isMobile}
           >
             <button
               className="guide-button"
               onClick={() => setIsGuideOpen(true)}
               aria-label="Open ecosystem guide"
             >
-              Introduction
-              <HelpCircle size={22} />
+              <span className="guide-button-text">Guide</span>
             </button>
           </Tooltip>
-          <div className="balance-section">
-            {isConnected ? (
-              <>
-                <div className="balance-item-vertical">
-                  <Tooltip
-                    content="Your balance of HolyC, the foundational, tax-free reserve asset"
-                    variant="info"
-                  >
-                    <span className="balance-label">HolyC</span>
-                  </Tooltip>
-                  <span className="balance-value holyc-balance">
-                    {holyCBalance ? formatBalance(formatEther(holyCBalance.value)) : '...'}
-                  </span>
-                </div>
-                <div className="balance-item-vertical">
-                  <Tooltip
-                    content="Your balance of JIT, the deflationary utility token with a 2% transfer burn"
-                    variant="burn"
-                  >
-                    <span className="balance-label">JIT</span>
-                  </Tooltip>
-                  <span className="balance-value jit-balance">
-                    {jitBalance ? formatBalance(formatEther(jitBalance.value)) : '...'}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="balance-item-vertical">
-                <span className="balance-label">Connect Wallet</span>
-              </div>
-            )}
-          </div>
           <WalletConnect />
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       <GuideModal 
         isOpen={isGuideOpen} 
@@ -123,17 +231,20 @@ export function NavBar() {
 
       <style>{`
         .navbar {
-          background: linear-gradient(135deg, 
-            rgba(26, 26, 36, 0.98) 0%, 
+          background: linear-gradient(135deg,
+            rgba(26, 26, 36, 0.98) 0%,
             rgba(20, 20, 30, 0.98) 100%);
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          padding: 16px 24px;
+          padding: 0 24px;
           position: sticky;
           top: 0;
           z-index: 100;
           animation: headerSlideIn 0.6s ease-out;
+          height: 72px;
+          display: flex;
+          align-items: center;
         }
 
         .navbar-content {
@@ -142,45 +253,55 @@ export function NavBar() {
           justify-content: space-between;
           max-width: 1400px;
           margin: 0 auto;
+          gap: 24px;
+          position: relative;
+          width: 100%;
         }
+        
 
         .title-container {
           position: relative;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          align-items: flex-start; /* Default alignment */
         }
+        
+        
+
 
         .contract-address {
           font-family: 'SF Pro Rounded', 'Helvetica Neue', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          color: #ffffff;
-          background: rgba(0, 0, 0, 0.2);
-          padding: 8px 12px;
-          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+          color: rgba(255, 255, 255, 0.85);
           cursor: pointer;
           transition: all 0.2s ease;
-          margin-top: 8px;
-          text-align: center;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          text-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+          text-align: left;
+          padding-left: 10px;
+          letter-spacing: 0.3px;
+          white-space: nowrap;
+          position: relative; /* For AnimatePresence positioning */
         }
 
         .contract-address:hover {
-          background: rgba(139, 92, 246, 0.2);
-          color: #c4b5fd;
+          color: rgba(255, 255, 255, 0.9);
+          text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
         }
+
+
+
 
         .copy-feedback {
           position: absolute;
-          bottom: -28px;
-          left: 50%;
-          transform: translateX(-50%);
+          top: 100%;
+          left: 10px;
+          margin-top: 4px;
           background: #4caf50;
           color: white;
-          padding: 4px 8px;
+          padding: 3px 8px;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: 11px;
         }
 
         .app-title-link {
@@ -190,13 +311,17 @@ export function NavBar() {
         .app-title {
           display: flex;
           align-items: center;
-          gap: 3px;
-          font-size: 24px;
+          gap: 1px;
+          font-size: 22px;
           font-weight: 800;
           margin: 0;
           letter-spacing: -0.5px;
           padding: 0 10px;
+          line-height: 1.2;
+          white-space: nowrap;
         }
+
+
 
         .temple-os {
           background: linear-gradient(135deg, #f472b6 0%, #a855f7 100%);
@@ -213,8 +338,8 @@ export function NavBar() {
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           font-weight: 600;
-          font-size: 26px;
-          margin: 0 1px;
+          font-size: 22px;
+          margin: 0;
         }
 
         .jit-compiler {
@@ -222,7 +347,6 @@ export function NavBar() {
           background-clip: text;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
           font-weight: 700;
         }
 
@@ -230,93 +354,119 @@ export function NavBar() {
         .navbar-right {
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 16px;
+        }
+
+        .balance-section-wrapper {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
         }
 
         .balance-section {
           display: flex;
           align-items: center;
-          gap: 20px;
-          padding: 6px 16px;
-          background: rgba(30, 30, 46, 0.6);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          gap: 18px;
+          padding: 14px 24px;
+          background: rgba(30, 30, 46, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 12px;
           backdrop-filter: blur(10px);
-          min-height: 52px;
-          min-width: 200px;
+          height: 48px;
+          pointer-events: auto;
         }
 
-        .balance-item-vertical {
+        .balance-item {
+          display: flex;
+          align-items: center;
+        }
+
+        .token-info {
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          gap: 2px;
-          min-width: 70px;
+          gap: 4px;
+        }
+
+        .balance-divider {
+          width: 1px;
+          height: 28px;
+          background: rgba(255, 255, 255, 0.1);
         }
 
         .balance-label {
-          font-size: 10px;
-          font-weight: 500;
+          font-size: 11px;
+          font-weight: 700;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          opacity: 0.8;
+          letter-spacing: 0.6px;
+          opacity: 0.85;
         }
 
         .balance-value {
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 700;
-          text-align: center;
-          line-height: 1;
+          line-height: 1.1;
         }
 
         .holyc-balance {
           color: #60a5fa;
-          text-shadow: 0 0 10px rgba(96, 165, 250, 0.4);
+          text-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
         }
 
-        .balance-label:has(+ .holyc-balance) {
+        .balance-item:has(.holyc-balance) .balance-label {
           color: #60a5fa;
-          text-shadow: 0 0 6px rgba(96, 165, 250, 0.3);
+          opacity: 0.8;
         }
 
         .jit-balance {
           color: #f87171;
-          text-shadow: 0 0 10px rgba(248, 113, 113, 0.4);
+          text-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
         }
 
-        .balance-label:has(+ .jit-balance) {
+        .balance-item:has(.jit-balance) .balance-label {
           color: #f87171;
-          text-shadow: 0 0 6px rgba(248, 113, 113, 0.3);
+          opacity: 0.8;
         }
 
         .guide-button {
-          background: rgba(139, 92, 246, 0.1);
-          border: 1px solid rgba(139, 92, 246, 0.3);
-          border-radius: 12px;
-          padding: 8px 16px;
-          color: #a78bfa;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          padding: 10px 28px;
+          color: rgba(255, 255, 255, 0.9);
           cursor: pointer;
           transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
-          backdrop-filter: blur(10px);
-          gap: 8px;
           font-weight: 600;
-          height: 52px;
+          font-size: 16px;
+          height: 44px;
+          letter-spacing: 0.3px;
+          backdrop-filter: blur(10px);
+          min-width: 100px;
         }
 
         .guide-button:hover {
-          background: rgba(139, 92, 246, 0.2);
-          border-color: rgba(139, 92, 246, 0.5);
-          color: #c4b5fd;
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #ffffff;
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
         }
 
         .guide-button:active {
           transform: translateY(0);
+        }
+
+        .guide-button-text {
+          position: relative;
+          z-index: 1;
+        }
+
+        .wallet-connect-wrapper button {
+          white-space: nowrap;
         }
 
         @keyframes headerSlideIn {
@@ -330,71 +480,21 @@ export function NavBar() {
           }
         }
 
-        /* Mobile responsive */
-        @media (max-width: 768px) {
-          .navbar {
-            padding: 12px 16px;
-          }
-
-          .app-title {
-            font-size: 18px;
-            gap: 2px;
-          }
-
-          .separator {
-            font-size: 20px;
-          }
-
-          .temple-os, .jit-compiler {
-            text-shadow: 0 0 15px rgba(244, 114, 182, 0.2);
-          }
-
-          .navbar-right {
-            gap: 12px;
-          }
-
-          .balance-section {
-            padding: 4px 12px;
-            gap: 16px;
-            height: 48px;
-          }
-
-          .balance-item-vertical {
-            min-width: 60px;
-          }
-
-          .balance-label {
-            font-size: 9px;
-          }
-
-          .balance-value {
-            font-size: 12px;
-          }
-        }
-
-        @media (max-width: 480px) {
+        /* Mobile layout switch - unified breakpoint */
+        @media (max-width: 900px) {
           .navbar-content {
-            flex-wrap: wrap;
+            justify-content: space-between;
+            position: relative;
+            max-width: 100%;
             gap: 12px;
           }
 
-          .app-title {
-            font-size: 16px;
-            flex: 1;
-            gap: 2px;
-            flex-wrap: wrap;
-          }
-
-          .separator {
-            font-size: 18px;
-            margin: 0 1px;
-          }
-
           .navbar-right {
-            flex: 1;
-            justify-content: flex-end;
+            gap: 8px;
           }
+
         }
+        
       `}</style>
     </nav>
   )

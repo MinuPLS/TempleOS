@@ -1,19 +1,21 @@
-/* Main Interface Styles */
+/* Main Interface Styles - COMPLETELY FIXED SIZE - NO RESIZING */
 .compilerInterface {
-  max-width: 640px;
-  width: 100%;
+  width: 600px; /* FIXED width - not max-width, not 100% */
   margin: 0 auto;
   background: var(--gradient-card);
   border: 1px solid var(--border-secondary);
-  border-radius: 24px;
+  border-radius: 20px;
   padding: 24px;
-  backdrop-filter: blur(10px); /* Reduced from 20px for better performance */
+  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.15),
     0 4px 8px rgba(0, 0, 0, 0.1);
   position: relative;
   overflow: visible;
+  /* Force fixed dimensions */
+  flex-shrink: 0;
+  contain: layout style;
 }
 
 .topRightTooltip {
@@ -24,9 +26,9 @@
 }
 
 .interfaceHeader {
-  margin-bottom: 20px;
-  padding: 16px;
-  border-radius: 16px;
+  margin-bottom: 18px; /* Fixed value */
+  padding: 16px; /* Fixed value */
+  border-radius: 14px; /* Fixed value */
   transition: all 0.4s ease;
   border: 2px solid transparent;
   position: relative;
@@ -62,7 +64,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 18px; /* Increased from 16px for better proportions */
   width: 100%;
 }
 
@@ -85,15 +87,15 @@
 }
 
 .modeToggle {
-  padding: 12px 24px;
+  padding: 10px 22px; /* Fixed values */
   border: none;
-  border-radius: 12px;
+  border-radius: 10px; /* Fixed value */
   background: transparent;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
+  font-size: 15px; /* Fixed value */
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease; /* Reduced from 0.3s for snappier feel */
+  transition: all 0.2s ease;
   position: relative;
   overflow: visible;
 }
@@ -120,15 +122,15 @@
 }
 
 .processExplanation {
-  padding: 2px 16px;
+  padding: 8px 16px;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 12px; /* Increased from 4px for better spacing */
   width: 100%;
   position: relative;
 }
 
 .explanationText {
-  font-size: 14px;
+  font-size: 13px; /* Fixed value */
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
   transition: all 0.2s ease;
@@ -145,36 +147,12 @@
 }
 
 .explanationSubText {
-  font-size: 12px;
+  font-size: 11px; /* Fixed value */
   color: rgba(255, 255, 255, 0.5);
-  margin-top: 4px;
+  margin-top: 6px; /* Increased from 4px for better spacing */
 }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .compilerInterface {
-    max-width: 100%;
-    margin: 16px;
-    padding: 24px;
-  }
-
-  .interfaceHeader {
-    padding: 20px 16px;
-  }
-
-  .headerContent {
-    gap: 20px;
-  }
-
-  .modeToggle {
-    padding: 10px 20px;
-    font-size: 14px;
-  }
-
-  .explanationText {
-    font-size: 12px;
-  }
-}
+/* NO RESPONSIVE SCALING - Component maintains consistent proportions */
 
 /* Header Info Section Styles */
 .headerInfoSection {
@@ -221,15 +199,27 @@
   width: 380px;
   max-height: 0;
   overflow: hidden;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    max-height 280ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 240ms cubic-bezier(0.23, 1, 0.32, 1);
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px) scale(0.96);
+  pointer-events: none;
+  /* GPU acceleration for smooth performance */
+  will-change: max-height, opacity, transform;
+  backface-visibility: hidden;
 }
 
 .expandableContent.expanded {
   max-height: 450px;
   opacity: 1;
-  transform: translateY(0);
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition: 
+    max-height 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 220ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .expandableContent .explanationText {
@@ -247,6 +237,18 @@
     0 8px 32px rgba(0, 0, 0, 0.3),
     0 4px 16px rgba(99, 102, 241, 0.1);
   margin-bottom: 8px;
+  
+  /* Subtle content staggered animation */
+  opacity: 0;
+  transform: translateY(4px);
+  transition: 
+    opacity 160ms cubic-bezier(0.23, 1, 0.32, 1) 60ms,
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1) 60ms;
+}
+
+.expandableContent.expanded .explanationText {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .expandableContent .explanationText p {
@@ -296,25 +298,4 @@
   font-weight: 600;
 }
 
-/* Mobile adjustments for header info section */
-@media (max-width: 768px) {
-  .headerInfoSection {
-    bottom: 5px;
-    right: 5px;
-  }
-  
-  .expandableContent {
-    width: calc(100vw - 40px);
-    max-width: 340px;
-    right: -10px;
-  }
-  
-  .expandableContent .explanationText {
-    font-size: 11px;
-    padding: 12px;
-  }
-  
-  .explanationTitle {
-    font-size: 13px;
-  }
-}
+/* Fixed positioning for tooltip - no responsive adjustments */

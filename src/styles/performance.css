@@ -1,9 +1,26 @@
-/* Conservative performance optimizations that don't break existing functionality */
+/* Enhanced performance optimizations for responsive layout */
 
-/* Safe GPU acceleration - only for non-interactive elements */
-.safe-gpu-acceleration {
+/* GPU acceleration for layout-heavy elements */
+.gpu-accelerated {
   transform: translateZ(0);
   backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* Layout containment for better performance */
+.layout-contained {
+  contain: layout style paint;
+}
+
+/* Style containment for component isolation */
+.style-contained {
+  contain: style paint;
+}
+
+/* Optimized animations during resize */
+.resize-optimized {
+  transition: transform 0.2s ease-out;
+  will-change: transform;
 }
 
 /* Touch optimization for better mobile experience */
@@ -16,4 +33,30 @@
 .optimized-input {
   will-change: border-color;
   transition: border-color 0.15s ease-out;
+}
+
+/* Panel-specific optimizations */
+.optimized-panel {
+  contain: layout style paint;
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Backdrop filter optimization */
+.optimized-backdrop {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  contain: layout;
+}
+
+/* Grid container optimization */
+.optimized-grid {
+  contain: layout style;
+  will-change: grid-template-columns;
+}
+
+/* Animation pause utility */
+.paused-animations * {
+  animation-play-state: paused !important;
+  transition: none !important;
 }

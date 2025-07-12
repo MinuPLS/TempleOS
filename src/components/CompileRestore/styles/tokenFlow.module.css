@@ -4,10 +4,10 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 100%;
-  max-width: 420px;
+  width: 100%; /* RESTORE original responsive width */
+  max-width: 440px; /* Increased from 420px for better spacing */
   margin: 0 auto;
-  padding: 8px 0;
+  padding: 24px 0 36px 0; /* Increased padding for better proportions */
   gap: 0;
   overflow: visible;
   z-index: 1;
@@ -24,20 +24,19 @@
 
 .tokenContainer {
   position: relative;
-  width: 110px;
-  height: 110px;
+  width: 120px; /* Increased from 95px */
+  height: 120px; /* Increased from 95px */
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   contain: layout;
-  will-change: transform;
 }
 
 .tokenLogo {
-  width: 110px;
-  height: 110px;
+  width: 120px; /* Increased from 95px to match container */
+  height: 120px; /* Increased from 95px to match container */
   border-radius: 50%;
   object-fit: cover;
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), filter 0.2s ease;
@@ -133,10 +132,10 @@
 
 .holyCToken .tokenName {
   color: #3b82f6;
-  font-size: 22px;
+  font-size: 22px; /* Increased from 18px */
   font-weight: 800;
   text-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 
@@ -147,10 +146,10 @@
 
 .jitToken .tokenName {
   color: #f59e0b;
-  font-size: 22px;
+  font-size: 22px; /* Increased from 18px */
   font-weight: 800;
   text-shadow: 0 0 15px rgba(245, 158, 11, 0.8);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 
@@ -191,17 +190,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100px;
-  height: 100px;
-  margin: 0 -35px;
+  width: 95px; /* Increased from 85px */
+  height: 95px; /* Increased from 85px */
+  margin: 0 -32px; /* Slightly increased negative margin for better balance */
   z-index: 3;
   overflow: visible;
 }
 
 .vortex {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: 70px; /* Increased from 60px */
+  height: 70px; /* Increased from 60px */
   border-radius: 50%;
   filter: blur(4px);
   opacity: 0.2;
@@ -213,8 +212,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 56px; /* Increased from 48px */
+  height: 56px; /* Increased from 48px */
   border-radius: 50%;
   background: rgba(10, 20, 40, 0.5);
   backdrop-filter: blur(12px);
@@ -233,16 +232,17 @@
 }
 
 .tokenName {
-  font-size: 18px;
+  font-size: 22px; /* Increased from 18px */
   font-weight: 700;
   transition: transform 0.2s ease;
   text-align: center;
   position: absolute;
-  bottom: -30px;
+  bottom: -52px; /* Increased from -48px for better spacing */
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
   will-change: transform;
+  white-space: nowrap;
 }
 
 .sourceActive .tokenName {
@@ -259,58 +259,4 @@
   }
 }
 
-/* Mobile responsive */
-@media (max-width: 768px) {
-  .tokenFlow {
-    gap: 24px;
-    padding: 12px 0;
-    max-width: 350px;
-  }
-
-  .tokenLogo {
-    width: 80px;
-    height: 80px;
-  }
-
-  .tokenContainer {
-    width: 80px;
-    height: 80px;
-  }
-
-  .tokenName {
-    font-size: 14px;
-  }
-
-  .centralArea {
-    margin: 0 -15px; /* Reduced negative margin for mobile */
-    width: 80px;
-    height: 80px;
-  }
-
-  .arrowButton {
-    width: 48px;
-    height: 48px;
-    background: rgba(10, 20, 40, 0.8) !important;
-  }
-
-  .arrowSvg {
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
-    min-height: 30px;
-    display: block;
-    flex-shrink: 0;
-  }
-
-  .arrowSvg path {
-    stroke-width: 4 !important;
-    opacity: 1 !important;
-    fill: none;
-    stroke-dasharray: 100 0 !important;
-    stroke-dashoffset: 0 !important;
-  }
-
-  .arrowSvg defs linearGradient stop {
-    stop-opacity: 1 !important;
-  }
-}
+/* NO RESPONSIVE SCALING - Fixed proportions for consistent component behavior */

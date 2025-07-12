@@ -1,4 +1,5 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { useDebouncedCallback } from '../../../hooks/useDebouncedCallback';
 
 interface Coords {
   x: number;
@@ -40,8 +41,13 @@ export const ParticleFlowCanvas: React.FC<ParticleFlowCanvasProps> = React.memo(
   }>>([]);
   const prevCompileModeRef = useRef<boolean | null>(null);
   const animationFrameIdRef = useRef<number>(0);
+  const [isResizing, setIsResizing] = useState(false);
 
-  // Effect for initialization and resizing
+  const handleResizeEnd = useDebouncedCallback(() => {
+    setIsResizing(false);
+  }, 300);
+
+  // Effect for initialization - RESTORE original canvas sizing logic
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -49,22 +55,32 @@ export const ParticleFlowCanvas: React.FC<ParticleFlowCanvasProps> = React.memo(
     if (!ctx) return;
 
     const resizeCanvas = () => {
+      setIsResizing(true);
       const { width, height } = canvas.getBoundingClientRect();
       canvas.width = width * window.devicePixelRatio;
       canvas.height = height * window.devicePixelRatio;
       ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      handleResizeEnd();
     };
 
-    window.addEventListener('resize', resizeCanvas);
+    // Initial setup
     resizeCanvas();
 
+    // RESTORE window resize listener for canvas internal sizing
+    window.addEventListener('resize', resizeCanvas);
+
     return () => window.removeEventListener('resize', resizeCanvas);
-  }, []);
+  }, [handleResizeEnd]);
 
   // Effect for animation
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !isActive) return;
+    if (!canvas || !isActive || isResizing) {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+      return;
+    }
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -79,7 +95,7 @@ export const ParticleFlowCanvas: React.FC<ParticleFlowCanvasProps> = React.memo(
         return {
           id: i,
           startTime: performance.now() - phase * CYCLE_DURATION * 1000,
-          size: 10 + Math.random() * 5,
+          size: 12 + Math.random() * 6, // Increased from 10 + Math.random() * 5
           speed: 1.0,
           spawnOffset: { x: Math.cos(spawnAngle) * spawnRadius, y: Math.sin(spawnAngle) * spawnRadius },
           pathVariation: { x: (Math.random() - 0.5) * 100, y: (Math.random() - 0.5) * 60 },
@@ -216,7 +232,7 @@ export const ParticleFlowCanvas: React.FC<ParticleFlowCanvasProps> = React.memo(
     return () => {
       cancelAnimationFrame(animationFrameIdRef.current);
     };
-  }, [isCompileMode, isActive, source, target]);
+  }, [isCompileMode, isActive, source, target, isResizing]);
 
   return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, zIndex: 1, display: isActive ? 'block' : 'none' }} />;
 });

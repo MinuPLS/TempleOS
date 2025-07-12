@@ -5,6 +5,7 @@ import HolyCLogo from '../../assets/TokenLogos/HolyC.png';
 import JITLogo from '../../assets/TokenLogos/JIT.png';
 import WPLSLogo from '../../assets/TokenLogos/wpls.png';
 import RefreshIcon from '../../assets/refresh-icon.svg';
+import { Tooltip } from '../Tooltip';
 import { useState } from 'react';
 
 export const UniswapPools = () => {
@@ -110,11 +111,23 @@ export const UniswapPools = () => {
   return (
     <div className={styles.poolsContainer}>
       <div className={styles.header}>
-        <h2 className={styles.title}>PulseX V2 Pools</h2>
+        <Tooltip 
+          content="The main 3 pools for HolyC and JIT token trading" 
+          variant="info"
+          position="bottom"
+        >
+          <h2 className={styles.title}>PulseX V2 Pools</h2>
+        </Tooltip>
         <div className={styles.headerActions}>
-          <button onClick={refresh} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh pools">
-            <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
-          </button>
+          <Tooltip 
+            content="Refresh stats with a new on-chain fetch" 
+            variant="info"
+            position="bottom"
+          >
+            <button onClick={refresh} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh pools">
+              <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
+            </button>
+          </Tooltip>
         </div>
       </div>
       <div className={`${styles.poolsGrid} ${isLoading ? styles.loading : ''}`}>

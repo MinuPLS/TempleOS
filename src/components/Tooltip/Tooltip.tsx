@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle } from 'lucide-react';
 import styles from './Tooltip.module.css';
+import { throttle } from '../../lib/performanceOptimizer';
 
 export interface TooltipProps {
   content: string | React.ReactNode;
@@ -23,12 +24,13 @@ export const Tooltip: React.FC<TooltipProps> = ({
   position = 'auto',
   disabled = false,
   trigger = 'both',
-  delay = 300,
+  delay = 50,
   className = '',
   showIcon = false,
   iconSize = 16
 }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const [isPreloaded, setIsPreloaded] = useState(false); // Track if tooltip is mounted and positioned
   const [calculatedPosition, setCalculatedPosition] = useState(position);
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -37,55 +39,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Detect mobile device
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
-    };
+    // Detect mobile device with throttling
+    const checkMobile = throttle(() => {
+      setIsMobile(window.innerWidth <= 900 || 'ontouchstart' in window); // Unified breakpoint
+    }, 16); // ~1 frame for 60fps
     
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkMobile, { passive: true });
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const showTooltip = () => {
-    if (disabled || !content) return;
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = setTimeout(() => {
-      setIsVisible(true);
-      calculatePosition();
-    }, isMobile ? 0 : delay);
-  };
-
-  const hideTooltip = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    if (!isMobile || trigger !== 'click') {
-      setIsVisible(false);
-    }
-  }, [isMobile, trigger]);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (disabled || !content) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (isMobile || trigger === 'click' || trigger === 'both') {
-      if (isVisible) {
-        setIsVisible(false);
-      } else {
-        showTooltip();
-      }
-    }
-  };
-
-  const calculatePosition = useCallback(() => {
+  const calculateAndSetPosition = useCallback(() => {
     if (!triggerRef.current || !tooltipRef.current) return;
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -148,11 +112,96 @@ export const Tooltip: React.FC<TooltipProps> = ({
     });
   }, [position]);
 
+  // Preload tooltip - mount it without positioning (positioning happens on show)
+  const preloadTooltip = useCallback(() => {
+    if (disabled || !content || isPreloaded) return;
+    
+    setIsPreloaded(true);
+    // Don't calculate position on preload - do it when actually showing
+    // This prevents stale positioning after window resizes
+  }, [disabled, content, isPreloaded]);
+
+  // Listen for external preload events
   useEffect(() => {
-    if (isVisible) {
-      calculatePosition();
+    const handlePreloadEvent = () => {
+      preloadTooltip();
+    };
+
+    const triggerElement = triggerRef.current;
+    if (triggerElement) {
+      triggerElement.addEventListener('preload-tooltip', handlePreloadEvent);
+      return () => {
+        triggerElement.removeEventListener('preload-tooltip', handlePreloadEvent);
+      };
     }
-  }, [isVisible, calculatePosition]);
+  }, [preloadTooltip]);
+
+  const showTooltip = useCallback((instant = false) => {
+    if (disabled || !content) return;
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    const show = () => {
+      if (!isPreloaded) {
+        // If not preloaded, mount first
+        setIsPreloaded(true);
+        setTimeout(() => {
+          calculateAndSetPosition();
+          setIsVisible(true);
+        }, 0);
+      } else {
+        // Already preloaded (mounted), calculate fresh position and show
+        setTimeout(() => {
+          calculateAndSetPosition();
+          setIsVisible(true);
+        }, 0);
+      }
+    };
+
+    if (isMobile || instant) {
+      show();
+    } else {
+      timeoutRef.current = setTimeout(show, delay);
+    }
+  }, [disabled, content, isMobile, delay, isPreloaded, calculateAndSetPosition]);
+
+  const hideTooltip = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    if (!isMobile || trigger !== 'click') {
+      setIsVisible(false);
+      // Keep preloaded state for faster subsequent shows
+    }
+  }, [isMobile, trigger]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled || !content) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isMobile || trigger === 'click' || trigger === 'both') {
+      if (isVisible) {
+        setIsVisible(false);
+      } else {
+        if (isPreloaded) {
+          // Already preloaded (mounted) - calculate fresh position and show
+          setTimeout(() => {
+            calculateAndSetPosition();
+            setIsVisible(true);
+          }, 0);
+        } else {
+          // Not preloaded, need to mount and position first
+          showTooltip(true);
+        }
+      }
+    }
+  };
+
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -186,10 +235,10 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, [isVisible, hideTooltip]);
 
-  const tooltipElement = isVisible && content ? (
+  const tooltipElement = (
     <div
       ref={tooltipRef}
-      className={`${styles.tooltip} ${styles[variant]} ${styles[calculatedPosition]} ${className}`}
+      className={`${styles.tooltip} ${isVisible ? styles.visible : ''} ${styles[variant]} ${styles[calculatedPosition]} ${className}`}
       style={tooltipStyle}
       role="tooltip"
       aria-live="polite"
@@ -203,16 +252,22 @@ export const Tooltip: React.FC<TooltipProps> = ({
       </div>
       <div className={styles.tooltipArrow} />
     </div>
-  ) : null;
+  );
 
   return (
     <>
       <div
         ref={triggerRef}
         className={`${styles.tooltipTrigger} ${showIcon ? styles.withIcon : ''}`}
-        onMouseEnter={!isMobile && (trigger === 'hover' || trigger === 'both') ? showTooltip : undefined}
+        onMouseEnter={!isMobile && (trigger === 'hover' || trigger === 'both') ? () => {
+          preloadTooltip();
+          showTooltip();
+        } : undefined}
         onMouseLeave={!isMobile && (trigger === 'hover' || trigger === 'both') ? hideTooltip : undefined}
-        onFocus={!isMobile && (trigger === 'hover' || trigger === 'both') ? showTooltip : undefined}
+        onFocus={!isMobile && (trigger === 'hover' || trigger === 'both') ? () => {
+          preloadTooltip();
+          showTooltip();
+        } : undefined}
         onBlur={!isMobile && (trigger === 'hover' || trigger === 'both') ? hideTooltip : undefined}
         onClick={handleClick}
         aria-describedby={isVisible ? 'tooltip' : undefined}
@@ -221,8 +276,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
         {showIcon ? (
           <div className={styles.tooltipWithIcon}>
             {children}
-            <HelpCircle 
-              size={iconSize} 
+            <HelpCircle
+              size={iconSize}
               className={`${styles.tooltipIcon} ${styles[variant]}`}
             />
           </div>
@@ -230,7 +285,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
           children
         )}
       </div>
-      {tooltipElement && createPortal(tooltipElement, document.body)}
+      {content && (isPreloaded || isVisible) && createPortal(tooltipElement, document.body)}
     </>
   );
 };

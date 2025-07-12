@@ -6,6 +6,7 @@ import HolyCLogo from '../../assets/TokenLogos/HolyC.png';
 import JITLogo from '../../assets/TokenLogos/JIT.png';
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png';
 import RefreshIcon from '../../assets/refresh-icon.svg';
+import { Tooltip } from '../Tooltip';
 import { useState } from 'react';
 
 export const StatsDashboard = () => {
@@ -28,11 +29,23 @@ export const StatsDashboard = () => {
   return (
     <div className={styles.poolsContainer}>
       <div className={styles.header}>
-        <h2 className={styles.title}>Token Stats</h2>
+        <Tooltip 
+          content="Key metrics to track the ecosystem and help make trading decisions" 
+          variant="info"
+          position="bottom"
+        >
+          <h2 className={styles.title}>Token Stats</h2>
+        </Tooltip>
         <div className={styles.headerActions}>
-          <button onClick={refreshTokenStats} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
-            <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
-          </button>
+          <Tooltip 
+            content="Refresh stats with a new on-chain fetch" 
+            variant="info"
+            position="bottom"
+          >
+            <button onClick={refreshTokenStats} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
+              <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
+            </button>
+          </Tooltip>
         </div>
       </div>
       <div className={styles.poolsGrid}>
@@ -60,14 +73,25 @@ export const StatsDashboard = () => {
                 <span>{formatCurrency(tokenPrices.jitUSD)}</span>
               </div>
             </div>
-            {tokenPrices.holycUSD !== 0 && tokenPrices.jitUSD !== 0 && (
-              <p className={styles.priceDifference}>
-                {tokenPrices.holycUSD < tokenPrices.jitUSD
-                  ? <>HolyC is <span className={styles.cheaper}>cheaper</span> by <span className={styles.cheaper}>{((1 - tokenPrices.holycUSD / tokenPrices.jitUSD) * 100).toFixed(2)}%</span></>
-                  : <>JIT is <span className={styles.expensive}>more expensive</span> by <span className={styles.expensive}>{((tokenPrices.jitUSD / tokenPrices.holycUSD - 1) * 100).toFixed(2)}%</span></>
-                }
-              </p>
-            )}
+            {tokenPrices.holycUSD !== 0 && tokenPrices.jitUSD !== 0 && (() => {
+              const holycPrice = tokenPrices.holycUSD;
+              const jitPrice = tokenPrices.jitUSD;
+              
+              if (holycPrice === jitPrice) return null;
+
+              const moreExpensiveTokenName = holycPrice > jitPrice ? 'HolyC' : 'JIT';
+              const moreExpensiveTokenStyle = holycPrice > jitPrice ? styles.tooltipBlue : styles.tooltipAmber;
+              const percentageDiff = holycPrice > jitPrice
+                ? ((holycPrice / jitPrice) - 1) * 100
+                : ((jitPrice / holycPrice) - 1) * 100;
+
+              return (
+                <p className={styles.priceDifference}>
+                  <span className={moreExpensiveTokenStyle}>{moreExpensiveTokenName}</span>
+                  <span className={styles.cheaper}> is more expensive</span> by <span className={styles.cheaper}>{percentageDiff.toFixed(2)}%</span>
+                </p>
+              );
+            })()}
           </div>
         </div>
         

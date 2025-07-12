@@ -42,19 +42,22 @@ function compilerReducer(state: CompilerState, action: Partial<CompilerState>): 
 }
 
 export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
   const { writeContractAsync } = useWriteContract()
   
-  // State
+  // Consolidated UI State
+  const [uiState, setUiState] = useReducer((state: any, updates: any) => ({ ...state, ...updates }), {
+    inputFocused: false,
+    expandedTransactionRow: null,
+    userInteracted: false,
+    selectedPercentage: null,
+    percentageDropdownOpen: false,
+    isInfoExpanded: false,
+    exceedsBalance: false
+  })
+
+  // Main compiler state (existing)
   const [state, dispatch] = useReducer(compilerReducer, initialState)
-  const [exceedsBalance, setExceedsBalance] = useState(false)
-  const [inputFocused, setInputFocused] = useState(false)
-  const [expandedTransactionRow, setExpandedTransactionRow] = useState<string | null>(null)
-  const [copyFeedback] = useState(false)
-  const [userInteracted, setUserInteracted] = useState(false)
-  const [selectedPercentage, setSelectedPercentage] = useState<number | null>(null)
-  const [percentageDropdownOpen, setPercentageDropdownOpen] = useState(false)
-  const [isInfoExpanded, setIsInfoExpanded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Custom hooks with optimized contract fetching
@@ -109,7 +112,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const targetToken = useMemo(() => state.isCompileMode ? 'JIT' : 'HolyC', [state.isCompileMode])
   const currentBalance = useMemo(() => state.isCompileMode ? holyCBalance : jitBalance, [state.isCompileMode, holyCBalance, jitBalance])
   const hasAmount = useMemo(() => isValidAmount(debouncedAmount), [debouncedAmount])
-  const shouldShowDetails = useMemo(() => hasAmount || inputFocused || expandedTransactionRow || userInteracted, [hasAmount, inputFocused, expandedTransactionRow, userInteracted])
+  const shouldShowDetails = useMemo(() => hasAmount || uiState.inputFocused || uiState.expandedTransactionRow || uiState.userInteracted, [hasAmount, uiState.inputFocused, uiState.expandedTransactionRow, uiState.userInteracted])
   
   // Optimized display values with better formatting
   const displayValues = useMemo(() => {
@@ -148,7 +151,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   }, [debouncedAmount, currentBalance])
   
   useEffect(() => {
-    setExceedsBalance(balanceExceeded)
+    setUiState({ exceedsBalance: balanceExceeded })
   }, [balanceExceeded])
 
   // Pre-computed transaction breakdown to avoid repeated useMemo calls in render
@@ -191,8 +194,10 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const optimizedInputHandler = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanValue = handleNumberInput(e.target.value)
     dispatch({ amount: cleanValue })
-    setSelectedPercentage(null) // Clear percentage selection when typing manually
-    setPercentageDropdownOpen(false) // Close dropdown when typing
+    setUiState({ 
+      selectedPercentage: null, // Clear percentage selection when typing manually
+      percentageDropdownOpen: false // Close dropdown when typing
+    })
   }, [])
 
   const handlePercentageSelect = useCallback((percentage: number) => {
@@ -202,22 +207,26 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
     const percentageAmount = (parseFloat(balanceInEther) * percentage / 100).toString()
     
     dispatch({ amount: percentageAmount })
-    setSelectedPercentage(percentage)
-    setPercentageDropdownOpen(false)
+    setUiState({ 
+      selectedPercentage: percentage,
+      percentageDropdownOpen: false
+    })
   }, [currentBalance])
 
   const togglePercentageDropdown = useCallback(() => {
-    setPercentageDropdownOpen(prev => !prev)
-  }, [])
+    setUiState({ percentageDropdownOpen: !uiState.percentageDropdownOpen })
+  }, [uiState.percentageDropdownOpen])
 
   const handleInputFocus = useCallback(() => {
-    setInputFocused(true)
-    setUserInteracted(true)
+    setUiState({ 
+      inputFocused: true,
+      userInteracted: true
+    })
   }, [])
 
   const handleInputBlur = useCallback(() => {
     // Don't blur automatically - let outside click handle it
-    // setInputFocused(false)
+    // setUiState({ inputFocused: false })
   }, [])
 
   const handleApprove = useCallback(async () => {
@@ -259,10 +268,11 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
     e.stopPropagation()
     
     // Mark as user interaction to keep UI open
-    setUserInteracted(true)
-    
-    setExpandedTransactionRow(prev => prev === 'transaction-breakdown' ? null : 'transaction-breakdown')
-  }, [])
+    setUiState({
+      userInteracted: true,
+      expandedTransactionRow: uiState.expandedTransactionRow === 'transaction-breakdown' ? null : 'transaction-breakdown'
+    })
+  }, [uiState.expandedTransactionRow])
 
 
 
@@ -273,10 +283,12 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         // Use setTimeout to prevent interference with click events
         setTimeout(() => {
-          setInputFocused(false)
-          setExpandedTransactionRow(null)
-          setUserInteracted(false)
-          setPercentageDropdownOpen(false)
+          setUiState({
+            inputFocused: false,
+            expandedTransactionRow: null,
+            userInteracted: false,
+            percentageDropdownOpen: false
+          })
         }, 100)
       }
     }
@@ -289,20 +301,38 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
 
   const headerClass = `${styles.interfaceHeader} ${state.isCompileMode ? styles.compileMode : styles.restoreMode}`
 
-  const contractFeeTooltipContent = (
+  const contractFeeTooltipContent = useMemo(() => (
     <>
       This is the fee for <span className={styles.tooltipBlue}>Compile</span> or <span className={styles.tooltipAmber}>Restore</span>. It gives you less <span className={styles.tooltipBlue}>HolyC</span> upon Restoring, or less <span className={styles.tooltipAmber}>JIT</span> for Compiling. The fee is taxed by sending <span className={styles.tooltipBlue}>HolyC</span> to the <span className={styles.tooltipRed}>burn address</span>.
     </>
-  );
+  ), []);
 
-  const transferFeeTooltipContent = (
+  const transferFeeTooltipContent = useMemo(() => (
     <>
       This is the transfer fee for <span className={styles.tooltipAmber}>JIT</span>, taxed when sending it across wallets. This naturally decreases <span className={styles.tooltipAmber}>JIT</span> supply & therefore naturally increases <span className={styles.tooltipGreen}>positive price pressure</span>.
     </>
-  );
+  ), []);
 
   return (
-    <div className={styles.compilerInterface} ref={containerRef}>
+    <div 
+      className={styles.compilerInterface} 
+      ref={containerRef}
+      onMouseEnter={() => {
+        // Preload all tooltips when entering the interface area
+        const tooltipTriggers = containerRef.current?.querySelectorAll('[data-tooltip-preload]');
+        tooltipTriggers?.forEach(trigger => {
+          const event = new CustomEvent('preload-tooltip');
+          trigger.dispatchEvent(event);
+        });
+        
+        // Preload info dropdown content
+        const infoTrigger = containerRef.current?.querySelector('[data-info-preload]');
+        if (infoTrigger) {
+          // Pre-calculate any positioning or prepare content
+          // The CSS is already optimized for smooth transitions
+        }
+      }}
+    >
       {/* Compact Header with Mode Toggle and Token Flow */}
       <div className={headerClass}>
         <div className={styles.headerContent}>
@@ -342,12 +372,13 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
         {/* Info Dropdown in bottom right of header */}
         <div className={styles.headerInfoSection}>
           <div 
-            className={`${styles.expandIcon} ${isInfoExpanded ? styles.expanded : ''}`}
-            onClick={() => setIsInfoExpanded(!isInfoExpanded)}
+            className={`${styles.expandIcon} ${uiState.isInfoExpanded ? styles.expanded : ''}`}
+            onClick={() => setUiState({ isInfoExpanded: !uiState.isInfoExpanded })}
+            data-info-preload
           >
             ▼
           </div>
-          <div className={`${styles.expandableContent} ${isInfoExpanded ? styles.expanded : ''}`}>
+          <div className={`${styles.expandableContent} ${uiState.isInfoExpanded ? styles.expanded : ''}`}>
             <div className={styles.explanationText}>
               <h4 className={styles.explanationTitle}>Direct Token Conversion</h4>
               <p>
@@ -378,8 +409,9 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
                 content={contractFeeTooltipContent}
                 variant="info"
                 position="top"
+                delay={100}
               >
-                <div className={inputStyles.feeIndicator} data-fee-type="contract">
+                <div className={inputStyles.feeIndicator} data-fee-type="contract" data-tooltip-preload>
                   Contract <span className={inputStyles.feeValue}>
                     {compileRestoreFee ? (Number(compileRestoreFee) / 1000).toFixed(1) : '0'}%
                   </span>
@@ -389,8 +421,9 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
                 content={transferFeeTooltipContent}
                 variant="info"
                 position="top"
+                delay={100}
               >
-                <div className={inputStyles.feeIndicator} data-fee-type="transfer">
+                <div className={inputStyles.feeIndicator} data-fee-type="transfer" data-tooltip-preload>
                   Transfer <span className={inputStyles.feeValue}>
                     {transferFee ? (Number(transferFee) / 1000).toFixed(1) : '0'}%
                   </span>
@@ -422,17 +455,17 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
               {currentBalance && (
                 <div className={inputStyles.percentageDropdownContainer}>
                   <button
-                    className={`${inputStyles.percentageTrigger} ${percentageDropdownOpen ? inputStyles.active : ''}`}
+                    className={`${inputStyles.percentageTrigger} ${uiState.percentageDropdownOpen ? inputStyles.active : ''}`}
                     onClick={togglePercentageDropdown}
                     type="button"
                   >
                     ▼
                   </button>
-                  <div className={`${inputStyles.percentageDropdown} ${percentageDropdownOpen ? inputStyles.open : ''}`}>
+                  <div className={`${inputStyles.percentageDropdown} ${uiState.percentageDropdownOpen ? inputStyles.open : ''}`}>
                     {[25, 50, 75, 100].map((percentage) => (
                       <button
                         key={percentage}
-                        className={`${inputStyles.percentageButton} ${selectedPercentage === percentage ? inputStyles.selected : ''}`}
+                        className={`${inputStyles.percentageButton} ${uiState.selectedPercentage === percentage ? inputStyles.selected : ''}`}
                         onClick={() => handlePercentageSelect(percentage)}
                         type="button"
                       >
@@ -447,7 +480,9 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
           
           <div className={inputStyles.balanceContainer}>
             <div className={inputStyles.balanceDisplay}>
-              Balance: {currentBalance ? formatBalance(formatEther(currentBalance.value)) : '0'} {sourceToken}
+              {isConnected
+                ? `Balance: ${currentBalance ? formatBalance(formatEther(currentBalance.value)) : '0'} ${sourceToken}`
+                : 'Connect Wallet to see Balance'}
             </div>
           </div>
           {shouldShowDetails && (
@@ -464,7 +499,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
               {/* Dropdown button integrated into the purple line */}
               <div className={inputStyles.dropdownTrigger} onClick={toggleTransactionRow}>
                 <div className={inputStyles.purpleLine}></div>
-                <div className={`${inputStyles.dropdownIcon} ${expandedTransactionRow === 'transaction-breakdown' ? inputStyles.expanded : ''}`}>
+                <div className={`${inputStyles.dropdownIcon} ${uiState.expandedTransactionRow === 'transaction-breakdown' ? inputStyles.expanded : ''}`}>
                   ▼
                 </div>
                 <div className={inputStyles.purpleLine}></div>
@@ -476,7 +511,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
           <div className={`${inputStyles.transactionDetails} ${shouldShowDetails ? inputStyles.show : inputStyles.hide}`}>
             <div className={inputStyles.detailsContent}>
               {/* Expandable Transaction Details */}
-              <div className={`${inputStyles.expandableContent} ${expandedTransactionRow === 'transaction-breakdown' ? inputStyles.expanded : ''}`}>
+              <div className={`${inputStyles.expandableContent} ${uiState.expandedTransactionRow === 'transaction-breakdown' ? inputStyles.expanded : ''}`}>
                 <div className={inputStyles.explanationText}>
                   {transactionBreakdown.explanation}
                 </div>
@@ -512,7 +547,11 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
 
       {/* Action Buttons */}
       <div className={inputStyles.actionButtons}>
-        {exceedsBalance ? (
+        {!isConnected ? (
+          <button className={`${inputStyles.actionButton}`} disabled>
+            Connect Wallet
+          </button>
+        ) : uiState.exceedsBalance ? (
           <button className={`${inputStyles.actionButton}`} disabled>
             Insufficient Balance
           </button>
@@ -520,7 +559,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
           <button
             className={`${inputStyles.actionButton} ${inputStyles.approveButton}`}
             onClick={handleApprove}
-            disabled={isTxPending || isApprovalTxPending || !hasAmount || exceedsBalance}
+            disabled={isTxPending || isApprovalTxPending || !hasAmount || uiState.exceedsBalance}
           >
             {isApprovalTxPending ? '⟳ Approving...' : 'Approve HolyC'}
           </button>
@@ -530,7 +569,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
               state.isCompileMode ? inputStyles.compileButton : inputStyles.restoreButton
             }`}
             onClick={handleConvert}
-            disabled={isTxPending || isApprovalTxPending || !hasAmount || exceedsBalance}
+            disabled={isTxPending || isApprovalTxPending || !hasAmount || uiState.exceedsBalance}
           >
             {isTxPending
               ? `⟳ ${state.isCompileMode ? 'Compiling' : 'Restoring'}...`
@@ -539,11 +578,6 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
         )}
       </div>
       
-      {copyFeedback && (
-        <div className={inputStyles.copyNotification}>
-          ✓ Contract Copied!
-        </div>
-      )}
     </div>
   )
 })

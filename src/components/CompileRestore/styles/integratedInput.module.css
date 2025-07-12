@@ -11,6 +11,9 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
   will-change: border-color, box-shadow, background-color;
   cursor: text;
+  /* Performance optimizations */
+  contain: layout style;
+  transform: translateZ(0);
 }
 
 /* Fee Controls positioned in corners */
@@ -973,18 +976,7 @@
   }
 }
 
-/* Responsive Design */
-@media (max-width: 480px) {
-  .headerRight {
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .feeIndicators {
-    flex-direction: column;
-    gap: 2px;
-  }
-}
+/* NO RESPONSIVE SCALING - Fixed layout for consistent proportions */
 
 .burnInfo {
   text-align: center;

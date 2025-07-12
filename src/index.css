@@ -1,3 +1,6 @@
+/* Import performance optimizations */
+@import './styles/performance.css';
+
 /* Reset and base styles */
 * {
   margin: 0;
@@ -13,6 +16,13 @@
   --bg-card-hover: #252538;
   --border-primary: #2a2a3a;
   --border-secondary: rgba(255, 255, 255, 0.08);
+  
+  /* Unified Responsive System */
+  --breakpoint-mobile: 900px;
+  --breakpoint-tablet: 1200px;
+  --container-gap: clamp(8px, 2vw, 24px);
+  --panel-min-width: clamp(280px, 25vw, 400px);
+  --responsive-padding: clamp(12px, 2vw, 32px);
   
   /* Purple Theme */
   --purple-50: #f5f3ff;
@@ -51,8 +61,15 @@ body {
   background: var(--bg-primary);
   min-height: 100vh;
   color: var(--text-primary);
-  overflow-x: hidden;
   line-height: 1.6;
+  overflow-x: clip;
+  overflow-y: auto;
+}
+
+/* Prevent horizontal scroll while allowing overflow visibility */
+html {
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 /* Subtle background gradient */
@@ -445,97 +462,79 @@ body::before {
   line-height: 1.6;
 }
 
-/* Responsive design */
-@media (max-width: 1024px) {
+/* Unified responsive design with fluid scaling */
+
+/* Fluid base styles - no breakpoint jumps */
+.app-main {
+  padding: clamp(20px, 3vw, 48px) clamp(12px, 2vw, 32px);
+  gap: clamp(24px, 3vw, 40px);
+}
+
+.app-main-centered {
+  padding: clamp(24px, 3vw, 48px) clamp(16px, 2vw, 32px);
+  min-height: calc(100vh - clamp(160px, 15vh, 200px));
+}
+
+.glass-card {
+  padding: clamp(18px, 2.5vw, 32px);
+  border-radius: clamp(16px, 1.5vw, 24px);
+}
+
+.glass-input {
+  font-size: clamp(16px, 1.2vw, 18px);
+  padding: clamp(16px, 1.5vw, 20px) clamp(20px, 2vw, 24px);
+  min-height: clamp(52px, 4vw, 60px);
+}
+
+.glass-button {
+  padding: clamp(12px, 1vw, 16px) clamp(24px, 2vw, 32px);
+  font-size: clamp(14px, 1vw, 16px);
+  min-height: clamp(48px, 4vw, 56px);
+}
+
+.amount-value {
+  font-size: clamp(28px, 4vw, 48px);
+}
+
+.interface-section h3 {
+  font-size: clamp(18px, 2vw, 24px);
+}
+
+.app-title {
+  font-size: clamp(24px, 2.5vw, 32px);
+}
+
+/* Minimal breakpoints only for layout changes, not sizing */
+@media (max-width: 900px) {
   .app-main {
     grid-template-columns: 1fr;
-    padding: 32px 24px;
-    gap: 32px;
-  }
-  
-  .app-main-centered {
-    padding: 32px 24px;
-    min-height: calc(100vh - 180px);
   }
   
   .dashboard-layout {
     max-width: 100%;
-    gap: 24px;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header {
-    padding: 20px 24px;
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .app-title {
-    font-size: 28px;
-  }
-  
-  .app-main {
-    padding: 24px 16px;
-    gap: 24px;
-  }
-  
-  .app-main-centered {
-    padding: 24px 16px;
-    min-height: calc(100vh - 160px);
-  }
-  
-  .glass-card {
-    padding: 24px;
-    border-radius: 20px;
-  }
-  
-  .control-row {
-    flex-direction: column;
-    gap: 12px;
   }
   
   .balance-container {
     grid-template-columns: 1fr;
   }
   
-  .amount-value {
-    font-size: 36px;
-  }
-  
-  .interface-section h3 {
-    font-size: 20px;
+  .control-row {
+    flex-direction: column;
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .app-header {
-    padding: 16px 20px;
+    flex-direction: column;
+    gap: clamp(16px, 2vw, 20px);
+    text-align: center;
   }
-  
+}
+
+/* Only for extreme mobile layout changes */
+@media (max-width: 480px) {
   .app-main {
-    padding: 20px 12px;
-  }
-  
-  .glass-card {
-    padding: 20px;
-  }
-  
-  .amount-value {
-    font-size: 28px;
-  }
-  
-  .glass-input {
-    font-size: 16px;
-    padding: 16px 20px;
-    min-height: 52px;
-  }
-  
-  .glass-button {
-    padding: 12px 24px;
-    font-size: 14px;
-    min-height: 48px;
+    grid-template-columns: 1fr;
   }
 }
 

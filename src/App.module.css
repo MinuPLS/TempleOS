@@ -1,0 +1,207 @@
+/* Performance-First Responsive Layout System */
+
+.contentAnimate {
+  transition: opacity 0.3s ease; /* Minimize transition scope */
+}
+
+.contentAnimate.connected {
+  opacity: 1;
+}
+
+.contentAnimate.disconnected {
+  opacity: 0.8;
+}
+
+/* Unified Main Container - consistent padding with flexibility */
+.unifiedMainContainer {
+  padding: 24px 16px; /* Fixed base padding - no clamp calculations */
+  min-height: calc(100vh - 89px);
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Desktop: 3-panel layout with flexible whitespace */
+.responsivePanelsGrid {
+  display: grid;
+  grid-template-columns: 380px 1fr 380px; /* Fixed side panels, flexible center */
+  gap: 24px;
+  align-items: start;
+  transition: gap 0.2s ease; /* Only animate gap changes */
+}
+
+/* Narrower desktop: reduce gap instead of scaling components */
+@media (max-width: 1400px) {
+  .responsivePanelsGrid {
+    gap: 16px;
+  }
+  .unifiedMainContainer {
+    padding: 20px 12px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .responsivePanelsGrid {
+    grid-template-columns: 350px 1fr 350px; /* Slight narrowing of side panels */
+    gap: 12px;
+  }
+  .unifiedMainContainer {
+    padding: 16px 8px;
+  }
+}
+
+/* Tablet: 2-panel OR single compile/restore with navigation */
+@media (max-width: 1000px) {
+  .responsivePanelsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  /* Default: show only compile/restore */
+  .panelStats,
+  .panelPools {
+    display: none;
+  }
+  
+  .panelCompiler {
+    display: block;
+    max-width: 700px; /* Consistent size - no scaling */
+    margin: 0 auto;
+  }
+}
+
+/* Tablet: 2-panel mode when toggled */
+@media (max-width: 1000px) {
+  .twoPanel .responsivePanelsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  
+  .twoPanel .panelStats,
+  .twoPanel .panelPools {
+    display: block !important;
+  }
+  
+  .twoPanel .panelCompiler {
+    display: none;
+  }
+}
+
+/* Mobile: 1 panel + navigation */
+@media (max-width: 600px) {
+  .responsivePanelsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .unifiedMainContainer {
+    padding: 12px 8px;
+  }
+  
+  /* Mobile: Only show active panel */
+  .panelStats,
+  .panelPools,
+  .panelCompiler {
+    display: none;
+  }
+  
+  .panelStats.active,
+  .panelPools.active,
+  .panelCompiler.active {
+    display: block !important;
+    max-width: 100%;
+    margin: 0;
+  }
+  
+  /* Override 2-panel mode on mobile */
+  .twoPanel .panelStats,
+  .twoPanel .panelPools {
+    display: none !important;
+  }
+  
+  .twoPanel .panelStats.active,
+  .twoPanel .panelPools.active {
+    display: block !important;
+  }
+}
+
+/* Panel Styling - minimal transitions for performance */
+.panelStats,
+.panelCompiler,
+.panelPools {
+  opacity: 1;
+  transition: opacity 0.2s ease; /* Minimal transition scope */
+}
+
+/* Navigation system - only show when needed */
+.panelNavigation {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 20px;
+  gap: 12px;
+  background: rgba(20, 20, 35, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  margin: 16px auto 0;
+  max-width: 500px;
+}
+
+/* Tablet: Show navigation for mode switching */
+@media (max-width: 1000px) {
+  .panelNavigation {
+    display: flex;
+  }
+}
+
+/* Mobile: Show navigation for panel switching */
+@media (max-width: 600px) {
+  .panelNavigation {
+    display: flex;
+  }
+}
+
+/* Global panel nav button styles for CSS module */
+:global(.panel-nav-btn) {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+}
+
+:global(.panel-nav-btn:hover) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+:global(.panel-nav-btn.active) {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Performance optimizations - minimal approach */
+.panelStats,
+.panelCompiler,
+.panelPools {
+  contain: layout style; /* Remove paint containment to reduce overhead */
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .contentAnimate,
+  .panelStats,
+  .panelCompiler,
+  .panelPools {
+    transition: none;
+  }
+}

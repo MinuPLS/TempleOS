@@ -27,11 +27,10 @@ export const TokenFlowFinal = memo<TokenFlowFinalProps>(({
 
   const [coords, setCoords] = useState<{ source: Coords | null, target: Coords | null }>({ source: null, target: null });
 
-  // Optimized coordinate measurement with debouncing and ResizeObserver
+  // RESTORE original coordinate measurement system for proper particle animation
   useEffect(() => {
     const measureElements = () => {
       if (holyCRef.current && jitRef.current && containerRef.current) {
-        // Use getBoundingClientRect more efficiently
         const containerRect = containerRef.current.getBoundingClientRect();
         const holyCRect = holyCRef.current.getBoundingClientRect();
         const jitRect = jitRef.current.getBoundingClientRect();
@@ -52,33 +51,17 @@ export const TokenFlowFinal = memo<TokenFlowFinalProps>(({
       }
     };
 
-    // Use ResizeObserver for better performance than window resize
+    // RESTORE original ResizeObserver for proper particle positioning within the fixed outer container
     let resizeObserver: ResizeObserver | null = null;
     
     const initMeasurement = () => {
-      // Initial measurement with RAF for smooth rendering
       requestAnimationFrame(measureElements);
       
-      // Set up ResizeObserver for container changes
       if (containerRef.current && 'ResizeObserver' in window) {
         resizeObserver = new ResizeObserver((_entries) => {
-          // Debounce resize measurements
           requestAnimationFrame(measureElements);
         });
         resizeObserver.observe(containerRef.current);
-      } else {
-        // Fallback for browsers without ResizeObserver
-        let resizeTimer: NodeJS.Timeout;
-        const throttledResize = () => {
-          clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(measureElements, 150); // Increased debounce time
-        };
-        window.addEventListener('resize', throttledResize);
-        
-        return () => {
-          clearTimeout(resizeTimer);
-          window.removeEventListener('resize', throttledResize);
-        };
       }
     };
 
@@ -165,15 +148,16 @@ export const TokenFlowFinal = memo<TokenFlowFinalProps>(({
           
           <motion.button
             className={styles.arrowButton}
+            data-mode={isCompileMode ? 'compile' : 'restore'}
             onClick={() => onModeChange(!isCompileMode)}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             style={{ border: `2px solid ${particleColor}` }}
           >
             <motion.svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
+              width="36"
+              height="36"
+              viewBox="0 0 36 36"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               className={styles.arrowSvg}
@@ -193,7 +177,7 @@ export const TokenFlowFinal = memo<TokenFlowFinalProps>(({
                 </linearGradient>
               </defs>
               <motion.path
-                d="M6 16H26M26 16L18 8M26 16L18 24"
+                d="M6 18H30M30 18L20 8M30 18L20 28"
                 stroke={`url(#arrowGradient-${isCompileMode})`}
                 strokeWidth="4"
                 strokeLinecap="round"
