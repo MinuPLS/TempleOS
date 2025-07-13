@@ -1,0 +1,149 @@
+/* Panel Dot Navigation - Minimal Design */
+.dotNavigation {
+  display: none; /* Hidden by default on desktop */
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 6px auto;
+  padding: 4px 0;
+  z-index: 10;
+}
+
+.dotsWrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.navDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 100%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.navDot:hover {
+  transform: scale(1.2);
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+    0 0 0 2px rgba(255, 255, 255, 0.05);
+}
+
+.navDot.active {
+  transform: scale(1.4);
+  background: linear-gradient(135deg,
+    currentColor 0%,
+    rgba(255, 255, 255, 0.2) 30%,
+    currentColor 100%);
+  border-color: currentColor;
+  box-shadow:
+    0 0 24px currentColor,
+    0 6px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.navDot:active {
+  transform: scale(0.9);
+}
+
+/* Color coding for each panel */
+.navDot.stats {
+  background: rgba(147, 197, 253, 0.8); /* Light blue */
+  color: rgba(147, 197, 253, 0.8);
+}
+
+.navDot.stats.active {
+  background: rgba(147, 197, 253, 1);
+  color: rgba(147, 197, 253, 1);
+}
+
+.navDot.compiler {
+  background: rgba(168, 85, 247, 0.8); /* Purple */
+  color: rgba(168, 85, 247, 0.8);
+}
+
+.navDot.compiler.active {
+  background: rgba(168, 85, 247, 1);
+  color: rgba(168, 85, 247, 1);
+}
+
+.navDot.pools {
+  background: rgba(34, 197, 94, 0.8); /* Green */
+  color: rgba(34, 197, 94, 0.8);
+}
+
+.navDot.pools.active {
+  background: rgba(34, 197, 94, 1);
+  color: rgba(34, 197, 94, 1);
+}
+
+.arrowButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 32px;
+  font-weight: 300;
+  width: 60px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.arrowButton.stats {
+  color: rgba(147, 197, 253, 0.8);
+}
+
+.arrowButton.compiler {
+  color: rgba(168, 85, 247, 0.8);
+}
+
+.arrowButton.pools {
+  color: rgba(34, 197, 94, 0.8);
+}
+
+.arrowButton:hover {
+  color: rgba(255, 255, 255, 0.95);
+  transform: scale(1.15);
+  text-shadow: 0 4px 16px rgba(255, 255, 255, 0.4);
+}
+
+/* Show dot navigation only on small screens */
+@media (max-width: 1000px) {
+  .dotNavigation {
+    display: flex;
+  }
+}

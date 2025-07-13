@@ -8,7 +8,12 @@ import RefreshIcon from '../../assets/refresh-icon.svg';
 import { Tooltip } from '../Tooltip';
 import { useState } from 'react';
 
-export const UniswapPools = () => {
+interface UniswapPoolsProps {
+  currentPanel?: number;
+  onPanelChange?: (panel: number) => void;
+}
+
+export const UniswapPools = ({}: UniswapPoolsProps = {}) => {
   const { poolData, tokenPrices, isLoading, refresh } = usePoolData();
   const [expandedPools, setExpandedPools] = useState<Set<string>>(new Set());
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
@@ -110,14 +115,9 @@ export const UniswapPools = () => {
 
   return (
     <div className={styles.poolsContainer}>
+
+
       <div className={styles.header}>
-        <Tooltip 
-          content="The main 3 pools for HolyC and JIT token trading" 
-          variant="info"
-          position="bottom"
-        >
-          <h2 className={styles.title}>PulseX V2 Pools</h2>
-        </Tooltip>
         <div className={styles.headerActions}>
           <Tooltip 
             content="Refresh stats with a new on-chain fetch" 
@@ -129,6 +129,13 @@ export const UniswapPools = () => {
             </button>
           </Tooltip>
         </div>
+        <Tooltip 
+          content="The main 3 pools for HolyC and JIT token trading" 
+          variant="info"
+          position="bottom"
+        >
+          <h2 className={styles.title}>PulseX V2 Pools</h2>
+        </Tooltip>
       </div>
       <div className={`${styles.poolsGrid} ${isLoading ? styles.loading : ''}`}>
         {poolData.length === 0 && !isLoading ? (

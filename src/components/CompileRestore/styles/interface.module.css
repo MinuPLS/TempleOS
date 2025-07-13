@@ -1,14 +1,15 @@
-/* Main Interface Styles - COMPLETELY FIXED SIZE - NO RESIZING */
+/* Main Interface Styles - FIXED SIZE WITH RESPONSIVE SCALING */
 .compilerInterface {
-  width: 600px; /* FIXED width - not max-width, not 100% */
+  width: 600px; /* Base fixed width */
+  max-width: calc(100vw - 32px); /* Allow scaling when viewport is too small */
   margin: 0 auto;
   background: var(--gradient-card);
   border: 1px solid var(--border-secondary);
   border-radius: 20px;
-  padding: 24px;
+  padding: 20px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.15),
     0 4px 8px rgba(0, 0, 0, 0.1);
   position: relative;
@@ -16,6 +17,9 @@
   /* Force fixed dimensions */
   flex-shrink: 0;
   contain: layout style;
+  /* CSS transform for scaling */
+  transform-origin: top center;
+  transition: transform 0.2s ease;
 }
 
 .topRightTooltip {
@@ -26,8 +30,8 @@
 }
 
 .interfaceHeader {
-  margin-bottom: 18px; /* Fixed value */
-  padding: 16px; /* Fixed value */
+  margin-bottom: 16px; /* Fixed value */
+  padding: 14px; /* Fixed value */
   border-radius: 14px; /* Fixed value */
   transition: all 0.4s ease;
   border: 2px solid transparent;
@@ -298,4 +302,27 @@
   font-weight: 600;
 }
 
+
 /* Fixed positioning for tooltip - no responsive adjustments */
+
+/* Responsive scaling - only scale down when viewport is too small */
+@media (max-width: 632px) {
+  /* 632px = 600px interface width + 32px margins */
+  .compilerInterface {
+    /* Calculate scale factor based on viewport width */
+    /* Scale = (viewport width - margins) / base width */
+    /* Apply more vertical scaling (0.85x) for shorter, better proportions */
+    transform: scale(calc((100vw - 32px) / 600)) scaleY(calc(0.85 * (100vw - 32px) / 600));
+    /* Adjust vertical space to prevent overlap after scaling */
+    margin-bottom: calc(24px * (1 - (100vw - 32px) / 600));
+  }
+}
+
+/* Extra small viewports - apply minimum scale */
+@media (max-width: 400px) {
+  .compilerInterface {
+    /* Minimum scale with better vertical proportions - shorter */
+    transform: scale(0.62) scaleY(0.53); /* Significantly shorter than wide scaling */
+    margin-bottom: calc(24px * 0.38); /* Adjust space accordingly */
+  }
+}

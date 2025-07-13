@@ -11,7 +11,6 @@ export interface TokenBalance {
 export interface CompilerState {
   isCompileMode: boolean;
   amount: string;
-  needsApproval: boolean;
   showBurnAnimation: boolean;
   showModeTransition: boolean;
 }

@@ -32,7 +32,6 @@ import inputStyles from './styles/integratedInput.module.css'
 const initialState: CompilerState = {
   isCompileMode: true,
   amount: '',
-  needsApproval: false,
   showBurnAnimation: false,
   showModeTransition: false,
 }
@@ -41,7 +40,12 @@ function compilerReducer(state: CompilerState, action: Partial<CompilerState>): 
   return { ...state, ...action }
 }
 
-export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
+interface CompileRestoreInterfaceProps {
+  // currentPanel?: number; // Removed as PanelDotNavigation is not used
+  // onPanelChange?: (panel: number) => void; // Removed as PanelDotNavigation is not used
+}
+
+export const CompileRestoreInterface = memo(function CompileRestoreInterface({}: CompileRestoreInterfaceProps = {}) {
   const { address, isConnected } = useAccount()
   const { writeContractAsync } = useWriteContract()
   
@@ -79,15 +83,6 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const { isLoading: isTxPending, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({ hash: txHash })
   const { isLoading: isApprovalTxPending, isSuccess: isApprovalTxSuccess } = useWaitForTransactionReceipt({ hash: approvalTxHash })
 
-  // Check approval needs
-  useEffect(() => {
-    const needsApproval =
-      state.isCompileMode &&
-      !!state.amount &&
-      allowance !== undefined &&
-      allowance < parseEther(state.amount)
-    dispatch({ needsApproval })
-  }, [state.amount, allowance, state.isCompileMode])
 
   // Refetch allowance after approval
   useEffect(() => {
@@ -114,6 +109,16 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const hasAmount = useMemo(() => isValidAmount(debouncedAmount), [debouncedAmount])
   const shouldShowDetails = useMemo(() => hasAmount || uiState.inputFocused || uiState.expandedTransactionRow || uiState.userInteracted, [hasAmount, uiState.inputFocused, uiState.expandedTransactionRow, uiState.userInteracted])
   
+  // Check approval needs - derived value
+  const needsApproval = useMemo(() => {
+    return (
+      state.isCompileMode &&
+      !!state.amount &&
+      allowance !== undefined &&
+      allowance < parseEther(state.amount)
+    );
+  }, [state.amount, allowance, state.isCompileMode]);
+
   // Optimized display values with better formatting
   const displayValues = useMemo(() => {
     if (!debouncedAmount || !isValidAmount(debouncedAmount)) {
@@ -218,15 +223,10 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   }, [uiState.percentageDropdownOpen])
 
   const handleInputFocus = useCallback(() => {
-    setUiState({ 
+    setUiState({
       inputFocused: true,
       userInteracted: true
     })
-  }, [])
-
-  const handleInputBlur = useCallback(() => {
-    // Don't blur automatically - let outside click handle it
-    // setUiState({ inputFocused: false })
   }, [])
 
   const handleApprove = useCallback(async () => {
@@ -450,7 +450,6 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
                 value={state.amount}
                 onChange={optimizedInputHandler}
                 onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
               />
               {currentBalance && (
                 <div className={inputStyles.percentageDropdownContainer}>
@@ -555,7 +554,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
           <button className={`${inputStyles.actionButton}`} disabled>
             Insufficient Balance
           </button>
-        ) : state.isCompileMode && state.needsApproval ? (
+        ) : needsApproval ? (
           <button
             className={`${inputStyles.actionButton} ${inputStyles.approveButton}`}
             onClick={handleApprove}

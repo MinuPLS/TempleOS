@@ -44,9 +44,16 @@ export const TokenFlowFinal = memo<TokenFlowFinalProps>(({
           y: jitRect.top - containerRect.top + jitRect.height * 0.5,
         };
         
-        setCoords({
-          source: isCompileMode ? holyCCenter : jitCenter,
-          target: isCompileMode ? jitCenter : holyCCenter,
+        setCoords(prevCoords => {
+          const newSource = isCompileMode ? holyCCenter : jitCenter;
+          const newTarget = isCompileMode ? jitCenter : holyCCenter;
+
+          // Deep comparison to prevent unnecessary state updates
+          if (prevCoords.source?.x === newSource.x && prevCoords.source?.y === newSource.y &&
+              prevCoords.target?.x === newTarget.x && prevCoords.target?.y === newTarget.y) {
+            return prevCoords; // No change, return previous state to prevent re-render
+          }
+          return { source: newSource, target: newTarget };
         });
       }
     };

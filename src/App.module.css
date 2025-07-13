@@ -20,6 +20,19 @@
   margin: 0 auto;
 }
 
+/* Mobile Navigation Container */
+.mobileNavigationContainer {
+  display: none; /* Hidden on desktop */
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1000px) {
+  .mobileNavigationContainer {
+    display: block;
+  }
+}
+
 /* Desktop: 3-panel layout with flexible whitespace */
 .responsivePanelsGrid {
   display: grid;
@@ -56,35 +69,23 @@
     gap: 16px;
   }
   
-  /* Default: show only compile/restore */
+  /* Show only the active panel */
   .panelStats,
-  .panelPools {
+  .panelPools,
+  .panelCompiler {
     display: none;
   }
-  
-  .panelCompiler {
+
+  .panelStats.active,
+  .panelPools.active,
+  .panelCompiler.active {
     display: block;
     max-width: 700px; /* Consistent size - no scaling */
     margin: 0 auto;
+    overflow: visible; /* Allow scaled content to display properly */
   }
 }
 
-/* Tablet: 2-panel mode when toggled */
-@media (max-width: 1000px) {
-  .twoPanel .responsivePanelsGrid {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-  
-  .twoPanel .panelStats,
-  .twoPanel .panelPools {
-    display: block !important;
-  }
-  
-  .twoPanel .panelCompiler {
-    display: none;
-  }
-}
 
 /* Mobile: 1 panel + navigation */
 @media (max-width: 600px) {
@@ -110,18 +111,9 @@
     display: block !important;
     max-width: 100%;
     margin: 0;
+    overflow: visible; /* Allow scaled content to display properly */
   }
   
-  /* Override 2-panel mode on mobile */
-  .twoPanel .panelStats,
-  .twoPanel .panelPools {
-    display: none !important;
-  }
-  
-  .twoPanel .panelStats.active,
-  .twoPanel .panelPools.active {
-    display: block !important;
-  }
 }
 
 /* Panel Styling - minimal transitions for performance */
@@ -146,17 +138,10 @@
   max-width: 500px;
 }
 
-/* Tablet: Show navigation for mode switching */
+/* Hide bottom navigation on small screens - will be integrated into compiler */
 @media (max-width: 1000px) {
   .panelNavigation {
-    display: flex;
-  }
-}
-
-/* Mobile: Show navigation for panel switching */
-@media (max-width: 600px) {
-  .panelNavigation {
-    display: flex;
+    display: none;
   }
 }
 
@@ -196,12 +181,14 @@
   contain: layout style; /* Remove paint containment to reduce overhead */
 }
 
+
 /* Respect user motion preferences */
 @media (prefers-reduced-motion: reduce) {
   .contentAnimate,
   .panelStats,
   .panelCompiler,
-  .panelPools {
+  .panelPools,
+  .sideNavButton {
     transition: none;
   }
 }

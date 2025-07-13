@@ -9,7 +9,12 @@ import RefreshIcon from '../../assets/refresh-icon.svg';
 import { Tooltip } from '../Tooltip';
 import { useState } from 'react';
 
-export const StatsDashboard = () => {
+interface StatsDashboardProps {
+  currentPanel?: number;
+  onPanelChange?: (panel: number) => void;
+}
+
+export const StatsDashboard = ({}: StatsDashboardProps = {}) => {
   const { tokenPrices } = usePoolData();
   const { tokenStats, isLoading, error, refresh: refreshTokenStats } = useTokenStats();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -28,14 +33,9 @@ export const StatsDashboard = () => {
 
   return (
     <div className={styles.poolsContainer}>
+
+
       <div className={styles.header}>
-        <Tooltip 
-          content="Key metrics to track the ecosystem and help make trading decisions" 
-          variant="info"
-          position="bottom"
-        >
-          <h2 className={styles.title}>Token Stats</h2>
-        </Tooltip>
         <div className={styles.headerActions}>
           <Tooltip 
             content="Refresh stats with a new on-chain fetch" 
@@ -47,6 +47,13 @@ export const StatsDashboard = () => {
             </button>
           </Tooltip>
         </div>
+        <Tooltip 
+          content="Key metrics to track the ecosystem and help make trading decisions" 
+          variant="info"
+          position="bottom"
+        >
+          <h2 className={styles.title}>Token Stats</h2>
+        </Tooltip>
       </div>
       <div className={styles.poolsGrid}>
         {/* Token Prices Section */}
