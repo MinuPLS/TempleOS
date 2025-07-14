@@ -259,4 +259,57 @@
   }
 }
 
-/* NO RESPONSIVE SCALING - Fixed proportions for consistent component behavior */
+/* Responsive Scaling for Mobile */
+@media (max-width: 600px) {
+  .tokenFlow {
+    padding: 16px 0 24px 0;
+    max-width: 100%;
+  }
+
+  .tokenContainer,
+  .tokenLogo {
+    width: 80px;
+    height: 80px;
+  }
+
+  .centralArea {
+    width: 60px;
+    height: 60px;
+    margin: 0 -20px;
+  }
+
+  .arrowButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .arrowSvg {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .arrowSvg path {
+    stroke-width: 3;
+  }
+
+  .tokenName {
+    font-size: 16px;
+    bottom: -36px;
+  }
+
+  .vortex {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 380px) {
+  .tokenContainer,
+  .tokenLogo {
+    width: 70px;
+    height: 70px;
+  }
+  .tokenName {
+    font-size: 14px;
+  }
+}

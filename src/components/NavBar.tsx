@@ -482,17 +482,61 @@ export function NavBar() {
 
         /* Mobile layout switch - unified breakpoint */
         @media (max-width: 900px) {
+          .navbar {
+            padding: 0 12px;
+            height: 64px;
+          }
           .navbar-content {
             justify-content: space-between;
             position: relative;
             max-width: 100%;
-            gap: 12px;
+            gap: 8px;
+          }
+
+          .title-container {
+            flex-shrink: 1;
+            min-width: 0;
+          }
+
+          .app-title {
+            font-size: 18px;
+          }
+
+          .separator, .jit-compiler {
+            display: none;
+          }
+          
+          .contract-address {
+            display: none; /* Hide contract address on mobile */
+          }
+
+          .balance-section-wrapper {
+            display: none;
           }
 
           .navbar-right {
             gap: 8px;
           }
 
+          .guide-button {
+            padding: 8px 16px;
+            font-size: 14px;
+            height: 38px;
+            min-width: auto;
+          }
+        }
+
+        @media (max-width: 400px) {
+          .guide-button-text {
+            display: none;
+          }
+          .guide-button::before {
+            content: '📖'; /* Use an emoji or icon font */
+            font-size: 18px;
+          }
+          .guide-button {
+            padding: 8px 12px;
+          }
         }
         
       `}</style>

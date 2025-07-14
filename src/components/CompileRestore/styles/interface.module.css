@@ -305,24 +305,65 @@
 
 /* Fixed positioning for tooltip - no responsive adjustments */
 
-/* Responsive scaling - only scale down when viewport is too small */
-@media (max-width: 632px) {
-  /* 632px = 600px interface width + 32px margins */
+/* Responsive scaling for tablet and mobile */
+@media (max-width: 1000px) {
   .compilerInterface {
-    /* Calculate scale factor based on viewport width */
-    /* Scale = (viewport width - margins) / base width */
-    /* Apply more vertical scaling (0.85x) for shorter, better proportions */
-    transform: scale(calc((100vw - 32px) / 600)) scaleY(calc(0.85 * (100vw - 32px) / 600));
-    /* Adjust vertical space to prevent overlap after scaling */
-    margin-bottom: calc(24px * (1 - (100vw - 32px) / 600));
+    width: 100%; /* Become fluid within the single-panel layout */
+    transform: none; /* Disable scaling on tablets */
+    margin-bottom: 0;
   }
 }
 
-/* Extra small viewports - apply minimum scale */
-@media (max-width: 400px) {
+@media (max-width: 600px) {
   .compilerInterface {
-    /* Minimum scale with better vertical proportions - shorter */
-    transform: scale(0.62) scaleY(0.53); /* Significantly shorter than wide scaling */
-    margin-bottom: calc(24px * 0.38); /* Adjust space accordingly */
+    padding: 16px; /* Reduce padding on small screens */
   }
+
+  .modeToggle {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .explanationText {
+    font-size: 12px;
+  }
+
+  .expandableContent {
+    display: none;
+  }
+}
+
+.infoModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.infoModalContent {
+  position: relative;
+  background: rgba(20, 20, 35, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.infoModalClose {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
 }
