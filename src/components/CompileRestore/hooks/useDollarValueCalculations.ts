@@ -85,12 +85,11 @@ export function useDollarValueCalculations({
         }
       }
 
-      // Net gain/loss = output value - input value
-      const netGainLoss = outputValue - inputValue
-      
-      // Calculate symmetric percentage based on price difference between tokens
-      // This ensures both directions show the same percentage magnitude for the same price difference
+      // Calculate symmetric gain/loss based on pure token price difference
+      // This ensures both directions show the same dollar amount and percentage magnitude
+      let netGainLoss = 0
       let gainLossPercent = 0
+      
       if (tokenPrices.jitUSD > 0 && tokenPrices.holycUSD > 0 && receivedAmount > 0) {
         // Calculate the price difference percentage between HolyC and JIT
         const priceDiffPercent = ((tokenPrices.holycUSD - tokenPrices.jitUSD) / tokenPrices.jitUSD) * 100
@@ -98,9 +97,13 @@ export function useDollarValueCalculations({
         if (isCompileMode) {
           // Compile: HolyC → JIT (selling expensive for cheap)
           gainLossPercent = -Math.abs(priceDiffPercent) // Always negative
+          // Calculate dollar loss based on pure price difference
+          netGainLoss = -(inputAmount * Math.abs(tokenPrices.holycUSD - tokenPrices.jitUSD))
         } else {
           // Restore: JIT → HolyC (buying expensive with cheap)  
           gainLossPercent = Math.abs(priceDiffPercent) // Always positive
+          // Calculate dollar gain based on pure price difference
+          netGainLoss = inputAmount * Math.abs(tokenPrices.holycUSD - tokenPrices.jitUSD)
         }
       }
 
