@@ -6,22 +6,18 @@ import JITLogo from '../../assets/TokenLogos/JIT.png';
 import WPLSLogo from '../../assets/TokenLogos/wpls.png';
 import RefreshIcon from '../../assets/refresh-icon.svg';
 import { Tooltip } from '../Tooltip';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface UniswapPoolsProps {
   currentPanel?: number;
   onPanelChange?: (panel: number) => void;
 }
 
-export const UniswapPools = ({}: UniswapPoolsProps = {}) => {
-  const { poolData, tokenPrices, isLoading, refresh } = usePoolData();
+const UniswapPools = ({}: UniswapPoolsProps = {}) => {
+  const { poolData, isLoading, refresh } = usePoolData();
   const [expandedPools, setExpandedPools] = useState<Set<string>>(new Set());
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   
-  // Debug information
-  console.log('Pool data:', poolData);
-  console.log('Token prices:', tokenPrices);
-  console.log('Loading state:', isLoading);
 
   const getTokenLogo = (symbol: string) => {
     if (symbol === 'HolyC') return HolyCLogo;
@@ -331,3 +327,5 @@ export const UniswapPools = ({}: UniswapPoolsProps = {}) => {
     </div>
   );
 };
+
+export default memo(UniswapPools);

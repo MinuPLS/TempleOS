@@ -1,0 +1,298 @@
+.navbar {
+  background: linear-gradient(135deg,
+    rgba(26, 26, 36, 0.98) 0%,
+    rgba(20, 20, 30, 0.98) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  animation: headerSlideIn 0.6s ease-out;
+  height: 72px;
+  display: flex;
+  align-items: center;
+}
+
+.navbarContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 24px;
+  position: relative;
+  width: 100%;
+}
+
+.titleContainer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start; /* Default alignment */
+}
+
+.contractAddress {
+  font-family: 'SF Pro Rounded', 'Helvetica Neue', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  padding-left: 10px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  position: relative; /* For AnimatePresence positioning */
+}
+
+.contractAddress:hover {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.copyFeedback {
+  position: absolute;
+  top: 100%;
+  left: 10px;
+  margin-top: 4px;
+  background: #4caf50;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.appTitleLink {
+  text-decoration: none;
+}
+
+.appTitle {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.5px;
+  padding: 0 10px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.templeOs {
+  background: linear-gradient(135deg, #f472b6 0%, #a855f7 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(244, 114, 182, 0.3);
+  font-weight: 900;
+}
+
+.separator {
+  background: linear-gradient(135deg, #60a5fa 0%, #f472b6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 600;
+  font-size: 22px;
+  margin: 0;
+}
+
+.jitCompiler {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+}
+
+.navbarRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.balanceSectionWrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.balanceSection {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 24px;
+  background: rgba(30, 30, 46, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  height: 48px;
+  pointer-events: auto;
+}
+
+.balanceItem {
+  display: flex;
+  align-items: center;
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.balanceDivider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.balanceLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  opacity: 0.85;
+}
+
+.balanceValue {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.holycBalance {
+  color: #60a5fa;
+  text-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
+}
+
+.balanceItem:has(.holycBalance) .balanceLabel {
+  color: #60a5fa;
+  opacity: 0.8;
+}
+
+.jitBalance {
+  color: #f87171;
+  text-shadow: 0 0 12px rgba(248, 113, 113, 0.5);
+}
+
+.balanceItem:has(.jitBalance) .balanceLabel {
+  color: #f87171;
+  opacity: 0.8;
+}
+
+.guideButton {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 10px 28px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 16px;
+  height: 44px;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(10px);
+  min-width: 100px;
+}
+
+.guideButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.guideButton:active {
+  transform: translateY(0);
+}
+
+.guideButtonText {
+  position: relative;
+  z-index: 1;
+}
+
+.walletConnectWrapper button {
+  white-space: nowrap;
+}
+
+@keyframes headerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+}
+
+/* Mobile layout switch - unified breakpoint */
+@media (max-width: 900px) {
+  .navbar {
+    padding: 0 12px;
+    height: 64px;
+  }
+  .navbarContent {
+    justify-content: space-between;
+    position: relative;
+    max-width: 100%;
+    gap: 8px;
+  }
+
+  .titleContainer {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+
+  .appTitle {
+    font-size: 18px;
+  }
+
+  .separator, .jitCompiler {
+    display: none;
+  }
+  
+  .contractAddress {
+    display: none; /* Hide contract address on mobile */
+  }
+
+  .balanceSectionWrapper {
+    display: none;
+  }
+
+  .navbarRight {
+    gap: 8px;
+  }
+
+  .guideButton {
+    padding: 8px 16px;
+    font-size: 14px;
+    height: 38px;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 400px) {
+  .guideButtonText {
+    display: none;
+  }
+  .guideButton::before {
+    content: '📖'; /* Use an emoji or icon font */
+    font-size: 18px;
+  }
+  .guideButton {
+    padding: 8px 12px;
+  }
+}

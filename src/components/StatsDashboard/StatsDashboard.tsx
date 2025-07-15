@@ -7,14 +7,14 @@ import JITLogo from '../../assets/TokenLogos/JIT.png';
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png';
 import RefreshIcon from '../../assets/refresh-icon.svg';
 import { Tooltip } from '../Tooltip';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 
 interface StatsDashboardProps {
   currentPanel?: number;
   onPanelChange?: (panel: number) => void;
 }
 
-export const StatsDashboard = ({}: StatsDashboardProps = {}) => {
+const StatsDashboard = ({}: StatsDashboardProps = {}) => {
   const { tokenPrices } = usePoolData();
   const { tokenStats, isLoading, error, refresh: refreshTokenStats } = useTokenStats();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -269,3 +269,5 @@ export const StatsDashboard = ({}: StatsDashboardProps = {}) => {
     </div>
   );
 };
+
+export default memo(StatsDashboard);
