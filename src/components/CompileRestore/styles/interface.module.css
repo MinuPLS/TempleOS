@@ -29,6 +29,13 @@
   z-index: 10;
 }
 
+.bottomRightTooltip {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 5;
+}
+
 .interfaceHeader {
   margin-bottom: 16px; /* Fixed value */
   padding: 14px; /* Fixed value */

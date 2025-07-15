@@ -40,6 +40,7 @@ interface TokenInputFormProps {
   shouldShowDetails: boolean;
   isConnected: boolean;
   isCompileMode: boolean;
+  dollarValueTooltip?: React.ReactNode;
 }
 
 export const TokenInputForm = memo<TokenInputFormProps>(({
@@ -54,7 +55,8 @@ export const TokenInputForm = memo<TokenInputFormProps>(({
   onUiStateChange,
   shouldShowDetails,
   isConnected,
-  isCompileMode
+  isCompileMode,
+  dollarValueTooltip
 }) => {
   // Input handler for amount. The resulting calculations are debounced.
   const optimizedInputHandler = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,6 +226,13 @@ export const TokenInputForm = memo<TokenInputFormProps>(({
                 </span>
               </div>
             </div>
+            
+            {/* Dollar Value Tooltip positioned in bottom right of receive section */}
+            {dollarValueTooltip && (
+              <div className={inputStyles.dollarValueTooltipPosition}>
+                {dollarValueTooltip}
+              </div>
+            )}
           </div>
         </div>
       </div>

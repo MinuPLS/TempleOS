@@ -9,10 +9,12 @@ import { useOptimizedContracts } from './hooks/useOptimizedContracts'
 import { useCalculations } from './hooks/useCalculations'
 import { useDebounce } from './hooks/useDebounce'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
+import { useDollarValueCalculations } from './hooks/useDollarValueCalculations'
 
 // Components
 import { TokenInputForm } from './components/TokenInputForm'
 import { ActionButtons } from './components/ActionButtons'
+import { DollarValueTooltip } from './components/DollarValueTooltip'
 import CompilerHeader from './CompilerHeader'
 import InfoModal from './InfoModal'
 import Tooltip from '../Tooltip/Tooltip'
@@ -89,6 +91,15 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
     compileRestoreFee,
     isUserFeeExempt,
     isCompileMode: state.isCompileMode,
+  })
+
+  const dollarValueCalculations = useDollarValueCalculations({
+    amount: debouncedAmount,
+    calculations,
+    isCompileMode: state.isCompileMode,
+    tokenPrices,
+    compileRestoreFee,
+    isUserFeeExempt,
   })
 
   // Transaction tracking
@@ -349,6 +360,21 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
             shouldShowDetails={shouldShowDetails}
             isConnected={isConnected}
             isCompileMode={state.isCompileMode}
+            dollarValueTooltip={
+              hasAmount ? (
+                <DollarValueTooltip
+                  inputValue={dollarValueCalculations.inputValue}
+                  outputValue={dollarValueCalculations.outputValue}
+                  feeValue={dollarValueCalculations.feeValue}
+                  netGainLoss={dollarValueCalculations.netGainLoss}
+                  gainLossPercent={dollarValueCalculations.gainLossPercent}
+                  isGain={dollarValueCalculations.isGain}
+                  isLoss={dollarValueCalculations.isLoss}
+                  isNeutral={dollarValueCalculations.isNeutral}
+                  isCompileMode={state.isCompileMode}
+                />
+              ) : undefined
+            }
           />
         </div>
       </div>
@@ -371,6 +397,7 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
           onClose={() => setUiState({ isInfoExpanded: false })}
         />
       )}
+
     </div>
   )
 })

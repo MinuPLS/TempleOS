@@ -809,17 +809,17 @@
   margin-left: 4px;
 }
 
-/* Clean Receive Section Design */
+/* Clean Receive Section Design - Changed to Blue theme */
 .receiveSection {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(34, 197, 94, 0.15));
-  border: 1px solid rgba(34, 197, 94, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.15));
+  border: 1px solid rgba(59, 130, 246, 0.4);
   border-radius: 12px;
   padding: 16px;
   margin-top: 12px;
   margin-bottom: 4px;
   position: relative;
   transition: all 300ms ease;
-  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
 }
 
@@ -855,28 +855,44 @@
 .tokenNameCenter {
   display: flex;
   justify-content: center;
+  align-items: center;
+}
+
+.dollarValueTooltipPosition {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+}
+
+/* Responsive positioning for mobile */
+@media (max-width: 600px) {
+  .dollarValueTooltipPosition {
+    bottom: 12px;
+    right: 12px;
+  }
 }
 
 .receiveSection:hover {
-  border-color: rgba(34, 197, 94, 0.5);
-  box-shadow: 0 6px 25px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .resultSection:hover {
-  border-color: rgba(34, 197, 94, 0.6);
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.18));
-  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: rgba(59, 130, 246, 0.6);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.18));
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .receiveTitle {
   font-size: 12px;
   font-weight: 600;
-  color: rgba(34, 197, 94, 0.9);
+  color: rgba(59, 130, 246, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   text-align: center;
   margin: 0 0 8px 0;
-  text-shadow: 0 1px 2px rgba(34, 197, 94, 0.2);
+  text-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
 }
 
 .resultAmountDisplay {
