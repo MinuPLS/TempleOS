@@ -85,27 +85,9 @@ export function useDollarValueCalculations({
         }
       }
 
-      // Calculate symmetric gain/loss based on pure token price difference
-      // This ensures both directions show the same dollar amount and percentage magnitude
-      let netGainLoss = 0
-      let gainLossPercent = 0
-      
-      if (tokenPrices.jitUSD > 0 && tokenPrices.holycUSD > 0 && receivedAmount > 0) {
-        // Calculate the price difference percentage between HolyC and JIT
-        const priceDiffPercent = ((tokenPrices.holycUSD - tokenPrices.jitUSD) / tokenPrices.jitUSD) * 100
-        
-        if (isCompileMode) {
-          // Compile: HolyC → JIT (selling expensive for cheap)
-          gainLossPercent = -Math.abs(priceDiffPercent) // Always negative
-          // Calculate dollar loss based on pure price difference
-          netGainLoss = -(inputAmount * Math.abs(tokenPrices.holycUSD - tokenPrices.jitUSD))
-        } else {
-          // Restore: JIT → HolyC (buying expensive with cheap)  
-          gainLossPercent = Math.abs(priceDiffPercent) // Always positive
-          // Calculate dollar gain based on pure price difference
-          netGainLoss = inputAmount * Math.abs(tokenPrices.holycUSD - tokenPrices.jitUSD)
-        }
-      }
+      // Net change is the difference between what the user puts in and what they receive
+      const netGainLoss = outputValue - inputValue
+      const gainLossPercent = inputValue > 0 ? (netGainLoss / inputValue) * 100 : 0
 
       // Determine gain/loss/neutral status
       const threshold = 0.01 // $0.01 threshold for neutral

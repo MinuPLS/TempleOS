@@ -82,7 +82,7 @@ export const DollarValueTooltip: React.FC<DollarValueTooltipProps> = ({
 
         <div className={styles.disclaimer}>
           <span className={styles.disclaimerText}>
-            This shows the RAW token value you receive. If planning to swap for profit through PulseX pools, account for slippage and JIT transfer fees.
+            Output already includes the 4% compile/restore fee. Additional AMM slippage, JIT transfer taxes, or swap fees are not included.
           </span>
         </div>
       </div>
