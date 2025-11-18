@@ -52,7 +52,7 @@
 .tooltip {
   position: fixed;
   z-index: 9999;
-  max-width: 320px;
+  max-width: min(94vw, 560px);
   min-width: 200px;
   padding: 0;
   pointer-events: none;

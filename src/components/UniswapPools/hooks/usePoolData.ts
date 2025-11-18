@@ -10,7 +10,7 @@ import {
   JIT_WPLS_PAIR_ADDRESS
 } from '@/config/contracts';
 
-interface PoolData {
+export interface PoolData {
   pairAddress: `0x${string}`;
   liquidityUSD: string;
   token0: {
@@ -23,7 +23,7 @@ interface PoolData {
   };
 }
 
-interface TokenPrices {
+export interface TokenPrices {
   holycUSD: number;
   jitUSD: number;
 }

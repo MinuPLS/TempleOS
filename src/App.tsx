@@ -8,6 +8,7 @@ import { PanelDotNavigation } from './components/PanelDotNavigation'
 import { useAccount } from 'wagmi'
 import { useState } from 'react'
 import styles from './App.module.css'
+import LandingPage from './components/LandingPage/LandingPage'
 
 const MainPage = () => {
   useAccount()
@@ -53,7 +54,9 @@ function App() {
     <div>
       <NavBar />
       <Routes>
-        <Route path="/" element={<MainPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/dashboard" element={<LandingPage />} />
+        <Route path="/compiler" element={<MainPage />} />
       </Routes>
     </div>
   )

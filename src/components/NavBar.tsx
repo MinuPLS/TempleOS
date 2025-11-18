@@ -7,16 +7,22 @@ import { HOLY_C_ADDRESS, JIT_ADDRESS } from '../config/contracts'
 import { WalletConnect } from './WalletConnect'
 import { Tooltip } from './Tooltip'
 import { GuideModal } from './GuideModal'
+import { DivineManagerGuideModal } from './GuideModal/DivineManagerGuideModal'
 import { throttle } from '../lib/performanceOptimizer'
 import styles from './NavBar.module.css'
+import { Link, useLocation } from 'react-router-dom'
 
 export function NavBar() {
   const { address, isConnected } = useAccount()
   const [isGuideOpen, setIsGuideOpen] = useState(false)
   const [copyFeedback, setCopyFeedback] = useState(false)
+  const [isDivineGuideOpen, setIsDivineGuideOpen] = useState(false)
+  const [isGuidesMenuOpen, setIsGuidesMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const resizeTimeoutRef = useRef<number | null>(null)
+  const guidesRef = useRef<HTMLDivElement | null>(null)
+  const location = useLocation()
   
   const { data: holyCBalance, refetch: refetchHolyCBalance } = useBalance({
     address,
@@ -72,11 +78,48 @@ export function NavBar() {
     }
   }, [refetchHolyCBalance, refetchJitBalance])
 
-  const handleCopyAddress = () => {
-    navigator.clipboard.writeText("0x57909025ACE10D5dE114d96E3EC84F282895870c")
-    setCopyFeedback(true)
-    setTimeout(() => setCopyFeedback(false), 2000)
-  }
+  useEffect(() => {
+    const handleOpenDivineGuide = () => {
+      setIsDivineGuideOpen(true)
+    }
+
+    window.addEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+
+    return () => {
+      window.removeEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!guidesRef.current) return
+      if (!guidesRef.current.contains(event.target as Node)) {
+        setIsGuidesMenuOpen(false)
+      }
+    }
+
+    if (isGuidesMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      if (isGuidesMenuOpen) {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [isGuidesMenuOpen, guidesRef])
+
+  useEffect(() => {
+    const handleOpenDivineGuide = () => {
+      setIsDivineGuideOpen(true)
+    }
+
+    window.addEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+
+    return () => {
+      window.removeEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+    }
+  }, [])
 
   const formatBalance = (value: string | number) => {
     const num = Number(value)
@@ -91,8 +134,39 @@ export function NavBar() {
     return `${address.slice(0, 8)}...${address.slice(-6)}`
   }
 
-  const fullAddress = "0x57909025ACE10D5dE114d96E3EC84F282895870c";
-  const compactAddress = formatCompactAddress(fullAddress);
+  const isOnLandingPage = location.pathname === '/' || location.pathname.startsWith('/dashboard')
+  const navSubtitle = isOnLandingPage ? 'HolyC' : 'JustInTimeCompiler'
+  const currentAddress = isOnLandingPage ? HOLY_C_ADDRESS : JIT_ADDRESS
+  const compactAddress = formatCompactAddress(currentAddress);
+  const tooltipContent = isOnLandingPage
+    ? 'The HolyC contract address'
+    : 'The JustInTime Compiler contract this dApp is interating with, verified and opensource'
+  const navCta = isOnLandingPage
+    ? { label: 'Launch dApp', to: '/compiler' }
+    : { label: 'Overview', to: '/' }
+
+  const handleCopyAddress = () => {
+    const targetAddress = currentAddress
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(targetAddress)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = targetAddress
+        textarea.style.position = 'fixed'
+        textarea.style.left = '-9999px'
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+      }
+      setCopyFeedback(true)
+      setTimeout(() => setCopyFeedback(false), 2000)
+    } catch (error) {
+      console.error('Failed to copy contract address', error)
+    }
+  }
 
 
   return (
@@ -132,13 +206,13 @@ export function NavBar() {
                   style={{ display: 'flex', alignItems: 'center', transformOrigin: 'left', overflow: 'hidden' }}
                 >
                   <span className={styles.separator}>:</span>
-                  <span className={styles.jitCompiler}>JustInTimeCompiler</span>
+                  <span className={styles.jitCompiler}>{navSubtitle}</span>
                 </motion.span>
               </h1>
             </a>
           </Tooltip>
           <Tooltip 
-            content="The JustInTime Compiler contract this dApp is interating with, verified and opensource" 
+            content={tooltipContent} 
             variant="info"
             position="bottom"
             disabled={isMobile}
@@ -162,7 +236,7 @@ export function NavBar() {
                   }}
                   style={{ display: 'inline-block', transformOrigin: 'left', willChange: 'transform, opacity' }}
                 >
-                  {isMobile ? compactAddress : fullAddress}
+                  {isMobile ? compactAddress : currentAddress}
                 </motion.span>
               </AnimatePresence>
             </motion.div>
@@ -208,19 +282,55 @@ export function NavBar() {
           layout={!isResizing}
           transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
         >
-          <Tooltip
-            content="Open the complete guide to understand the TempleOS ecosystem, tokenomics, and arbitrage strategies"
-            variant="info"
-            disabled={isMobile}
+          <Link
+            to={navCta.to}
+            className={`${styles.navRouteButton} ${isOnLandingPage ? styles.navRouteButtonPrimary : ''}`}
           >
+            {navCta.label}
+          </Link>
+          <div ref={guidesRef} className={styles.guidesWrapper}>
             <button
-              className={styles.guideButton}
-              onClick={() => setIsGuideOpen(true)}
-              aria-label="Open ecosystem guide"
+              type="button"
+              className={`${styles.guideButton} ${styles.guidesToggle}`}
+              onClick={() => setIsGuidesMenuOpen((prev) => !prev)}
+              aria-haspopup="true"
+              aria-expanded={isGuidesMenuOpen}
             >
-              <span className={styles.guideButtonText}>Guide</span>
+              <span className={styles.guideButtonText}>Guides</span>
             </button>
-          </Tooltip>
+            <AnimatePresence>
+              {isGuidesMenuOpen && (
+                <motion.div
+                  className={styles.guidesMenu}
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                  transition={{ duration: 0.16, ease: [0.2, 0, 0.2, 1] }}
+                >
+                  <button
+                    type="button"
+                    className={`${styles.guidesItem} ${styles.guidesItemPrimary}`}
+                    onClick={() => {
+                      setIsGuidesMenuOpen(false)
+                      setIsGuideOpen(true)
+                    }}
+                  >
+                    The Compiler
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.guidesItem} ${styles.guidesItemSecondary}`}
+                    onClick={() => {
+                      setIsGuidesMenuOpen(false)
+                      setIsDivineGuideOpen(true)
+                    }}
+                  >
+                    Divine Manager
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           <WalletConnect />
         </motion.div>
       </motion.div>
@@ -228,6 +338,10 @@ export function NavBar() {
       <GuideModal 
         isOpen={isGuideOpen} 
         onClose={() => setIsGuideOpen(false)} 
+      />
+      <DivineManagerGuideModal
+        isOpen={isDivineGuideOpen}
+        onClose={() => setIsDivineGuideOpen(false)}
       />
 
     </nav>

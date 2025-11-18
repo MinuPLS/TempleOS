@@ -11,7 +11,7 @@ import {
   HOLYC_WPLS_PAIR_ADDRESS
 } from '@/config/contracts';
 
-interface TokenStats {
+export interface TokenStats {
   holycLocked: bigint;
   jitCirculating: bigint;
   holycFeesBurned: bigint;

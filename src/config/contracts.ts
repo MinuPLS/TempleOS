@@ -11,6 +11,7 @@ export const WPLS_DAI_PAIR_ADDRESS = '0xE56043671df55dE5CDf8459710433C10324DE0aE
 export const HOLYC_WPLS_PAIR_ADDRESS = '0x28be4ad6d58ab4aacea3cb42bde457b7da251bac' as const;
 export const HOLYC_JIT_PAIR_ADDRESS = '0x7fa560cbe6d7c0d6d408b3fd9e59137d3324c76e' as const;
 export const JIT_WPLS_PAIR_ADDRESS = '0xc68a84655fa4ef48f8dd5273821183216da4de37' as const;
+export const DIVINE_MANAGER_ADDRESS = '0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de' as const;
 
 export const CONTRACT_ADDRESSES = {
   holyC: HOLY_C_ADDRESS,
@@ -21,6 +22,7 @@ export const CONTRACT_ADDRESSES = {
   uniswapV2Factory: UNISWAP_V2_FACTORY_ADDRESS,
   wplsDaiPair: WPLS_DAI_PAIR_ADDRESS,
   burn: '0x0000000000000000000000000000000000000369' as const,
+  divineManager: DIVINE_MANAGER_ADDRESS,
 } as const
 
 export const CHAIN_ID = 369 // Chain 369
@@ -383,6 +385,19 @@ export const HOLYC_ABI = [
     ],
     stateMutability: 'view'
   }
+] as const
+
+export const DIVINE_MANAGER_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'bytes32', name: 'strategyId', type: 'bytes32' },
+      { indexed: true, internalType: 'bytes32', name: 'jobNonce', type: 'bytes32' },
+      { indexed: false, internalType: 'uint256', name: 'profitWPLS', type: 'uint256' },
+    ],
+    name: 'TicketExecuted',
+    type: 'event',
+  },
 ] as const
 
 // NEW – absolute mint at deployment (1 B tokens, 18 decimals)
