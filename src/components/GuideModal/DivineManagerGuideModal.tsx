@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Rocket, Sparkles, Activity, Search, Bot, Zap, ShieldCheck, Flame, Target } from 'lucide-react'
+import { X, ChefHat, Sparkles, Activity, Search, Bot, Zap, ShieldCheck, Flame, Target } from 'lucide-react'
 import styles from './GuideModal.module.css'
 
 export interface DivineManagerGuideModalProps {
@@ -46,7 +46,7 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
           <h2>
-            <Rocket className={styles.headerIcon} /> Divine Manager Mission Log
+            <ChefHat className={styles.headerIcon} /> The Divine Manager
           </h2>
           <button className={styles.closeButton} onClick={onClose} aria-label="Close guide">
             <X size={24} />

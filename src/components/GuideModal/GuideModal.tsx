@@ -105,6 +105,12 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
             <p>The fee structure deliberately channels <span className={styles.tooltipGreen}>arbitrage</span> volume through the <strong className={styles.tooltipIndigo}>HolyC</strong>/<strong className={styles.tooltipAmber}>JIT</strong> pool, benefiting LPs who are shielded from <span className={styles.tooltipRed}>impermanent loss</span> by the Compiler's fixed-rate guarantee.</p>
           </Section>
 
+          <Section title="For Advanced Users: Manual &quot;Compiling&quot;" icon={<UserCheck size={20} />}>
+            <p><strong>Note:</strong> Most holders should rely on the <strong className={styles.tooltipBlue}>Divine Manager</strong>. This section exists for advanced arbitrage traders only.</p>
+            <p>While the <strong className={styles.tooltipBlue}>Divine Manager</strong> runs automatically and closes most available arbs, the Compiler remains public so that disciplined operators can mirror those loops manually.</p>
+            <p>If you are a sophisticated trader, you can interact with the contract directly to perform the same arbitrage cycles as the Manager—just understand the risks before touching <span className={styles.tooltipAmber}>JIT</span> yourself.</p>
+          </Section>
+
           <div className={styles.strategySection}>
             <h4 className={styles.strategyTitleHeader}><Zap size={20} /> The Trader's Advantage</h4>
             <p className={styles.strategyIntro}>Friction in the system creates opportunity. Bots and traders create inefficiencies and <span className={styles.tooltipRed}>burn</span> tokens, leaving behind value that only a savvy user with the Compiler can capture.</p>
