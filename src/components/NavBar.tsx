@@ -284,14 +284,14 @@ export function NavBar() {
         >
           <Link
             to={navCta.to}
-            className={`${styles.navRouteButton} ${isOnLandingPage ? styles.navRouteButtonPrimary : ''}`}
+            className={styles.navRouteButton}
           >
             {navCta.label}
           </Link>
           <div ref={guidesRef} className={styles.guidesWrapper}>
             <button
               type="button"
-              className={`${styles.guideButton} ${styles.guidesToggle}`}
+              className={`${styles.guideButton} ${styles.guidesToggle} ${styles.guideButtonPrimary}`}
               onClick={() => setIsGuidesMenuOpen((prev) => !prev)}
               aria-haspopup="true"
               aria-expanded={isGuidesMenuOpen}
@@ -315,7 +315,7 @@ export function NavBar() {
                       setIsGuideOpen(true)
                     }}
                   >
-                    The Compiler
+                    Tokenomics
                   </button>
                   <button
                     type="button"

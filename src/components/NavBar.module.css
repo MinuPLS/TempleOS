@@ -248,6 +248,31 @@
   z-index: 1;
 }
 
+.guideButtonPrimary {
+  background: var(--gradient-button);
+  border-color: transparent;
+  color: #fff;
+  box-shadow:
+    0 12px 30px rgba(88, 80, 236, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  overflow: hidden;
+}
+
+.guideButtonPrimary::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.guideButtonPrimary:hover::after {
+  opacity: 0.5;
+}
+
 .walletConnectWrapper {
   display: flex;
   align-items: center;

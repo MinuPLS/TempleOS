@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  X, BookOpen, Coins, ArrowRight, CheckCircle2, 
-  Recycle, Anchor, ShieldCheck, Zap, Gem, Flame, Bot, UserCheck, TrendingUp, Droplets
+  X, BookOpen, Coins, ArrowRight, ArrowLeftRight, CheckCircle2, 
+  Anchor, ShieldCheck, Zap, Bot, TrendingUp, Droplets
 } from 'lucide-react';
+import HolyCLogo from '../../assets/TokenLogos/HolyC.png';
+import JITLogo from '../../assets/TokenLogos/JIT.png';
 import styles from './GuideModal.module.css';
 
 export interface GuideModalProps {
@@ -46,7 +48,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
-          <h2><BookOpen className={styles.headerIcon} /> The JIT Compiler Guide</h2>
+          <h2><BookOpen className={styles.headerIcon} /> Tokenomics</h2>
           <button className={styles.closeButton} onClick={onClose} aria-label="Close guide">
             <X size={24} />
           </button>
@@ -54,107 +56,168 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
 
         <div className={styles.modalBody}>
           <div className={styles.intro}>
-            <h3 className={styles.introTitle}>Divine Intellect: The First Deflationary Pump.Tires Token</h3>
+            <div className={styles.introLogos}>
+              <img src={HolyCLogo} alt="HolyC logo" className={styles.introLogo} />
+              <ArrowLeftRight size={18} className={styles.introArrow} />
+              <img src={JITLogo} alt="JIT logo" className={styles.introLogo} />
+            </div>
+            <h3 className={styles.introTitle}>TempleOS: HolyC &amp; JIT</h3>
             <p className={styles.introText}>
-              <strong className={styles.tooltipIndigo}>HolyC</strong> is the first deflationary Pump.Tires token, made possible by a pioneering tokenomic model designed and invented by <strong className={styles.tooltipPurple}>@MinuPLS</strong>.
+              <strong className={styles.tooltipIndigo}>HolyC</strong> is the first deflationary Pump.Tires token, powered by a pioneering tokenomic design from <strong className={styles.tooltipPurple}>@MinuPLS</strong>.
             </p>
-            <p className={styles.introText} style={{marginTop: '12px'}}>
-              Inspired by Terry Davis’s Just-In-Time Compiler for TempleOS, the "Divine Compiler" uses a second token, <strong className={styles.tooltipAmber}>JIT</strong>, to make the non-burning HolyC effectively deflationary through a unique dual-token system that creates <span className={styles.tooltipGreen}>arbitrage</span>, <span className={styles.tooltipRed}>supply shock</span>, and price alignment.
+            <p className={`${styles.introText} ${styles.introQuestion}`}>
+              <span className={styles.keyword}>Paradox:</span> <em>How do you burn the supply of a fixed-supply, zero-tax token?</em>
+            </p>
+            <p className={styles.introText}>
+              The answer is the <span className={styles.glowText}>Divine Compiler</span>. Inspired by Terry Davis’s Just-In-Time Compiler for TempleOS, it creates a shadow state called <strong className={styles.tooltipAmber}>JIT</strong> so <span className={styles.tooltipIndigo}>HolyC</span> can remain safe and tax-free while its wrapped counterpart constantly burns behind the scenes.
             </p>
           </div>
 
-          <Section title="The Two Tokens" icon={<Coins size={20} />}>
+          <Section title="The Dual-Token Architecture" icon={<Coins size={20} />}>
+            <p>The ecosystem pairs one main asset with one utility wrapper. They are mathematically linked but free to trade independently.</p>
             <div className={styles.tokenGrid}>
               <div className={`${styles.tokenCard} ${styles.holycCard}`}>
-                <h5 className={styles.tokenTitle}>HolyC</h5>
-                <p className={styles.tokenDesc}>The foundational, tax-free reserve asset with a fixed supply.</p>
-                <div className={styles.tokenStat}><span>Supply:</span> <strong>1T (Fixed)</strong></div>
-                <div className={styles.tokenStat}><span>Tax:</span> <strong>0%</strong></div>
+                <div className={styles.tokenCardHeader}>
+                  <img src={HolyCLogo} alt="HolyC logo" className={styles.tokenLogo} />
+                  <div>
+                    <h5 className={styles.tokenTitle}>HolyC</h5>
+                    <span className={styles.tokenSubtitle}>The Asset</span>
+                  </div>
+                </div>
+                <div className={styles.tokenBadges}>
+                  <span className={`${styles.tokenBadge} ${styles.reserveBadge}`}>Reserve</span>
+                  <span className={styles.tokenBadge}>Fixed</span>
+                </div>
+                <p className={styles.tokenDesc}><span className={styles.keyword}>Role:</span> The foundational reserve currency.</p>
+                <div className={styles.tokenStat}><span>Properties</span><strong>Fixed Supply · 1T</strong></div>
+                <div className={styles.tokenStat}><span>Tax</span><strong>0% · Renounced</strong></div>
+                <div className={styles.tokenStat}><span>User Action</span><strong>Buy &amp; Hold</strong></div>
               </div>
               <div className={`${styles.tokenCard} ${styles.jitCard}`}>
-                <h5 className={styles.tokenTitle}>JIT</h5>
-                <p className={styles.tokenDesc}>The utility token that enables deflation through a transfer burn.</p>
-                <div className={styles.tokenStat}><span>Supply:</span> <strong>≤1T (Deflationary)</strong></div>
-                <div className={styles.tokenStat}><span>Transfer Fee:</span> <strong>2% Burn</strong></div>
+                <div className={styles.tokenCardHeader}>
+                  <img src={JITLogo} alt="JIT logo" className={styles.tokenLogo} />
+                  <div>
+                    <h5 className={styles.tokenTitle}>JIT</h5>
+                    <span className={styles.tokenSubtitle}>The Wrapper</span>
+                  </div>
+                </div>
+                <div className={styles.tokenBadges}>
+                  <span className={`${styles.tokenBadge} ${styles.wrapperBadge}`}>Wrapper</span>
+                  <span className={styles.tokenBadge}>Deflationary</span>
+                </div>
+                <p className={styles.tokenDesc}><span className={styles.keyword}>Role:</span> Utility wrapper backed 100% by locked HolyC.</p>
+                <div className={styles.tokenStat}><span>Properties</span><strong>Deflationary Supply</strong></div>
+                <div className={styles.tokenStat}><span>Transfer</span><strong>2% Burn</strong></div>
+                <div className={styles.tokenStat}><span>User Action</span><strong>Divine Manager / bots burn supply</strong></div>
               </div>
             </div>
           </Section>
 
-          <Section title="The Compiler's Fixed-Rate Guarantee" icon={<Anchor size={20} />}>
-            <p>The Compiler is the only place <span className={styles.tooltipAmber}>JIT</span> can be minted or restored. It enforces a fixed 1:1 conversion (minus fees), creating a <strong className={styles.tooltipGreen}>hardcoded anchor outside the market</strong>.</p>
-            <p>This predictable ratio holds regardless of pool prices. The Compiler is indifferent to market conditions; it simply enforces its fixed rate, ensuring the tokens always have a path back to equilibrium.</p>
+          <Section title="The Divine Compiler: The 1:1 Anchor" icon={<Anchor size={20} />}>
+            <p>The Compiler smart contract sits between both tokens. It lets you wrap <span className={styles.tooltipIndigo}>HolyC</span> into <span className={styles.tooltipAmber}>JIT</span> (<span className={styles.keyword}>Compile</span>) or unwrap JIT back into HolyC (<span className={styles.keyword}>Restore</span>) at a fixed internal rate.</p>
+            <p>To keep the system permanently deflationary, the Compiler charges a toll each way.</p>
             <div className={styles.parityFlow}>
-              <div className={styles.parityRow}><span>1 <span className={styles.tooltipIndigo}>HolyC</span></span> <ArrowRight size={16} /> <span>1 <span className={styles.tooltipAmber}>JIT</span> <small>(-4% Fee)</small></span></div>
-              <div className={styles.parityRow}><span>1 <span className={styles.tooltipAmber}>JIT</span></span> <ArrowRight size={16} /> <span>1 <span className={styles.tooltipIndigo}>HolyC</span> <small>(-4% Fee)</small></span></div>
+              <div className={styles.parityRow}>
+                <div className={styles.flowBlock}>
+                  <img src={HolyCLogo} alt="HolyC source" className={styles.flowTokenLogo} />
+                  <div>
+                    <strong>Compile</strong>
+                    <span>Lock 1 HolyC</span>
+                  </div>
+                </div>
+                <ArrowRight size={18} />
+                <div className={styles.flowBlock}>
+                  <img src={JITLogo} alt="JIT output" className={styles.flowTokenLogo} />
+                  <div>
+                    <strong>Receive 1 JIT</strong>
+                    <small>(minus 4% burn)</small>
+                  </div>
+                </div>
+              </div>
+              <div className={styles.parityRow}>
+                <div className={styles.flowBlock}>
+                  <img src={JITLogo} alt="JIT source" className={styles.flowTokenLogo} />
+                  <div>
+                    <strong>Restore</strong>
+                    <span>Burn 1 JIT</span>
+                  </div>
+                </div>
+                <ArrowRight size={18} />
+                <div className={styles.flowBlock}>
+                  <img src={HolyCLogo} alt="HolyC output" className={styles.flowTokenLogo} />
+                  <div>
+                    <strong>Unlock 1 HolyC</strong>
+                    <small>(minus 4% burn)</small>
+                  </div>
+                </div>
+              </div>
             </div>
+            <p className={styles.caption}>This toll creates the <span className={styles.keyword}>Hard Anchor.</span> Inside the Compiler the rate never moves. Outside, the market can swing wildly.</p>
           </Section>
 
-          <Section title="How the System Self-Regulates" icon={<Recycle size={20} />}>
-            <p>Every buy or sell in the <span className={styles.tooltipIndigo}>HolyC</span>/<span className={styles.tooltipPurple}>PLS</span> or <span className={styles.tooltipAmber}>JIT</span>/<span className={styles.tooltipPurple}>PLS</span> pools creates price pressure. When <span className={styles.tooltipIndigo}>HolyC</span> is bought, its price rises relative to <span className={styles.tooltipAmber}>JIT</span>, creating an imbalance. These price shifts create natural <span className={styles.tooltipGreen}>arbitrage</span> pathways that always route volume through the <span className={styles.tooltipIndigo}>HolyC</span>/<span className={styles.tooltipAmber}>JIT</span> pool, triggering the 2% <span className={styles.tooltipRed}>JIT burn</span>.</p>
+          <Section title="How Variance Is Created (The Depeg)" icon={<Zap size={20} />}>
+            <p><span className={styles.tooltipIndigo}>HolyC</span>/PLS and <span className={styles.tooltipAmber}>JIT</span>/PLS pools on PulseX trade independently, so the tokens diverge in price.</p>
+            <ul className={styles.calloutList}>
+              <li><span className={styles.tooltipAmber}>Friction Gap:</span> JIT burns 2% on every transfer and costs 4% to compile or redeem, so markets naturally price it differently from HolyC.</li>
+              <li><span className={styles.tooltipGreen}>Opportunity Window:</span> The Compiler rate stays ~1:1. When the market drifts away, a gap appears—free value waiting for whoever bridges it.</li>
+            </ul>
+            <div className={styles.dualStatGrid}>
+              <div className={styles.dualStat}>
+                <h5>Market Price</h5>
+                <p>Moves with liquidity and trading volume.</p>
+              </div>
+              <div className={styles.dualStat}>
+                <h5>Compiler Price</h5>
+                <p>Hard-coded 1 HolyC ↔ 1 JIT (minus toll).</p>
+              </div>
+            </div>
             <div className={styles.insightBox}>
-              <Gem size={16} />
-              <span>The system fuels itself. It doesn’t need manual interaction—the market just needs to breathe.</span>
+              <CheckCircle2 size={16} />
+              <span>The gap between these prices is the engine’s heartbeat.</span>
             </div>
           </Section>
 
-          <Section title="Engine of Deflation: Supply Shock" icon={<Flame size={20} />}>
-            <p><span className={styles.tooltipAmber}>JIT</span>'s deflationary mechanics create a continuous <span className={styles.tooltipRed}>supply shock</span>. When <span className={styles.tooltipAmber}>JIT</span> becomes scarce, the market is incentivized to compile <span className={styles.tooltipIndigo}>HolyC</span> to mint more <span className={styles.tooltipAmber}>JIT</span>, which removes <span className={styles.tooltipIndigo}>HolyC</span> from circulation and burns a portion as fees. This permanently locks some <span className={styles.tooltipIndigo}>HolyC</span> in the compiler contract.</p>
+          <Section title="The Protocol’s Advantage: Automated Arbitrage" icon={<Bot size={20} />}>
+            <p>In most ecosystems, predatory bots would vacuum this gap. Here, the <strong className={styles.tooltipPurple}>Divine Manager</strong> captures it for holders by running an automated loop 24/7.</p>
+            <div className={styles.stepList}>
+              <div className={styles.step}>
+                <div className={styles.stepNumber}>1</div>
+                <span><strong className={styles.stepTitle}>Buy:</strong> Acquire the undervalued token on PulseX.</span>
+              </div>
+              <div className={styles.step}>
+                <div className={styles.stepNumber}>2</div>
+                <span><strong className={styles.stepTitle}>Bridge:</strong> Force it through the Compiler at the fixed rate, sidestepping market pricing.</span>
+              </div>
+              <div className={styles.step}>
+                <div className={styles.stepNumber}>3</div>
+                <span><strong className={styles.stepTitle}>Sell:</strong> Offload the stronger asset back to market to close the gap.</span>
+              </div>
+            </div>
+            <p>The captured profit is split: <span className={styles.tooltipRed}>Burn</span> a portion immediately (reducing <span className={styles.tooltipIndigo}>HolyC</span> supply) and route the remainder to the <span className={styles.tooltipGreen}>Protocol Vault</span> to back every holder.</p>
           </Section>
 
-          <Section title="LP Advantage: No Impermanent Loss" icon={<ShieldCheck size={20} />}>
-            <p>The fee structure deliberately channels <span className={styles.tooltipGreen}>arbitrage</span> volume through the <strong className={styles.tooltipIndigo}>HolyC</strong>/<strong className={styles.tooltipAmber}>JIT</strong> pool, benefiting LPs who are shielded from <span className={styles.tooltipRed}>impermanent loss</span> by the Compiler's fixed-rate guarantee.</p>
+          <Section title="Decentralization &amp; Open Access" icon={<ShieldCheck size={20} />}>
+            <p>Automation benefits the protocol, but the system stays fully permissionless.</p>
+            <ul>
+              <li>The Compiler contract and the <span className={styles.tooltipAmber}>JIT</span> token are open tools.</li>
+              <li>Anyone can Compile, Restore, or self-arb via the dApp or block explorer.</li>
+              <li>Whether you loop manually or let the Divine Manager work, every action feeds the deflationary engine.</li>
+            </ul>
+            <p>Want to study the automations in detail? Dive into the <span className={styles.tooltipPurple}>Divine Manager Guide</span>.</p>
           </Section>
-
-          <Section title="For Advanced Users: Manual &quot;Compiling&quot;" icon={<UserCheck size={20} />}>
-            <p><strong>Note:</strong> Most holders should rely on the <strong className={styles.tooltipBlue}>Divine Manager</strong>. This section exists for advanced arbitrage traders only.</p>
-            <p>While the <strong className={styles.tooltipBlue}>Divine Manager</strong> runs automatically and closes most available arbs, the Compiler remains public so that disciplined operators can mirror those loops manually.</p>
-            <p>If you are a sophisticated trader, you can interact with the contract directly to perform the same arbitrage cycles as the Manager—just understand the risks before touching <span className={styles.tooltipAmber}>JIT</span> yourself.</p>
-          </Section>
-
-          <div className={styles.strategySection}>
-            <h4 className={styles.strategyTitleHeader}><Zap size={20} /> The Trader's Advantage</h4>
-            <p className={styles.strategyIntro}>Friction in the system creates opportunity. Bots and traders create inefficiencies and <span className={styles.tooltipRed}>burn</span> tokens, leaving behind value that only a savvy user with the Compiler can capture.</p>
-            
-            <Section title="Strategy 1: The Compiler Hop & Rebalance" icon={<UserCheck size={20} />} className={styles.subSection}>
-              <p>The Compiler is your bridge to transform an undervalued token into a stronger one, allowing you to profit from the price difference.</p>
-              <div className={styles.stepList}>
-                <div className={styles.step}><div className={styles.stepNumber}>1</div><span><strong className={styles.stepTitle}>Buy Cheap:</strong> Identify the undervalued token in the <span className={styles.tooltipPurple}>PLS</span> pools and acquire it.</span></div>
-                <div className={styles.step}><div className={styles.stepNumber}>2</div><span><strong className={styles.stepTitle}>Compiler Hop:</strong> Use the Compiler to convert it 1:1 (minus fees) into the higher-value token.</span></div>
-                <div className={styles.step}><div className={styles.stepNumber}>3</div><span><strong className={styles.stepTitle}>Rebalance:</strong> Swap the expensive token back for more of the cheap one in the <span className={styles.tooltipIndigo}>HolyC</span>/<span className={styles.tooltipAmber}>JIT</span> pool for a profit.</span></div>
-              </div>
-              <div className={styles.insightBox} style={{borderColor: 'var(--green-glow)'}}>
-                <Gem size={16} />
-                <span>You <span className={styles.tooltipGreen}>profit</span> by restoring balance, without harming the market.</span>
-              </div>
-            </Section>
-
-            <Section title="Strategy 2: Exploiting Bot Activity" icon={<Bot size={20} />} className={styles.subSection}>
-              <p><span className={styles.tooltipGreen}>Arbitrage bots</span> react instantly to price spikes across PulseX pools, but they can't use the Compiler. Their actions create deeper arbitrage opportunities for you.</p>
-              <div className={styles.stepList}>
-                <div className={styles.step}><div className={styles.stepNumber}>1</div><span>A bot's trade <span className={styles.tooltipRed}>burns JIT</span> and shifts pool ratios, creating a discount.</span></div>
-                <div className={styles.step}><div className={styles.stepNumber}>2</div><span><strong className={styles.stepTitle}>Spot the Discount:</strong> Identify the <span className={styles.tooltipAmber}>JIT</span> discount caused by bot activity.</span></div>
-                <div className={styles.step}><div className={styles.stepNumber}>3</div><span><strong className={styles.stepTitle}>Restore Value:</strong> Buy cheap <span className={styles.tooltipAmber}>JIT</span> and use the Compiler to restore it 1:1 to the more valuable <span className={styles.tooltipIndigo}>HolyC</span>.</span></div>
-              </div>
-              <div className={styles.insightBox} style={{borderColor: 'var(--green-glow)'}}>
-                <UserCheck size={16} />
-                <span>Leverage the Compiler to capture deep value that bots can’t reach.</span>
-              </div>
-            </Section>
-          </div>
 
           <Section title="The Holder's Advantage" icon={<TrendingUp size={20} />}>
-            <p>As a holder of the fixed-supply <strong className={styles.tooltipIndigo}>HolyC</strong> token, you benefit passively from the entire ecosystem without ever needing to interact with it directly.</p>
-            <p>Every trade, whether by a strategic user or an <span className={styles.tooltipGreen}>arbitrage bot</span>, contributes to the deflation of <span className={styles.tooltipAmber}>JIT</span> and the corresponding reduction of <span className={styles.tooltipIndigo}>HolyC</span>'s circulating supply. Both traders and bots are naturally incentivized to perform actions that ultimately <span className={styles.tooltipRed}>burn</span> tokens, creating a perpetual, positive pressure on the value of your holdings.</p>
-            <div className={styles.insightBox} style={{borderColor: 'var(--green-glow)'}}>
+            <p>Holding the fixed-supply <strong className={styles.tooltipIndigo}>HolyC</strong> token gives you passive exposure to the entire machine. You never need to touch <span className={styles.tooltipAmber}>JIT</span> to benefit.</p>
+            <p>Every compile, restore, transfer burn, or arbitrage loop permanently destroys tokens. The system turns market volatility into engineered scarcity.</p>
+            <div className={styles.insightBox} style={{ borderColor: 'var(--green-glow)' }}>
               <CheckCircle2 size={16} />
-              <span>Simply holding <strong className={styles.tooltipIndigo}>HolyC</strong> is enough to benefit from the deflationary engine.</span>
+              <span>Simply holding <strong className={styles.tooltipIndigo}>HolyC</strong> is enough to receive the upside of constant burns.</span>
             </div>
           </Section>
 
           <Section title="The Engine Needs Fuel" icon={<Droplets size={20} />} className={styles.finalSection}>
-            <p>The system works, but it doesn’t create its own fuel. It needs activity.</p>
-            <p>No volume means no price gaps. No gaps means no arbitrage. No arbitrage means no burn or rebalancing. Without volume, the engine doesn't spin.</p>
-            <p className={styles.finalThought}>That’s not a flaw. That’s just how engines work.</p>
+            <p>The engine is powerful, but it still needs volume. No volume means no gaps. No gaps means no arbitrage. No arbitrage means no burn.</p>
+            <p>That’s not a flaw—it’s how engines work.</p>
           </Section>
 
         </div>

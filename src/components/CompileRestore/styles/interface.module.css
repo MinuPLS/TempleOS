@@ -22,6 +22,114 @@
   transition: transform 0.2s ease;
 }
 
+.manualAccessOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(5, 10, 25, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: manualPromptFade 0.3s ease-out;
+}
+
+.manualAccessModal {
+  position: relative;
+  width: min(420px, calc(100% - 32px));
+  border-radius: 24px;
+  padding: 28px 26px 22px;
+  background: radial-gradient(circle at top, rgba(99, 102, 241, 0.2), rgba(2, 6, 23, 0.96));
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 25px 65px rgba(8, 9, 30, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  overflow: hidden;
+}
+
+.manualAccessModal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.35), rgba(79, 70, 229, 0.4));
+  mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.manualAccessTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  color: #ede9fe;
+  letter-spacing: 0.4px;
+  text-shadow: 0 0 20px rgba(167, 139, 250, 0.45);
+}
+
+.manualAccessBody {
+  font-size: 15px;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.95);
+  margin-bottom: 20px;
+}
+
+.manualAccessBody p {
+  margin: 0 0 10px;
+}
+
+.manualAccessBody p:last-of-type {
+  margin-bottom: 0;
+}
+
+.manualAccessActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.manualAccessButton,
+.manualAccessGhostButton {
+  height: 46px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.manualAccessButton {
+  border: none;
+  background: linear-gradient(120deg, #c084fc, #7c3aed);
+  color: #fff;
+  box-shadow: 0 18px 35px rgba(124, 58, 237, 0.45);
+}
+
+.manualAccessButton:hover {
+  transform: translateY(-1px);
+}
+
+.manualAccessGhostButton {
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  background: transparent;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.manualAccessGhostButton:hover {
+  border-color: rgba(226, 232, 240, 0.7);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.manualAccessGhostButton:active,
+.manualAccessButton:active {
+  transform: translateY(0);
+}
+
 .topRightTooltip {
   position: absolute;
   top: 16px;
@@ -326,6 +434,16 @@
     padding: 16px; /* Reduce padding on small screens */
   }
 
+  .manualAccessOverlay {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .manualAccessModal {
+    width: 100%;
+    padding: 24px 20px 18px;
+  }
+
   .modeToggle {
     padding: 8px 16px;
     font-size: 14px;
@@ -373,4 +491,15 @@
   line-height: 1;
   cursor: pointer;
   padding: 4px;
+}
+
+@keyframes manualPromptFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

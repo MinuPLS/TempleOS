@@ -49,6 +49,55 @@ interface UiState {
   exceedsBalance: boolean
 }
 
+const MANUAL_ACCESS_DISMISS_KEY = 'templeos-manual-access-dismissed'
+
+interface ManualAccessPromptProps {
+  isOpen: boolean
+  onClose: () => void
+  onDisable: () => void
+}
+
+const ManualAccessPrompt = memo(function ManualAccessPrompt({
+  isOpen,
+  onClose,
+  onDisable,
+}: ManualAccessPromptProps) {
+  if (!isOpen) return null
+
+  return (
+    <div
+      className={styles.manualAccessOverlay}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="manual-access-title"
+      aria-describedby="manual-access-body"
+    >
+      <div
+        className={styles.manualAccessModal}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h4 id="manual-access-title" className={styles.manualAccessTitle}>
+          Manual Compiler Access
+        </h4>
+        <div id="manual-access-body" className={styles.manualAccessBody}>
+          <p>This tool is for advanced users who want to manually convert between HolyC and JIT &amp; are well aware of the burn fee.</p>
+          <p><strong>Most users should simply hold HolyC.</strong></p>
+          <p>While the Divine Manager handles these complex arbitrage loops automatically for the benefit of the protocol, the system remains fully decentralized and permissionless.</p>
+        </div>
+        <div className={styles.manualAccessActions}>
+          <button type="button" className={styles.manualAccessButton} onClick={onClose}>
+            Understood!
+          </button>
+          <button type="button" className={styles.manualAccessGhostButton} onClick={onDisable}>
+            Do not show again
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+})
+
 function compilerReducer(state: CompilerState, action: Partial<CompilerState>): CompilerState {
   return { ...state, ...action }
 }
@@ -72,12 +121,29 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const [state, dispatch] = useReducer(compilerReducer, initialState)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [isManualAccessPromptOpen, setIsManualAccessPromptOpen] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 600)
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const permanentlyDismissed = window.localStorage.getItem(MANUAL_ACCESS_DISMISS_KEY) === 'true'
+
+    if (permanentlyDismissed) {
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setIsManualAccessPromptOpen(true)
+    }, 600)
+
+    return () => window.clearTimeout(timer)
   }, [])
 
   // Custom hooks with optimized contract fetching
@@ -210,6 +276,17 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
     dispatch({ amount: newAmount })
   }, [])
 
+  const handleManualPromptClose = useCallback(() => {
+    setIsManualAccessPromptOpen(false)
+  }, [])
+
+  const handleManualPromptDisable = useCallback(() => {
+    setIsManualAccessPromptOpen(false)
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(MANUAL_ACCESS_DISMISS_KEY, 'true')
+    }
+  }, [])
+
   const handleApprove = useCallback(async () => {
     if (!state.amount) return
     try {
@@ -304,6 +381,11 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
         }
       }}
     >
+      <ManualAccessPrompt
+        isOpen={isManualAccessPromptOpen}
+        onClose={handleManualPromptClose}
+        onDisable={handleManualPromptDisable}
+      />
       <CompilerHeader
         state={state}
         onModeChange={handleModeChange}
