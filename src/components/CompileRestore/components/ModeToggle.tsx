@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react'
+import { memo, useCallback } from 'react'
 import { ANIMATION_DURATION } from '../utils/constants'
 import styles from '../styles/interface.module.css'
 

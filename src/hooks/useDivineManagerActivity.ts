@@ -102,7 +102,7 @@ export const useDivineManagerActivity = () => {
       const fromBlock = latestBlock > LOG_LOOKBACK_BLOCKS ? latestBlock - LOG_LOOKBACK_BLOCKS : 0n
       const divineAddress = DIVINE_MANAGER_ADDRESS.toLowerCase()
 
-      const logs = await publicClient.getLogs({
+      const logs = await publicClient.getContractEvents({
         address: DIVINE_MANAGER_ADDRESS,
         abi: DIVINE_MANAGER_ABI,
         eventName: 'TicketExecuted',
@@ -295,12 +295,8 @@ export const useDivineManagerActivity = () => {
             transactionHash: log.transactionHash,
             blockNumber,
             timestamp: Number(block.timestamp) * 1000,
-            strategyId: log.args?.strategyId
-              ? (log.args.strategyId as `0x${string}`).toString()
-              : '0x',
-            jobNonce: log.args?.jobNonce
-              ? (log.args.jobNonce as `0x${string}`).toString()
-              : '0x',
+            strategyId: log.args?.strategyId ? (log.args.strategyId as `0x${string}`) : '0x',
+            jobNonce: log.args?.jobNonce ? (log.args.jobNonce as `0x${string}`) : '0x',
             holyBurned,
             jitBurned,
             holyIn,

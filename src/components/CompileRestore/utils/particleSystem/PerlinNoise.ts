@@ -8,7 +8,7 @@ export class PerlinNoise {
 
   private initializePermutation(seed: number): void {
     // Create permutation table
-    const perm = [];
+    const perm: number[] = [];
     for (let i = 0; i < 256; i++) {
       perm[i] = i;
     }
@@ -18,7 +18,7 @@ export class PerlinNoise {
     while (n > 1) {
       n--;
       const k = Math.floor(this.seededRandom(seed + n) * (n + 1));
-      const temp = perm[n];
+      const temp: number = perm[n];
       perm[n] = perm[k];
       perm[k] = temp;
     }

@@ -83,7 +83,9 @@ export function useCalculations({
       // Limit cache size to prevent memory leaks
       if (cacheRef.current.size > 100) {
         const firstKey = cacheRef.current.keys().next().value
-        cacheRef.current.delete(firstKey)
+        if (typeof firstKey === 'string') {
+          cacheRef.current.delete(firstKey)
+        }
       }
       
       cacheRef.current.set(cacheKey, result)

@@ -1,16 +1,16 @@
-import React, { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, ReactNode, ChangeEvent, MouseEvent } from 'react'
 import { formatEther } from 'viem'
 import { formatBalance, formatFullAmount, handleNumberInput } from '../utils/formatting'
 import inputStyles from '../styles/integratedInput.module.css'
 
 interface UiState {
-  inputFocused: boolean;
-  expandedTransactionRow: number | null;
-  userInteracted: boolean;
-  selectedPercentage: number | null;
-  percentageDropdownOpen: boolean;
-  isInfoExpanded: boolean;
-  exceedsBalance: boolean;
+  inputFocused: boolean
+  expandedTransactionRow: string | null
+  userInteracted: boolean
+  selectedPercentage: number | null
+  percentageDropdownOpen: boolean
+  isInfoExpanded: boolean
+  exceedsBalance: boolean
 }
 
 interface DisplayValues {
@@ -40,7 +40,7 @@ interface TokenInputFormProps {
   shouldShowDetails: boolean;
   isConnected: boolean;
   isCompileMode: boolean;
-  dollarValueTooltip?: React.ReactNode;
+  dollarValueTooltip?: ReactNode;
 }
 
 export const TokenInputForm = memo<TokenInputFormProps>(({
@@ -59,7 +59,7 @@ export const TokenInputForm = memo<TokenInputFormProps>(({
   dollarValueTooltip
 }) => {
   // Input handler for amount. The resulting calculations are debounced.
-  const optimizedInputHandler = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const optimizedInputHandler = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const cleanValue = handleNumberInput(e.target.value)
     onAmountChange(cleanValue)
     onUiStateChange({ 
@@ -92,7 +92,7 @@ export const TokenInputForm = memo<TokenInputFormProps>(({
     })
   }, [onUiStateChange])
 
-  const toggleTransactionRow = useCallback((e: React.MouseEvent) => {
+  const toggleTransactionRow = useCallback((e: MouseEvent) => {
     e.stopPropagation()
     
     // Mark as user interaction to keep UI open

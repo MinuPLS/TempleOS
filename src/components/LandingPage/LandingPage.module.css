@@ -1217,15 +1217,31 @@
   flex-direction: column;
   gap: 12px;
   cursor: default;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
 }
 
 .txRowInteractive {
   cursor: pointer;
+  user-select: none;
+}
+
+.txRowInteractive:hover {
+  border-color: rgba(148, 163, 184, 0.25);
 }
 
 .txRowInteractive:focus-visible {
   outline: 2px solid rgba(147, 197, 253, 0.7);
   outline-offset: 3px;
+}
+
+.txRowExpanded {
+  border-color: rgba(148, 163, 184, 0.35);
+  background: rgba(15, 22, 40, 0.72);
+  box-shadow: 0 15px 36px rgba(2, 6, 23, 0.6);
 }
 
 .txRowHeader {
@@ -1249,9 +1265,56 @@
 .txRowHeaderMeta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.txRowMetaGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.txRowTime {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.txRowToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(2, 6, 23, 0.35);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.txRowToggle:hover {
+  border-color: rgba(148, 163, 184, 0.35);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 23, 42, 0.65);
+}
+
+.txRowToggle span {
+  line-height: 1;
+}
+
+.txRowToggleIcon {
+  transition: transform 0.25s ease;
+}
+
+.txRowToggleIconOpen {
+  transform: rotate(180deg);
 }
 
 .valueRow {
@@ -1419,22 +1482,22 @@
   width: 100%;
 }
 
-.mobileTooltip {
-  margin-bottom: 8px;
-  padding: 0 4px 4px;
+.txDetailsPanel {
+  margin: 0 0 6px;
+  padding: 0 2px;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
   transition:
-    max-height 400ms cubic-bezier(0.17, 0.84, 0.44, 1),
-    opacity 250ms ease,
+    max-height 420ms cubic-bezier(0.17, 0.84, 0.44, 1),
+    opacity 260ms ease,
     transform 320ms cubic-bezier(0.17, 0.84, 0.44, 1);
 }
 
-.mobileTooltipExpanded {
-  max-height: 1200px;
+.txDetailsPanelExpanded {
+  max-height: 1400px;
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
@@ -1594,6 +1657,11 @@
 
 .txTotalsBox {
   width: 100%;
+}
+
+.inlineSummaryCard {
+  background: rgba(8, 12, 30, 0.7);
+  border-radius: 16px;
 }
 
 .txFlowNet {

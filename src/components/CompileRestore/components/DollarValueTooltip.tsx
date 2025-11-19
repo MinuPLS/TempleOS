@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo, ReactNode } from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import Tooltip from '../../Tooltip/Tooltip'
 import { formatCurrency } from '../../../lib/utils'
@@ -17,7 +17,7 @@ interface DollarValueTooltipProps {
   className?: string
 }
 
-export const DollarValueTooltip: React.FC<DollarValueTooltipProps> = ({
+export const DollarValueTooltip = ({
   inputValue,
   outputValue,
   feeValue,
@@ -25,12 +25,12 @@ export const DollarValueTooltip: React.FC<DollarValueTooltipProps> = ({
   gainLossPercent,
   isGain,
   isLoss,
-  _isNeutral,
+  isNeutral: _isNeutral,
   isCompileMode,
   className = ''
-}) => {
+}: DollarValueTooltipProps) => {
   const { icon, colorClass, sign, tooltipContent } = useMemo(() => {
-    let icon: React.ReactNode
+    let icon: ReactNode
     let colorClass: string
     let sign: string
 

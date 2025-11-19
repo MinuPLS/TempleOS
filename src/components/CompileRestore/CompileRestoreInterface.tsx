@@ -40,13 +40,13 @@ const initialState: CompilerState = {
 }
 
 interface UiState {
-  inputFocused: boolean;
-  expandedTransactionRow: number | null;
-  userInteracted: boolean;
-  selectedPercentage: number | null;
-  percentageDropdownOpen: boolean;
-  isInfoExpanded: boolean;
-  exceedsBalance: boolean;
+  inputFocused: boolean
+  expandedTransactionRow: string | null
+  userInteracted: boolean
+  selectedPercentage: number | null
+  percentageDropdownOpen: boolean
+  isInfoExpanded: boolean
+  exceedsBalance: boolean
 }
 
 function compilerReducer(state: CompilerState, action: Partial<CompilerState>): CompilerState {
@@ -132,7 +132,14 @@ export const CompileRestoreInterface = memo(function CompileRestoreInterface() {
   const targetToken = useMemo(() => state.isCompileMode ? 'JIT' : 'HolyC', [state.isCompileMode])
   const currentBalance = useMemo(() => state.isCompileMode ? holyCBalance : jitBalance, [state.isCompileMode, holyCBalance, jitBalance])
   const hasAmount = useMemo(() => isValidAmount(debouncedAmount), [debouncedAmount])
-  const shouldShowDetails = useMemo(() => hasAmount || uiState.inputFocused || uiState.expandedTransactionRow || uiState.userInteracted, [hasAmount, uiState.inputFocused, uiState.expandedTransactionRow, uiState.userInteracted])
+  const shouldShowDetails = useMemo(
+    () =>
+      hasAmount ||
+      uiState.inputFocused ||
+      Boolean(uiState.expandedTransactionRow) ||
+      uiState.userInteracted,
+    [hasAmount, uiState.inputFocused, uiState.expandedTransactionRow, uiState.userInteracted]
+  )
   
   // Check approval needs - derived value
   const needsApproval = useMemo(() => {

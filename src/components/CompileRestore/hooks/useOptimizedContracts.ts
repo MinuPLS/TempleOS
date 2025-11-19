@@ -8,7 +8,7 @@ export function useOptimizedContracts(address?: `0x${string}`) {
       abi: HOLYC_ABI,
       address: HOLY_C_ADDRESS,
       functionName: 'allowance',
-      args: address ? [address, JIT_ADDRESS] : undefined,
+      args: address ? ([address, JIT_ADDRESS] as const) : undefined,
     },
     {
       abi: JIT_ABI,
@@ -24,7 +24,7 @@ export function useOptimizedContracts(address?: `0x${string}`) {
       abi: JIT_ABI,
       address: JIT_ADDRESS,
       functionName: 'feeExempt',
-      args: address ? [address] : undefined,
+      args: address ? ([address] as const) : undefined,
     },
   ] as const
 

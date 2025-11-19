@@ -3,7 +3,7 @@
  */
 
 // Debounce function with immediate execution option for better UX
-export function debounceWithImmediate<T extends (...args: unknown[]) => void>(
+export function debounceWithImmediate<T extends (...args: any[]) => void>(
   func: T,
   wait: number,
   immediate = false
@@ -36,7 +36,7 @@ export function debounceWithImmediate<T extends (...args: unknown[]) => void>(
 }
 
 // Throttle function that ensures execution at regular intervals
-export function throttle<T extends (...args: unknown[]) => void>(
+export function throttle<T extends (...args: any[]) => void>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {

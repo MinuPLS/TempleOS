@@ -1,8 +1,8 @@
 import { PathPoint } from './types';
 
 export class PathSystem {
-  private controlPoints: PathPoint[] = [];
-  private pathLength: number = 0;
+  private _controlPoints: PathPoint[] = []
+  private _pathLength = 0
   
   constructor() {
     this.initializePath();
@@ -10,7 +10,7 @@ export class PathSystem {
 
   private initializePath(): void {
     // Define bezier curve control points from HolyC to JIT token
-    this.controlPoints = [
+    this._controlPoints = [
       { x: -175, y: 0, tangentX: -50, tangentY: 0 },     // Start point (HolyC position)
       { x: -87.5, y: 0, tangentX: 0, tangentY: -30 },    // Control point 1
       { x: 0, y: 0, tangentX: 0, tangentY: 0 },          // Center transformation zone
@@ -36,17 +36,16 @@ export class PathSystem {
       prevPoint = point;
     }
     
-    this.pathLength = length;
+    this._pathLength = length;
   }
 
   public getPointOnPath(t: number): { x: number; y: number } {
     // Clamp t between 0 and 1
     t = Math.max(0, Math.min(1, t));
     
-    // For now, using a simple cubic bezier curve
-    // This can be expanded to use the full control point system
-    const x = this.cubicBezier(t, -175, -87.5, 87.5, 175);
-    const y = this.cubicBezier(t, 0, -20, 20, 0);
+    const [start, control1, center, control2, end] = this._controlPoints
+    const x = this.cubicBezier(t, start.x, control1.x, control2.x, end.x)
+    const y = this.cubicBezier(t, start.y, center.y, control2.y, end.y)
     
     return { x, y };
   }
@@ -118,5 +117,9 @@ export class PathSystem {
       x: dx / length,
       y: dy / length
     };
+  }
+
+  public getPathLength(): number {
+    return this._pathLength
   }
 }

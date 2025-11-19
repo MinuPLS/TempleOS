@@ -13,11 +13,7 @@ interface EthereumProvider {
   providers?: EthereumProvider[]
 }
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider
-  }
-}
+type WindowWithEthereum = Window & { ethereum?: EthereumProvider }
 
 // Check if MetaMask is available and handle conflicts
 export function configureMetaMask() {
@@ -25,7 +21,7 @@ export function configureMetaMask() {
 
   // Detect if multiple wallet extensions are present
   const hasMultipleWallets = () => {
-    const ethereum = window.ethereum
+    const ethereum = (window as WindowWithEthereum).ethereum
     if (!ethereum) return false
     
     // Check for common wallet extension properties
@@ -46,12 +42,12 @@ export function configureMetaMask() {
     console.warn('[TempleOS] Multiple wallet extensions detected. Using primary Ethereum provider.')
     
     // Try to select MetaMask specifically if available
-    const ethereum = window.ethereum
+    const ethereum = (window as WindowWithEthereum).ethereum
     if (ethereum?.providers?.length && ethereum.providers.length > 0) {
-      const metamaskProvider = ethereum.providers.find((p) => p.isMetaMask)
+      const metamaskProvider = ethereum.providers.find((p: EthereumProvider) => Boolean(p.isMetaMask))
       if (metamaskProvider) {
         // Use MetaMask provider specifically
-        window.ethereum = metamaskProvider
+        ;(window as WindowWithEthereum).ethereum = metamaskProvider
       }
     }
   }

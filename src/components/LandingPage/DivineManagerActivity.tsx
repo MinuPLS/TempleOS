@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
-import { Tooltip } from '../Tooltip'
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
 import type {
   DivineManagerExecution,
   DivineManagerStep,
@@ -246,8 +245,8 @@ const TxFlowTooltip = ({
         </div>
       </div>
 
-      {!inline && summary && (
-        <div className={`${styles.txTotalsBox} ${styles.tooltipCard}`}>
+      {summary && (
+        <div className={`${styles.txTotalsBox} ${styles.tooltipCard} ${inline ? styles.inlineSummaryCard : ''}`}>
           <div className={styles.txFlowNet}>
             <div>
               <p>Net HolyC</p>
@@ -290,7 +289,6 @@ export const DivineManagerActivity = ({
   tokenPrices,
 }: DivineManagerActivityProps) => {
   const [page, setPage] = useState(1)
-  const [isCompact, setIsCompact] = useState(false)
   const [expandedTx, setExpandedTx] = useState<string | null>(null)
   const { compileRestoreFee, transferFee } = useProtocolFees()
 
@@ -313,21 +311,7 @@ export const DivineManagerActivity = ({
   const compileFeePercent = `${(Number(compileRestoreFee) / 1000).toFixed(1)}%`
   const transferFeePercent = `${(Number(transferFee) / 1000).toFixed(1)}%`
 
-  useEffect(() => {
-    const handleResize = () => {
-      const compact = window.innerWidth <= 900
-      setIsCompact(compact)
-      if (!compact) {
-        setExpandedTx(null)
-      }
-    }
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
   const handleRowToggle = (hash: string) => {
-    if (!isCompact) return
     setExpandedTx((prev) => (prev === hash ? null : hash))
   }
 
@@ -385,24 +369,30 @@ export const DivineManagerActivity = ({
           const jitBurnValue = Number(formatUnits(tx.jitBurned, 18)) * tokenPrices.jitUSD
           const netBurnUsd = usdFormatter.format(Math.abs(holyBurnValue + jitBurnValue))
 
+          const summary = {
+            netHoly: formatSigned(netHoly, 'HOLYC'),
+            netJit: formatSigned(netJit, 'JIT'),
+            netBurnUsd,
+            netProfitUsd: usdValue,
+          }
           const expanded = expandedTx === tx.transactionHash
-          const txRow = (
+          const detailId = `tx-details-${tx.transactionHash}`
+
+          return (
             <div
               key={tx.transactionHash}
-              className={`${styles.txRow} ${isCompact ? styles.txRowInteractive : ''}`}
+              className={`${styles.txRow} ${styles.txRowInteractive} ${expanded ? styles.txRowExpanded : ''}`}
               onClick={() => handleRowToggle(tx.transactionHash)}
-              role={isCompact ? 'button' : undefined}
-              tabIndex={isCompact ? 0 : -1}
-              onKeyDown={
-                isCompact
-                  ? (event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        handleRowToggle(tx.transactionHash)
-                      }
-                    }
-                  : undefined
-              }
+              role="button"
+              tabIndex={0}
+              aria-expanded={expanded}
+              aria-controls={detailId}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleRowToggle(tx.transactionHash)
+                }
+              }}
             >
               <div className={styles.txRowHeader}>
                 <div className={styles.txRowMain}>
@@ -410,36 +400,46 @@ export const DivineManagerActivity = ({
                   <span>{shortenHex(tx.transactionHash, 6)}</span>
                 </div>
                 <div className={styles.txRowHeaderMeta}>
-                  <span className={styles.txRowTime}>{formatRelativeTime(tx.timestamp)}</span>
-                  <a
-                    href={`${explorerBase}/tx/${tx.transactionHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={styles.txRowLink}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Otterscan <ExternalLink size={13} />
-                  </a>
+                  <div className={styles.txRowMetaGroup}>
+                    <span className={styles.txRowTime}>{formatRelativeTime(tx.timestamp)}</span>
+                    <a
+                      href={`${explorerBase}/tx/${tx.transactionHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.txRowLink}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Otterscan <ExternalLink size={13} />
+                    </a>
+                  </div>
+                  <div className={styles.txRowToggle}>
+                    <span>{expanded ? 'Hide route' : 'Show route'}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`${styles.txRowToggleIcon} ${expanded ? styles.txRowToggleIconOpen : ''}`}
+                      aria-hidden="true"
+                    />
+                  </div>
                 </div>
               </div>
-              {isCompact && (
-                <div
-                  className={`${styles.mobileTooltip} ${expanded ? styles.mobileTooltipExpanded : ''}`}
-                  aria-hidden={!expanded}
-                >
-                  <TxFlowTooltip
-                    steps={displaySteps}
-                    feeBreakdown={feeBreakdown}
-                    compileFeeLabel={compileFeePercent}
-                    transferFeeLabel={transferFeePercent}
-                    burnStats={{
-                      holyc: formatAmount(tx.holyBurned),
-                      jit: formatAmount(tx.jitBurned),
-                    }}
-                    inline
-                  />
-                </div>
-              )}
+              <div
+                id={detailId}
+                className={`${styles.txDetailsPanel} ${expanded ? styles.txDetailsPanelExpanded : ''}`}
+                aria-hidden={!expanded}
+              >
+                <TxFlowTooltip
+                  steps={displaySteps}
+                  feeBreakdown={feeBreakdown}
+                  compileFeeLabel={compileFeePercent}
+                  transferFeeLabel={transferFeePercent}
+                  summary={summary}
+                  burnStats={{
+                    holyc: formatAmount(tx.holyBurned),
+                    jit: formatAmount(tx.jitBurned),
+                  }}
+                  inline
+                />
+              </div>
 
               <div className={styles.valueRow}>
                 <div className={styles.valueCard}>
@@ -469,37 +469,6 @@ export const DivineManagerActivity = ({
                 </div>
               </div>
             </div>
-          )
-
-          if (isCompact) {
-            return txRow
-          }
-
-          return (
-            <Tooltip
-              key={tx.transactionHash}
-              content={
-                <TxFlowTooltip
-                  steps={displaySteps}
-                  feeBreakdown={feeBreakdown}
-                  compileFeeLabel={compileFeePercent}
-                  transferFeeLabel={transferFeePercent}
-                  summary={{
-                    netHoly: formatSigned(netHoly, 'HOLYC'),
-                    netJit: formatSigned(netJit, 'JIT'),
-                    netBurnUsd,
-                    netProfitUsd: usdValue,
-                  }}
-                  burnStats={{
-                    holyc: formatAmount(tx.holyBurned),
-                    jit: formatAmount(tx.jitBurned),
-                  }}
-                />
-              }
-              trigger="hover"
-            >
-              {txRow}
-            </Tooltip>
           )
         })}
       </div>
