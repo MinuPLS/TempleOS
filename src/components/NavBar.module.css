@@ -248,7 +248,20 @@
   z-index: 1;
 }
 
-.walletConnectWrapper button {
+.walletConnectWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.walletConnectWrapper :global(.wallet-connect-wrapper) {
+  display: flex;
+  justify-content: flex-end;
+  width: auto;
+}
+
+.walletConnectWrapper :global(.wallet-connect-wrapper button) {
   white-space: nowrap;
 }
 
@@ -392,6 +405,56 @@
   .guidesMenu {
     right: 0;
     left: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .navbar {
+    padding: 10px 12px 14px;
+    height: auto;
+    align-items: flex-start;
+  }
+
+  .navbarContent {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .titleContainer {
+    flex: 1 1 220px;
+  }
+
+  .navbarRight {
+    flex: 1 1 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .navbarRight > * {
+    flex: 0 0 auto;
+  }
+
+  .navRouteButton,
+  .guideButton {
+    padding: 8px 16px;
+    font-size: 14px;
+    width: auto;
+  }
+
+  .walletConnectWrapper {
+    margin-left: auto;
+  }
+
+  .walletConnectWrapper :global(.wallet-connect-wrapper),
+  .walletConnectWrapper :global(.wallet-connect-wrapper button) {
+    width: auto;
+  }
+
+  .walletConnectWrapper :global(.wallet-connect-wrapper button) {
+    justify-content: center;
   }
 }
 

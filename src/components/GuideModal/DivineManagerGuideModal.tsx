@@ -55,32 +55,38 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
 
         <div className={styles.modalBody}>
           <div className={styles.intro}>
-            <h3 className={styles.introTitle}>Divine Manager: automated arb for HolyC</h3>
+            <h3 className={styles.introTitle}>
+              Divine Manager: automated arb for <span className={styles.tooltipIndigo}>HolyC</span>
+            </h3>
             <p className={styles.introText}>
-              When I shipped the Divine Compiler, the idea was simple: use a second token (
-              <strong className={styles.tooltipAmber}>JIT</strong>) to make a non-burning{' '}
+              When I shipped the <strong className={styles.tooltipBlue}>Divine Compiler</strong>, the idea was simple:
+              use a second token (<strong className={styles.tooltipAmber}>JIT</strong>) to make a non-burning{' '}
               <strong className={styles.tooltipIndigo}>HolyC</strong> coin actually deflationary. The trade-off? Someone
               still had to run the loop manually — watch the pools, calculate the spread, compile / restore, then click
               through the trades.
             </p>
             <p className={styles.introText}>
-              The Divine Manager is the “I’ll do it for you” layer on top of that design. It watches HolyC ↔ JIT ↔
-              Compiler flows, waits for clean price gaps, and only steps in when every fee, burn, and gas check is
-              cleared.
+              The Divine Manager is the “I’ll do it for you” layer on top of that design. It watches{' '}
+              <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span> ↔{' '}
+              <strong className={styles.tooltipBlue}>Compiler</strong> flows, waits for clean price gaps, and only steps
+              in when every fee, burn, and gas check is cleared.
             </p>
             <p className={styles.introText}>
               When it fires, it runs the entire cycle on-chain: captures the spread, converts owed fees into extra{' '}
               <strong className={styles.tooltipIndigo}>HolyC</strong>, sends the burn, and stacks profit as protocol
-              treasury. You don’t need to touch <strong className={styles.tooltipAmber}>JIT</strong>, the Compiler, or
-              the routes — you simply hold or trade HolyC like a normal 0% tax coin while the engine quietly harvests
-              the depeg.
+              treasury. You don’t need to touch <strong className={styles.tooltipAmber}>JIT</strong>, the{' '}
+              <strong className={styles.tooltipBlue}>Compiler</strong>, or the routes — you simply hold or trade{' '}
+              <strong className={styles.tooltipIndigo}>HolyC</strong> like a normal 0% tax coin while the engine quietly
+              harvests the depeg.
             </p>
           </div>
 
           <Section title="1. What the Divine Manager actually does" icon={<Sparkles size={20} />}>
             <p>
-              The Divine Manager is a smart contract that lives on top of the HolyC ↔ JIT ↔ Compiler triangle and turns
-              volatility into protocol-owned value. When the route is safe, it:
+              The Divine Manager is a smart contract that lives on top of the{' '}
+              <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span> ↔{' '}
+              <strong className={styles.tooltipBlue}>Compiler</strong> triangle and turns volatility into protocol-owned
+              value. When the route is safe, it:
             </p>
             <div className={styles.stepList}>
               <div className={styles.step}>
@@ -92,38 +98,54 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>2</div>
-                <span>Pays every owed compile / restore / transfer fee in HolyC at the end of the loop.</span>
+                <span>
+                  Pays every owed compile / restore / transfer fee in{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span> at the end of the loop.
+                </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>3</div>
-                <span>Burns that HolyC and sends the remainder to the protocol vault.</span>
+                <span>
+                  Burns that <span className={styles.tooltipIndigo}>HolyC</span> and sends the remainder to the protocol
+                  vault.
+                </span>
               </div>
             </div>
             <p>
-              It doesn’t hold funds in advance, it doesn’t need a manual confirmation, and it doesn’t change HolyC’s 0%
-              tax. It simply monetizes the volatility that already exists between:
+              It doesn’t hold funds in advance, it doesn’t need a manual confirmation, and it doesn’t change{' '}
+              <span className={styles.tooltipIndigo}>HolyC</span>’s 0% tax. It simply monetizes the volatility that
+              already exists between:
             </p>
             <ul>
-              <li>HolyC / WPLS</li>
-              <li>JIT / WPLS</li>
-              <li>HolyC / JIT</li>
-              <li>The fixed Divine Compiler rate</li>
+              <li>
+                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipPurple}>WPLS</span>
+              </li>
+              <li>
+                <span className={styles.tooltipAmber}>JIT</span> / <span className={styles.tooltipPurple}>WPLS</span>
+              </li>
+              <li>
+                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipAmber}>JIT</span>
+              </li>
+              <li>The fixed <strong className={styles.tooltipBlue}>Divine Compiler</strong> rate</li>
             </ul>
           </Section>
 
           <Section title="2. Why there is an opportunity at all" icon={<Activity size={20} />}>
             <p>
-              The system is built around two different “views” of price: the market price inside PulseX pools and the
-              compiler price that stays fixed at 1:1 (minus 4% compile / 4% restore) no matter what. Because{' '}
-              <strong className={styles.tooltipAmber}>JIT</strong> burns 2% on every transfer and each token has its own
-              WPLS pool, the two drift apart while the Compiler stubbornly sits in the middle. That gap is where the{' '}
-              <span className={styles.tooltipGreen}>profit</span> and <span className={styles.tooltipRed}>burns</span>{' '}
+              The system is built around two different “views” of price: the market price inside{' '}
+              <span className={styles.tooltipPurple}>PulseX</span> pools and the compiler price that stays fixed at 1:1
+              (minus 4% compile / 4% restore) no matter what. Because{' '}
+              <strong className={styles.tooltipAmber}>JIT</strong> burns 2% on every transfer and each token has its own{' '}
+              <span className={styles.tooltipPurple}>WPLS</span> pool, the two drift apart while the{' '}
+              <strong className={styles.tooltipBlue}>Compiler</strong> stubbornly sits in the middle. That gap is where
+              the <span className={styles.tooltipGreen}>profit</span> and <span className={styles.tooltipRed}>burns</span>{' '}
               come from.
             </p>
             <p>
-              Originally, you could do it manually: buy the cheap pool, use the Compiler to bypass AMM pricing, then sell
-              into the rich pool and pocket the difference. It works — but it’s work. Timing, gas, slippage, fees…it was
-              easy to mess up.
+              Originally, you could do it manually: buy the cheap pool, use the{' '}
+              <strong className={styles.tooltipBlue}>Compiler</strong> to bypass AMM pricing, then sell into the rich
+              pool and pocket the difference. It works — but it’s work. Timing, gas, slippage, fees…it was easy to mess
+              up.
             </p>
             <div className={styles.stepList}>
               <div className={styles.step}>
@@ -132,7 +154,9 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>2</div>
-                <span>Compile / restore at the fixed rate to flip the discount.</span>
+                <span>
+                  <span className={styles.tooltipBlue}>Compile / restore</span> at the fixed rate to flip the discount.
+                </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>3</div>
@@ -149,20 +173,29 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
             </p>
             <p>It continuously simulates routes across:</p>
             <ul>
-              <li>HolyC / WPLS</li>
-              <li>JIT / WPLS</li>
-              <li>HolyC / JIT</li>
-              <li>The Divine Compiler (compile + restore)</li>
+              <li>
+                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipPurple}>WPLS</span>
+              </li>
+              <li>
+                <span className={styles.tooltipAmber}>JIT</span> / <span className={styles.tooltipPurple}>WPLS</span>
+              </li>
+              <li>
+                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipAmber}>JIT</span>
+              </li>
+              <li>
+                The <strong className={styles.tooltipBlue}>Divine Compiler</strong> (compile + restore)
+              </li>
             </ul>
             <p>For each candidate loop it includes:</p>
             <ul>
               <li>4% compile + 4% restore</li>
-              <li>Every 2% JIT transfer burn in the route</li>
+              <li>Every 2% <span className={styles.tooltipAmber}>JIT</span> transfer burn in the route</li>
               <li>Slippage and gas using live reserves</li>
             </ul>
             <p>
-              If net HolyC + net JIT is still positive after all that, the Guardian greenlights the transaction and
-              calls the Divine Manager.
+              If net <span className={styles.tooltipIndigo}>HolyC</span> + net{' '}
+              <span className={styles.tooltipAmber}>JIT</span> is still positive after all that, the Guardian greenlights
+              the transaction and calls the Divine Manager.
             </p>
             <div className={styles.insightBox}>
               <Bot size={16} />
@@ -179,8 +212,9 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               <div className={styles.step}>
                 <div className={styles.stepNumber}>1</div>
                 <span>
-                  Runs the multi-leg swap fee-exempt: buy the cheap pool, bridge via HolyC ↔ JIT or the Compiler, then
-                  sell into the richer pool.
+                  Runs the multi-leg swap fee-exempt: buy the cheap pool, bridge via{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span>{' '}
+                  or the <strong className={styles.tooltipBlue}>Compiler</strong>, then sell into the richer pool.
                 </span>
               </div>
               <div className={styles.step}>
@@ -190,15 +224,22 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               <div className={styles.step}>
                 <div className={styles.stepNumber}>3</div>
                 <span>
-                  Restores the owed JIT into HolyC, sends that HolyC to the burn, and ships the remaining HolyC profit to
-                  the vault.
+                  Restores the owed <span className={styles.tooltipAmber}>JIT</span> into{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span>, sends that{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span> to the burn, and ships the remaining{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span> profit to the vault.
                 </span>
               </div>
             </div>
             <div className={styles.tokenGrid}>
               <div className={`${styles.tokenCard} ${styles.holycCard}`}>
-                <h5 className={styles.tokenTitle}>Circulating HolyC</h5>
-                <p className={styles.tokenDesc}>Burned directly plus indirectly locked through compiler backing.</p>
+                <h5 className={styles.tokenTitle}>
+                  Circulating <span className={styles.tooltipIndigo}>HolyC</span>
+                </h5>
+                <p className={styles.tokenDesc}>
+                  Burned directly plus indirectly locked through <strong className={styles.tooltipBlue}>Compiler</strong>{' '}
+                  backing.
+                </p>
                 <div className={styles.tokenStat}>
                   <span>Result</span>
                   <strong>- supply</strong>
@@ -210,10 +251,14 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               </div>
               <div className={`${styles.tokenCard} ${styles.jitCard}`}>
                 <h5 className={styles.tokenTitle}>Protocol vault</h5>
-                <p className={styles.tokenDesc}>Keeps the HolyC profit as protocol-owned collateral.</p>
+                <p className={styles.tokenDesc}>
+                  Keeps the <span className={styles.tooltipIndigo}>HolyC</span> profit as protocol-owned collateral.
+                </p>
                 <div className={styles.tokenStat}>
                   <span>Result</span>
-                  <strong>+ HolyC</strong>
+                  <strong>
+                    + <span className={styles.tooltipIndigo}>HolyC</span>
+                  </strong>
                 </div>
                 <div className={styles.tokenStat}>
                   <span>Usage</span>
@@ -231,16 +276,18 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
             <p>MEV bots see the same transaction, but they don’t get the same economics.</p>
             <ul>
               <li>
-                <strong>Fee exemption:</strong> The Divine Manager is whitelisted and runs fee-exempt. Copycats pay JIT
-                tax and slippage in real time.
+                <strong>Fee exemption:</strong> The Divine Manager is whitelisted and runs fee-exempt. Copycats pay{' '}
+                <span className={styles.tooltipAmber}>JIT</span> tax and slippage in real time.
               </li>
               <li>
                 <strong>Pre-sized routes:</strong> The Arb Guardian already simulates the exact size that fits available
                 liquidity + gas.
               </li>
               <li>
-                <strong>Internal fee accounting:</strong> The protocol restores JIT into HolyC and burns after the loop;
-                copy bots bleed value mid-route as each transfer taxes them.
+                <strong>Internal fee accounting:</strong> The protocol restores{' '}
+                <span className={styles.tooltipAmber}>JIT</span> into{' '}
+                <span className={styles.tooltipIndigo}>HolyC</span> and burns after the loop; copy bots bleed value
+                mid-route as each transfer taxes them.
               </li>
             </ul>
             <p>They can mimic the calldata, but they can’t copy the math edge.</p>
@@ -255,47 +302,73 @@ export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = (
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>2</div>
-                <span>The Manager tallies everything that should have burned (compile + restore + JIT transfer fees).</span>
+                <span>
+                  The Manager tallies everything that should have burned (compile + restore +{' '}
+                  <span className={styles.tooltipAmber}>JIT</span> transfer fees).
+                </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>3</div>
-                <span>The corresponding JIT is restored back into extra HolyC.</span>
+                <span>
+                  The corresponding <span className={styles.tooltipAmber}>JIT</span> is restored back into extra{' '}
+                  <span className={styles.tooltipIndigo}>HolyC</span>.
+                </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>4</div>
                 <span>
-                  That HolyC is sent in a single shot to <span className={styles.tooltipRed}>0x000...0369</span>.
+                  That <span className={styles.tooltipIndigo}>HolyC</span> is sent in a single shot to{' '}
+                  <span className={styles.tooltipRed}>0x000...0369</span>.
                 </span>
               </div>
             </div>
             <div className={styles.insightBox}>
               <Flame size={16} />
               <span>
-                HolyC supply drops directly through burns and indirectly through JIT burns that trap HolyC in the
-                Compiler forever.
+                <span className={styles.tooltipIndigo}>HolyC</span> supply drops directly through burns and indirectly
+                through <span className={styles.tooltipAmber}>JIT</span> burns that trap{' '}
+                <span className={styles.tooltipIndigo}>HolyC</span> in the{' '}
+                <strong className={styles.tooltipBlue}>Compiler</strong> forever.
               </span>
             </div>
           </Section>
 
           <Section title="7. Current mode & what you do as a holder" icon={<Target size={20} />}>
             <p>
-              Mode: accumulate + burn. Each profitable arb burns part of the haul in HolyC and stacks the rest inside a
-              HolyC vault controlled by the protocol.
+              Mode: accumulate + burn. Each profitable arb burns part of the haul in{' '}
+              <span className={styles.tooltipIndigo}>HolyC</span> and stacks the rest inside a{' '}
+              <span className={styles.tooltipIndigo}>HolyC</span> vault controlled by the protocol.
             </p>
             <p>Design goals (not promises):</p>
             <ul>
-              <li>Use vault HolyC in the future for holder rewards, LP incentives, or ecosystem utilities.</li>
+              <li>
+                Use vault <span className={styles.tooltipIndigo}>HolyC</span> in the future for holder rewards, LP
+                incentives, or ecosystem utilities.
+              </li>
               <li>Keep every burn and payout transparent through the execute feed.</li>
-              <li>Grow protocol-owned HolyC as permanent backing for HolyC liquidity.</li>
+              <li>
+                Grow protocol-owned <span className={styles.tooltipIndigo}>HolyC</span> as permanent backing for{' '}
+                <span className={styles.tooltipIndigo}>HolyC</span> liquidity.
+              </li>
             </ul>
-            <p>As a HolyC holder your role is simple:</p>
+            <p>
+              As a <span className={styles.tooltipIndigo}>HolyC</span> holder your role is simple:
+            </p>
             <ul>
-              <li>HolyC stays 0% tax.</li>
-              <li>You never have to touch JIT, the Compiler, or the Manager.</li>
-              <li>You just hold or trade HolyC while the system turns volatility into a lighter float and a deeper vault.</li>
+              <li><span className={styles.tooltipIndigo}>HolyC</span> stays 0% tax.</li>
+              <li>
+                You never have to touch <span className={styles.tooltipAmber}>JIT</span>, the{' '}
+                <strong className={styles.tooltipBlue}>Compiler</strong>, or the Manager.
+              </li>
+              <li>
+                You just hold or trade <span className={styles.tooltipIndigo}>HolyC</span> while the system turns
+                volatility into a lighter float and a deeper vault.
+              </li>
             </ul>
             <p className={styles.finalThought}>
-              <strong>Hold HolyC. Let the Manager do the work.</strong>
+              <strong>
+                Hold <span className={styles.tooltipIndigo}>HolyC</span>. Let the Manager do the work.
+              </strong>
             </p>
           </Section>
         </div>

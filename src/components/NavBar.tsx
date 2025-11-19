@@ -331,7 +331,9 @@ export function NavBar() {
               )}
             </AnimatePresence>
           </div>
-          <WalletConnect />
+          <div className={styles.walletConnectWrapper}>
+            <WalletConnect />
+          </div>
         </motion.div>
       </motion.div>
 

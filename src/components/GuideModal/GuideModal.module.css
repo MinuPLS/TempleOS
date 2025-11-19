@@ -142,6 +142,10 @@
   margin: 0 auto;
 }
 
+.introText + .introText {
+  margin-top: 12px;
+}
+
 .highlight {
   color: var(--highlight-color);
   font-weight: 600;
@@ -181,6 +185,20 @@
 
 .sectionContent p {
   margin: 0;
+}
+
+.sectionContent ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-position: outside;
+}
+
+.sectionContent li {
+  margin-bottom: 6px;
+}
+
+.sectionContent li:last-child {
+  margin-bottom: 0;
 }
 
 .tokenGrid, .feeGrid, .feeComparison {
