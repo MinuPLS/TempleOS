@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
 import type { DivineManagerExecution } from '@/hooks/useDivineManagerActivity'
+import { useBuyAndBurnActivity } from '@/hooks/useBuyAndBurnActivity'
 import { formatRelativeTime } from '@/lib/time'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
+import BriahLogo from '../../assets/TokenLogos/Briah.png'
 import styles from './LandingPage.module.css'
 import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 
@@ -76,10 +78,32 @@ export const DivineManagerActivity = ({
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD } = tokenPrices
   const [page, setPage] = useState(1)
+  const [showBurnPanel, setShowBurnPanel] = useState(false)
+  const [burnAutoRequested, setBurnAutoRequested] = useState(false)
+  const {
+    executions: burnExecutions,
+    isLoading: isBurnLoading,
+    error: burnError,
+    refresh: refreshBurns,
+    lastUpdated: burnLastUpdated,
+    briahUsdPrice,
+  } = useBuyAndBurnActivity()
 
   useEffect(() => {
     setPage(1)
   }, [executions])
+
+  useEffect(() => {
+    if (!showBurnPanel || burnAutoRequested) return
+    setBurnAutoRequested(true)
+    void refreshBurns()
+  }, [showBurnPanel, burnAutoRequested, refreshBurns])
+
+  useEffect(() => {
+    if (!showBurnPanel) {
+      setBurnAutoRequested(false)
+    }
+  }, [showBurnPanel])
 
   const totalPages = Math.max(1, Math.ceil(executions.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
@@ -91,8 +115,13 @@ export const DivineManagerActivity = ({
 
   const handlePrev = () => setPage((prev) => Math.max(1, prev - 1))
   const handleNext = () => setPage((prev) => Math.min(totalPages, prev + 1))
+  const handleToggleBurnPanel = () => setShowBurnPanel((prev) => !prev)
+  const handleRefreshBurns = () => {
+    void refreshBurns()
+  }
 
   const explorerBase = 'https://otter.pulsechain.com'
+  const burnRows = burnExecutions.slice(0, 5)
 
   return (
     <div className={styles.divineActivity}>
@@ -104,19 +133,114 @@ export const DivineManagerActivity = ({
             {lastUpdated ? `Updated ${formatRelativeTime(lastUpdated)}` : 'Syncing live data'}
           </p>
         </div>
-        <button
-          className={styles.activityRefreshButton}
-          onClick={onRefresh}
-          disabled={isLoading}
-          aria-label="Refresh Divine Manager feed"
-        >
-          <RotateCcw size={16} />
-        </button>
+        <div className={styles.activityControls}>
+          <button
+            type="button"
+            className={`${styles.burnToggle} ${showBurnPanel ? styles.burnToggleActive : ''}`}
+            onClick={handleToggleBurnPanel}
+            aria-pressed={showBurnPanel}
+          >
+            <span>Briah burns</span>
+            <span className={styles.burnToggleIndicator}>
+              <span className={styles.burnToggleKnob} />
+            </span>
+          </button>
+          <button
+            className={styles.activityRefreshButton}
+            onClick={onRefresh}
+            disabled={isLoading}
+            aria-label="Refresh Divine Manager feed"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
       </div>
 
       {error && (
         <div className={styles.activityError}>
           <p>{error}</p>
+        </div>
+      )}
+
+      {showBurnPanel && (
+        <div className={styles.burnPanel}>
+          <div className={styles.burnPanelHeader}>
+            <div>
+              <p className={styles.sectionEyebrow}>Buy &amp; burn</p>
+              <h4 className={styles.burnPanelTitle}>Briah burn tracker</h4>
+              <p className={styles.sectionSubtitle}>
+                {burnLastUpdated
+                  ? `Updated ${formatRelativeTime(burnLastUpdated)}`
+                  : 'Reading direct from the buy-and-burn vault'}
+              </p>
+            </div>
+            <div className={styles.burnPanelActions}>
+              <button
+                className={styles.activityRefreshButton}
+                onClick={handleRefreshBurns}
+                disabled={isBurnLoading}
+                aria-label="Refresh Briah burn feed"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+          </div>
+          {burnError && (
+            <div className={styles.activityError}>
+              <p>{burnError}</p>
+            </div>
+          )}
+          <div className={styles.burnList}>
+            {isBurnLoading && burnRows.length === 0 && (
+              <p className={styles.activityHint}>Summoning buy-and-burn logs…</p>
+            )}
+            {!isBurnLoading && burnRows.length === 0 && !burnError && (
+              <p className={styles.activityHint}>
+                No burn executions yet. Toggle back anytime — we pull straight from the contract when it fires.
+              </p>
+            )}
+            {burnRows.map((burn) => {
+              const briahAmount = Number(formatUnits(burn.briahBurned, 18))
+              const usdValue = briahUsdPrice ? usdFormatter.format(briahAmount * briahUsdPrice) : '—'
+
+              return (
+                <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
+                  <div className={styles.txRowHeader}>
+                    <div className={styles.txRowMain}>
+                      <p>Burn</p>
+                      <span>{shortenHex(burn.transactionHash, 6)}</span>
+                    </div>
+                    <div className={styles.txRowHeaderMeta}>
+                      <div className={styles.txRowMetaGroup}>
+                        <span className={styles.txRowTime}>{formatRelativeTime(burn.timestamp)}</span>
+                        <a
+                          href={`${explorerBase}/tx/${burn.transactionHash}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.txRowLink}
+                        >
+                          Otterscan <ExternalLink size={13} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.burnValueRow}>
+                    <div className={styles.burnTokenSummary}>
+                      <img src={BriahLogo} alt="Briah logo" />
+                      <div className={styles.burnTokenCopy}>
+                        <span className={styles.valueLabel}>Briah burned</span>
+                        <strong className={styles.burnAmount}>{formatAmount(burn.briahBurned, 4)} BRIAH</strong>
+                      </div>
+                    </div>
+                    <div className={styles.burnUsdBlock}>
+                      <span className={styles.valueLabel}>Est. USD value</span>
+                      <strong className={styles.burnUsdValue}>{usdValue}</strong>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

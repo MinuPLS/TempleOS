@@ -317,15 +317,15 @@
 
 .flowGrid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   align-items: stretch;
   width: 100%;
 }
 
 @media (min-width: 900px) {
   .flowGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
   }
 }
 
@@ -344,6 +344,15 @@
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
   position: relative;
+}
+
+@media (max-width: 900px) {
+  .flowBlock {
+    padding: 24px 8px 16px;
+    min-height: 200px;
+    border-radius: 16px;
+    gap: 8px;
+  }
 }
 
 .flowHolyc {
@@ -366,7 +375,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  justify-content: center; /* Center the icon within remaining space */
+  justify-content: space-between; /* Match the middle block alignment */
 }
 
 .tokenTopLabel {
@@ -408,6 +417,15 @@
   margin-bottom: 10px;
 }
 
+@media (max-width: 900px) {
+  .flowBlockIcon {
+    width: 60px;
+    height: 60px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+}
+
 .flowBlockIcon:hover {
   transform: scale(1.05);
 }
@@ -446,6 +464,17 @@
   color: rgba(148, 163, 184, 0.7);
 }
 
+@media (max-width: 900px) {
+  .flowTokenTicker {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+  
+  .flowTokenTitle {
+    font-size: 10px;
+  }
+}
+
 .flowBridge {
   border: none;
   background: transparent;
@@ -456,6 +485,13 @@
   justify-content: space-between; /* Align with others */
   padding-top: 40px;
   padding-bottom: 24px; /* Match others */
+}
+
+@media (max-width: 900px) {
+  .flowBridge {
+    padding-top: 24px;
+    padding-bottom: 16px;
+  }
 }
 
 .flowBridgeHeader {
@@ -783,6 +819,13 @@
   overflow: visible;
 }
 
+@media (max-width: 900px) {
+  .mergeSvg {
+    width: 100%;
+    height: 80px;
+  }
+}
+
 .fluidShape {
   transition: filter 0.3s ease;
   transform-origin: center;
@@ -887,37 +930,111 @@
 
 @media (max-width: 900px) {
   .automationSteps {
-    flex-direction: column;
-    gap: 16px;
+    flex-direction: row;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
 
   .stepConnector {
-    transform: rotate(90deg);
-    margin: -8px 0;
+    transform: none;
+    margin: 0;
+    min-width: 12px;
+  }
+  
+  .connectorIcon {
+    width: 16px;
+    height: 16px;
   }
   
   .automationStep {
-    width: 100%;
-    max-width: 320px;
-    flex-direction: row;
-    text-align: left;
-    padding: 16px 24px;
+    width: auto;
+    flex: 1;
+    max-width: none;
+    flex-direction: column;
+    text-align: center;
+    padding: 0;
+    min-width: 0;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+
+  .automationStep:hover {
+    transform: none;
+    background: transparent;
+    border: none;
   }
 
   .stepIconWrapper {
-    width: 48px;
-    height: 48px;
-    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
   }
 
   .stepIcon {
-    width: 24px;
-    height: 24px;
+    width: 16px;
+    height: 16px;
   }
 
   .stepDesc {
-    font-size: 13px;
+    font-size: 10px;
+    line-height: 1.2;
+    margin-top: 4px;
   }
+
+  /* Scale visuals down on mobile */
+  .gapVisualSvg, .captureVisualAbstract, .resultVisualStatic {
+    height: 70px;
+    margin-bottom: 0;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  
+  .gapSvg {
+    transform: scale(0.95); /* Scale back up */
+    overflow: visible;
+  }
+  
+  /* Scale up internal SVG elements on mobile */
+  .gapSvg foreignObject {
+    width: 60px;
+    height: 60px;
+    transform: translate(-6px, -6px);
+  }
+  
+  .resultVisualStatic {
+    gap: 6px; /* Tighten gap */
+    justify-content: center;
+  }
+
+  .resultPlus {
+    font-size: 14px;
+    margin: 0 2px;
+  }
+  
+  .resultLogoLeft, .resultLogoRight {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .resultLogoRight {
+    margin-left: -14px;
+  }
+
+  .resultDivider {
+    height: 24px;
+    margin: 0 2px;
+  }
+  
+  .resultBurnStatic {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .scannerRadar::before { width: 50px; height: 50px; }
+  .scannerRadar::after { width: 80px; height: 80px; }
 }
 
 
@@ -1395,6 +1512,66 @@
   flex-wrap: wrap;
 }
 
+.activityControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.burnToggle {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.7);
+  padding: 4px 12px 4px 42px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.burnToggleIndicator {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 3px;
+  transition: background 0.2s ease;
+}
+
+.burnToggleKnob {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f97316;
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.burnToggleActive {
+  border-color: rgba(6, 182, 212, 0.5);
+  background: rgba(6, 182, 212, 0.1);
+  color: #f8fafc;
+}
+
+.burnToggleActive .burnToggleIndicator {
+  background: rgba(6, 182, 212, 0.25);
+}
+
+.burnToggleActive .burnToggleKnob {
+  transform: translateX(11px);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+}
+
 .activityHeading {
   flex: 0 0 auto;
   min-width: 220px;
@@ -1472,6 +1649,16 @@
   .activityRefreshButton {
     align-self: flex-start;
   }
+
+  .activityControls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .burnToggle {
+    width: 100%;
+  }
 }
 
 .activityRefreshButton {
@@ -1547,6 +1734,94 @@
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
 }
+
+.burnPanel {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(9, 12, 28, 0.75);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.burnPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.burnPanelTitle {
+  margin: 4px 0 0;
+  font-size: 20px;
+  color: #f8fafc;
+}
+
+.burnPanelActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.burnList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.burnRow {
+  background: linear-gradient(120deg, rgba(6, 182, 212, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.burnValueRow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.burnTokenSummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 210px;
+}
+
+.burnTokenSummary img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.4);
+}
+
+.burnTokenCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.burnAmount {
+  font-size: 18px;
+  color: #f8fafc;
+}
+
+.burnUsdBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.burnUsdValue {
+  font-size: 18px;
+  color: #6ee7b7;
+}
+
 
 .txList {
   display: flex;
