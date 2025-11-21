@@ -484,14 +484,8 @@
 }
 
 @media (max-width: 400px) {
-  .guideButtonText {
-    display: none;
-  }
-  .guideButton::before {
-    content: '📖'; /* Use an emoji or icon font */
-    font-size: 18px;
-  }
   .guideButton {
-    padding: 8px 12px;
+    padding: 8px 16px;
+    min-width: auto;
   }
 }

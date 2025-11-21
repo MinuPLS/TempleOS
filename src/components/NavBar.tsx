@@ -83,10 +83,16 @@ export function NavBar() {
       setIsDivineGuideOpen(true)
     }
 
+    const handleOpenTokenomicsGuide = () => {
+      setIsGuideOpen(true)
+    }
+
     window.addEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+    window.addEventListener('open-tokenomics-guide', handleOpenTokenomicsGuide)
 
     return () => {
       window.removeEventListener('open-divine-manager-guide', handleOpenDivineGuide)
+      window.removeEventListener('open-tokenomics-guide', handleOpenTokenomicsGuide)
     }
   }, [])
 
@@ -331,9 +337,11 @@ export function NavBar() {
               )}
             </AnimatePresence>
           </div>
-          <div className={styles.walletConnectWrapper}>
-            <WalletConnect />
-          </div>
+          {!isOnLandingPage && (
+            <div className={styles.walletConnectWrapper}>
+              <WalletConnect />
+            </div>
+          )}
         </motion.div>
       </motion.div>
 

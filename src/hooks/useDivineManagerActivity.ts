@@ -27,6 +27,8 @@ export interface DivineManagerStep {
   tokenInAmount: bigint
   tokenOutAmount: bigint
   pool?: PoolKey
+  isSettlement?: boolean
+  settlementAmount?: bigint
   burns: {
     holyc: bigint
     jit: bigint
@@ -150,6 +152,7 @@ export const useDivineManagerActivity = () => {
           const steps: DivineManagerStep[] = []
           const compileQueue: DivineManagerStep[] = []
           const restoreQueue: DivineManagerStep[] = []
+          const completedRestores: DivineManagerStep[] = []
           const swapQueues = new Map<string, DivineManagerStep[]>()
 
           const createStep = (
@@ -168,6 +171,7 @@ export const useDivineManagerActivity = () => {
             tokenInAmount: amountIn,
             tokenOutAmount: 0n,
             pool,
+            isSettlement: false,
             burns: { holyc: 0n, jit: 0n },
           })
 
@@ -224,8 +228,18 @@ export const useDivineManagerActivity = () => {
             }
 
             if (logAddress.toLowerCase() === HOLY_C_ADDRESS.toLowerCase()) {
-              if (targetAddress === normalizedZero || targetAddress === normalizedBurn) {
+              const isHolyBurn =
+                fromAddress === divineAddress && (targetAddress === normalizedZero || targetAddress === normalizedBurn)
+              if (isHolyBurn) {
                 holyBurned += transfer.value
+                for (let i = completedRestores.length - 1; i >= 0; i--) {
+                  const candidate = completedRestores[i]
+                  if (!candidate.isSettlement && candidate.tokenOutAmount === transfer.value) {
+                    candidate.isSettlement = true
+                    candidate.settlementAmount = transfer.value
+                    break
+                  }
+                }
               }
               if (targetAddress === divineAddress) {
                 holyIn += transfer.value
@@ -248,6 +262,7 @@ export const useDivineManagerActivity = () => {
                 const restoreStep = restoreQueue.find((candidate) => candidate.tokenOutAmount === 0n)
                 if (restoreStep) {
                   restoreStep.tokenOutAmount = transfer.value
+                  completedRestores.push(restoreStep)
                 }
               }
             }

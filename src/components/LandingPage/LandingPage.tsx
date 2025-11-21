@@ -1,16 +1,17 @@
-import { useState, useRef } from 'react'
-import type { KeyboardEvent, ReactNode } from 'react'
+import { useState } from 'react'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
+import { ArrowRight, Zap, Flame, BookOpen } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useTokenStats } from '../StatsDashboard/hooks/useTokenStats'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
-import { formatBigIntTokenAmount } from '@/lib/utils'
+import { formatCurrency, formatBigIntTokenAmount } from '@/lib/utils'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
+import CompilerLogo from '../../assets/TokenLogos/Compilerv0.png'
 
-type TokenStatAccent = 'holyc' | 'jit' | 'locked' | 'burned' | 'lp'
+type TokenStatAccent = 'holyc' | 'jit' | 'locked' | 'burned' | 'lp' | 'compiler'
 
 export function LandingPage() {
   const { tokenPrices } = usePoolData()
@@ -24,8 +25,6 @@ export function LandingPage() {
   } = useDivineManagerActivity()
 
   const [openStatId, setOpenStatId] = useState<string | null>(null)
-  const [openHowCards, setOpenHowCards] = useState<Record<string, boolean>>({})
-  const howBodyRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const keyTokenStats: {
     id: string
@@ -34,6 +33,20 @@ export function LandingPage() {
     description: string
     accent: TokenStatAccent
   }[] = [
+    {
+      id: 'holyc-price',
+      label: 'HolyC Price',
+      value: formatCurrency(tokenPrices.holycUSD),
+      description: 'Current market price of HolyC on PulseX.',
+      accent: 'holyc',
+    },
+    {
+      id: 'jit-price',
+      label: 'JIT Price',
+      value: formatCurrency(tokenPrices.jitUSD),
+      description: 'Current market price of JIT on PulseX.',
+      accent: 'jit',
+    },
     {
       id: 'circulating-holyc',
       label: 'HolyC circulating',
@@ -51,6 +64,22 @@ export function LandingPage() {
       accent: 'jit',
     },
     {
+      id: 'holyc-compiler',
+      label: 'HolyC in Compiler',
+      value: `${formatBigIntTokenAmount(tokenStats.holycLocked, 0)} HOLYC`,
+      description:
+        "HolyC held in the Compiler contract to back the current JIT supply. Contains some Locked HolyC that can never be redeemed, since there isn't enough circulating JIT to Restore all of it into HolyC. The redeemable portion is already counted in HolyC Circulating.",
+      accent: 'compiler',
+    },
+    {
+      id: 'burned-lp',
+      label: 'Burned LP',
+      value: `${formatBigIntTokenAmount(tokenStats.holycLockedAsLP, 0)} HOLYC`,
+      description:
+        'HolyC currently deposited as liquidity on the DEX. The LP tokens were burned, so liquidity cannot be withdrawn; the HolyC stays in the pool for trading and moves into circulating supply as it is bought.',
+      accent: 'lp',
+    },
+    {
       id: 'locked-holyc',
       label: 'Locked HolyC',
       value: `${formatBigIntTokenAmount(tokenStats.permanentlyLockedHolyC, 0)} HOLYC`,
@@ -66,35 +95,11 @@ export function LandingPage() {
         'HolyC sent to the burn address from compile/restore fees or manual burns – permanently removed from supply.',
       accent: 'burned',
     },
-    {
-      id: 'burned-lp',
-      label: 'Burned LP',
-      value: `${formatBigIntTokenAmount(tokenStats.holycLockedAsLP, 0)} HOLYC`,
-      description:
-        'HolyC currently deposited as liquidity on the DEX. The LP tokens were burned, so liquidity cannot be withdrawn; the HolyC stays in the pool for trading and moves into circulating supply as it is bought.',
-      accent: 'lp',
-    },
   ]
 
   const handleToggleStat = (id: string) => {
     setOpenStatId((prev) => (prev === id ? null : id))
   }
-
-  const toggleHowCard = (id: string) => {
-    setOpenHowCards((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }))
-  }
-
-  const handleHowKeyDown = (event: KeyboardEvent<HTMLDivElement>, id: string) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      toggleHowCard(id)
-    }
-  }
-
-  const getHowBodyHeight = (id: string) => howBodyRefs.current[id]?.scrollHeight ?? 0
 
   const heroLinks = [
     {
@@ -111,116 +116,16 @@ export function LandingPage() {
     },
   ]
 
-  const howCards: {
-    id: string
-    title: string
-    summary: ReactNode
-    body: ReactNode
-    cardClass: string
-  }[] = [
-    {
-      id: 'anchor',
-      title: 'Two markets, one anchor',
-      cardClass: styles.howCardAnchor,
-      summary: (
-        <>
-          <p>
-            <span className={styles.textHolyc}>HolyC</span> trades in{' '}
-            <span className={styles.textHolyc}>HolyC</span>/<span className={styles.textPls}>PLS</span>,{' '}
-            <span className={styles.textJit}>JIT</span> trades in{' '}
-            <span className={styles.textJit}>JIT</span>/<span className={styles.textPls}>PLS</span>.
-          </p>
-          <p>
-            The <span className={styles.textAnchor}>Divine Compiler</span> sits in the middle with a fixed{' '}
-            <span className={styles.textHolyc}>HolyC</span> ↔ <span className={styles.textJit}>JIT</span> rate.
-          </p>
-        </>
-      ),
-      body: (
-        <>
-          <p>
-            When either pool wanders too far from that rate, a price gap appears. Normal AMM{' '}
-            <span className={styles.textArb}>arb bots</span> then bounce through the triangle (
-            <span className={styles.textHolyc}>HolyC</span>/<span className={styles.textPls}>PLS</span> →{' '}
-            <span className={styles.textHolyc}>HolyC</span>/<span className={styles.textJit}>JIT</span> →{' '}
-            <span className={styles.textJit}>JIT</span>/<span className={styles.textPls}>PLS</span> or the other way around) to
-            close the pool prices and take their spread.
-          </p>
-          <p>
-            That anchor lives outside AMM pricing, so pools are constantly catching up to the{' '}
-            <span className={styles.textAnchor}>Compiler</span> whenever the market drifts too far.
-          </p>
-        </>
-      ),
-    },
-    {
-      id: 'burn',
-      title: 'Where the burn actually comes from',
-      cardClass: styles.howCardBurn,
-      summary: (
-        <>
-          <p>
-            Every compile/restore charges a <span className={styles.textBurn}>4% HolyC fee</span>. Every{' '}
-            <span className={styles.textJit}>JIT</span> transfer burns <span className={styles.textBurn}>2%</span> of the{' '}
-            <span className={styles.textJit}>JIT</span> amount. <span className={styles.textHolyc}>HolyC</span> and{' '}
-            <span className={styles.textJit}>JIT</span> share the same system supply: JIT only exists while{' '}
-            <span className={styles.textHolyc}>HolyC</span> is locked in the{' '}
-            <span className={styles.textAnchor}>Compiler</span>.
-          </p>
-        </>
-      ),
-      body: (
-        <>
-          <p>
-            Volume moving between <span className={styles.textHolyc}>HolyC</span>/
-            <span className={styles.textJit}>JIT</span> and the two <span className={styles.textPls}>PLS</span> pools keeps{' '}
-            <span className={styles.textJit}>JIT</span> transferring – and burning – over time.
-          </p>
-          <p>
-            Because less and less <span className={styles.textJit}>JIT</span> exists, there isn’t enough left to restore every
-            locked <span className={styles.textHolyc}>HolyC</span>. That “orphaned” <span className={styles.textHolyc}>HolyC</span>{' '}
-            stays trapped in the <span className={styles.textAnchor}>Compiler</span> forever.
-          </p>
-          <p>
-            Every <span className={styles.textJit}>JIT</span> burn is effectively an indirect{' '}
-            <span className={styles.textHolyc}>HolyC</span> burn, slowly deleting circulating supply even though HolyC stays
-            tax-free.
-          </p>
-        </>
-      ),
-    },
-    {
-      id: 'automation',
-      title: 'What’s automated for you',
-      cardClass: styles.howCardAutomation,
-      summary: (
-        <>
-          <p>
-            As a holder you don’t need to touch any of this; you just trade or hold{' '}
-            <span className={styles.textHolyc}>HolyC</span> while complexity is automated for you in the background.
-          </p>
-        </>
-      ),
-      body: (
-        <>
-          <p>
-            Timing each <span className={styles.textArb}>arb</span>, sizing it, and routing around fees, slippage and gas is
-            messy.
-          </p>
-          <p>
-            The engine runs on an automated combo of <span className={styles.textArb}>Arb Guardian</span> (off-chain) and{' '}
-            <span className={styles.textAnchor}>Divine Manager</span> (on-chain) – it closes safe arbs, builds the{' '}
-            <span className={styles.textHolyc}>HolyC</span> vault, and burns supply whenever a route is actually profitable.
-          </p>
-          <p>Some days it fires a few times, some days not at all – that’s normal.</p>
-        </>
-      ),
-    },
-  ]
 
   const handleOpenDivineGuide = () => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('open-divine-manager-guide'))
+    }
+  }
+
+  const handleOpenTokenomicsGuide = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('open-tokenomics-guide'))
     }
   }
 
@@ -259,59 +164,108 @@ export function LandingPage() {
 
             <div className={styles.heroVisual}>
               <div className={styles.flowCard}>
+                <div className={styles.cardHeader}>
+                  <h2 className={styles.cardTitle}>2 Tokens, 1 Supply</h2>
+                  <p className={styles.cardDescription}>
+                    Holding HolyC gives you passive exposure to the whole engine. You never need to touch JIT to benefit.
+                  </p>
+                  <button
+                    onClick={handleOpenTokenomicsGuide}
+                    className={styles.tokenomicsButton}
+                  >
+                    <BookOpen size={16} />
+                    <span>Tokenomics</span>
+                  </button>
+                </div>
+                
                 <div className={styles.flowGrid}>
                   <div className={`${styles.flowBlock} ${styles.flowHolyc}`}>
                     <div className={styles.flowTokenHeader}>
-                      <div className={styles.flowTokenBadge}>
-                        <img src={HolyCLogo} alt="HolyC" className={styles.flowBlockIcon} />
-                      </div>
+                      <img src={HolyCLogo} alt="HolyC" className={styles.flowBlockIcon} />
                       <div className={styles.flowTokenMeta}>
-                        <p className={styles.flowTokenTicker}>HolyC token</p>
-                        <h3 className={styles.flowTokenTitle}>Pump.tires original</h3>
+                        <h3 className={styles.flowTokenTitle}>The Asset</h3>
+                        <p className={styles.flowTokenTicker}>Fixed Supply. 0% Tax.</p>
                       </div>
-                    </div>
-                    <p className={styles.flowDescription}>
-                      The foundational, tax-free asset with a fixed supply. As a holder of the fixed-supply HolyC token, you
-                      benefit passively from the entire ecosystem without ever needing to interact with it directly.
-                    </p>
-                    <div className={styles.flowFooter}>
-                      <span className={styles.flowChip}>Hold / Trade</span>
                     </div>
                   </div>
 
                   <div className={`${styles.flowBlock} ${styles.flowBridge}`}>
                     <div className={styles.flowBridgeHeader}>
-                      <p>HolyC ↔ JIT</p>
-                      <h3>Divine Compiler</h3>
-                    </div>
-                    <p className={`${styles.flowDescription} ${styles.flowBridgeDescription}`}>
-                      A smart contract where HolyC is locked to mint JIT and JIT is burned to restore HolyC. It enforces a fixed
-                      1:1 conversion with a 4% burn, creating a hard anchor outside the market. That ratio stays the same no
-                      matter what the pools do, so price gaps (and arbs) naturally appear.
-                    </p>
-                    <div className={styles.flowBridgeFooter}>
-                      <span>HolyC</span>
-                      <div className={styles.flowDoubleArrow} aria-hidden="true" />
-                      <span>JIT</span>
+                      <div className={styles.anchorVisual}>
+                         {/* Connection beams - visual only - extended width */}
+                        <div className={`${styles.connectorLine} ${styles.connectorLeft}`} />
+                        <div className={`${styles.connectorLine} ${styles.connectorRight}`} />
+
+                        <svg viewBox="0 0 200 200" className={styles.mergeSvg} preserveAspectRatio="xMidYMid meet">
+                          <defs>
+                            {/* HolyC Blue Gradient - Matches App Theme */}
+                            <radialGradient id="fluidBlue" cx="30%" cy="30%" r="70%">
+                              <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.9" />
+                              <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.6" />
+                              <stop offset="100%" stopColor="#1e40af" stopOpacity="0.2" />
+                            </radialGradient>
+
+                            {/* JIT Orange Gradient - Matches App Theme */}
+                            <radialGradient id="fluidOrange" cx="70%" cy="70%" r="70%">
+                              <stop offset="0%" stopColor="#fb923c" stopOpacity="0.9" />
+                              <stop offset="50%" stopColor="#f97316" stopOpacity="0.6" />
+                              <stop offset="100%" stopColor="#c2410c" stopOpacity="0.2" />
+                            </radialGradient>
+
+                            <filter id="fluidGlow" x="-50%" y="-50%" width="200%" height="200%">
+                              <feGaussianBlur stdDeviation="12" result="coloredBlur" />
+                              <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo" />
+                              <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+                            </filter>
+                          </defs>
+                          
+                          <g filter="url(#fluidGlow)">
+                             {/* HolyC Fluid (Blue) - Morphing Blob */}
+                             <path className={styles.fluidShape} fill="url(#fluidBlue)">
+                               <animate
+                                 attributeName="d"
+                                 dur="8s"
+                                 repeatCount="indefinite"
+                                 values="
+                                   M100,100 m-50,-40 c30,-20 70,-20 100,0 c20,20 20,60 0,80 c-30,20 -70,20 -100,0 c-20,-20 -20,-60 0,-80;
+                                   M100,100 m-40,-50 c40,-10 80,10 90,40 c10,30 -10,70 -40,80 c-40,10 -80,-10 -90,-40 c-10,-30 10,-70 40,-80;
+                                   M100,100 m-60,-30 c20,-30 80,-10 100,20 c20,30 0,80 -40,90 c-30,10 -90,-10 -100,-40 c-10,-30 10,-80 40,-70;
+                                   M100,100 m-50,-40 c30,-20 70,-20 100,0 c20,20 20,60 0,80 c-30,20 -70,20 -100,0 c-20,-20 -20,-60 0,-80
+                                 "
+                               />
+                             </path>
+ 
+                             {/* JIT Fluid (Orange) - Morphing Blob, swirling opposite */}
+                             <path className={styles.fluidShape} fill="url(#fluidOrange)" style={{ mixBlendMode: 'screen' }}>
+                               <animate
+                                 attributeName="d"
+                                 dur="9s"
+                                 repeatCount="indefinite"
+                                 values="
+                                   M100,100 m50,40 c-30,20 -70,20 -100,0 c-20,-20 -20,-60 0,-80 c30,-20 70,-20 100,0 c20,20 20,60 0,80;
+                                   M100,100 m60,30 c-20,30 -80,10 -100,-20 c-20,-30 0,-80 40,-90 c30,-10 90,10 100,40 c10,30 -10,80 -40,70;
+                                   M100,100 m40,50 c-40,10 -80,-10 -90,-40 c-10,-30 10,-70 40,-80 c40,-10 80,10 90,40 c10,30 -10,70 -40,80;
+                                   M100,100 m50,40 c-30,20 -70,20 -100,0 c-20,-20 -20,-60 0,-80 c30,-20 70,-20 100,0 c20,20 20,60 0,80
+                                 "
+                               />
+                             </path>
+                          </g>
+                        </svg>
+                      </div>
+                      <div className={styles.flowTokenMeta}>
+                        <h3 className={styles.flowTokenTitle}>The Anchor</h3>
+                        <p className={styles.flowTokenTicker}>Enforces the bridge that creates profit.</p>
+                      </div>
                     </div>
                   </div>
 
                   <div className={`${styles.flowBlock} ${styles.flowJit}`}>
                     <div className={styles.flowTokenHeader}>
-                      <div className={styles.flowTokenBadge}>
-                        <img src={JITLogo} alt="JIT" className={styles.flowBlockIcon} />
-                      </div>
+                      <img src={JITLogo} alt="JIT" className={styles.flowBlockIcon} />
                       <div className={styles.flowTokenMeta}>
-                        <p className={styles.flowTokenTicker}>JIT token</p>
-                        <h3 className={styles.flowTokenTitle}>Utility wrapper</h3>
+                        <h3 className={styles.flowTokenTitle}>The Engine</h3>
+                        <p className={styles.flowTokenTicker}>2% Burn. High Friction.</p>
                       </div>
-                    </div>
-                    <p className={styles.flowDescription}>
-                      Backed by locked HolyC. Trades in its own JIT/WPLS pool with a 2% transfer burn, so its price can drift
-                      away from HolyC until arbs close the gap.
-                    </p>
-                    <div className={styles.flowFooter}>
-                      <span className={styles.flowChip}>Utility / Bots</span>
                     </div>
                   </div>
                 </div>
@@ -320,54 +274,102 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="how" className={styles.howSection}>
-          <div className={styles.howHeader}>
-            <h2>How TempleOS Works</h2>
-            <p>
-              Two tokens, two markets, one compiler. HolyC and JIT each have their own PulseX pool; when those prices drift
-              away from the Compiler rate, the market gets paid to burn the supply for you.
-            </p>
-          </div>
+        <section className={styles.howSection}>
+          <div className={styles.managerCard}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>The Divine Manager</h2>
+              <p className={styles.cardDescription}>
+                As a HolyC holder, your job is easy: just buy, sell, or hold. The system turns volatility into a lighter float and a deeper vault.
+              </p>
+            </div>
 
-          <div className={styles.howGrid}>
-            {howCards.map(({ id, title, summary, body, cardClass }) => {
-              const isOpen = !!openHowCards[id]
-              const bodyId = `how-card-${id}`
-              return (
-                <div className={`${styles.howCard} ${cardClass} ${isOpen ? styles.howCardOpen : ''}`} key={id}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    className={styles.howToggle}
-                    onClick={() => toggleHowCard(id)}
-                    onKeyDown={(event) => handleHowKeyDown(event, id)}
-                    aria-expanded={isOpen}
-                    aria-controls={bodyId}
-                  >
-                    <div className={styles.howToggleHeader}>
-                      <h3>{title}</h3>
-                      <span className={styles.howCardArrow} aria-hidden="true" />
-                    </div>
-                    <div className={styles.howSummary}>{summary}</div>
-                  </div>
-                  <div
-                    id={bodyId}
-                    className={styles.howBody}
-                    style={{ maxHeight: isOpen ? `${getHowBodyHeight(id)}px` : 0 }}
-                    aria-hidden={!isOpen}
-                  >
-                    <div
-                      className={styles.howBodyInner}
-                      ref={(el) => {
-                        howBodyRefs.current[id] = el
-                      }}
-                    >
-                      {body}
-                    </div>
+            <div className={styles.automationSteps}>
+              {/* Step 1: The Gap (SVG Split + Central PulseX) */}
+              <div className={styles.automationStep}>
+                <div className={styles.gapVisualSvg}>
+                  <svg viewBox="0 0 200 180" className={styles.gapSvg} preserveAspectRatio="xMidYMid meet">
+                    {/* Base Line (Shortened, stops before PulseX) */}
+                    <line x1="10" y1="90" x2="35" y2="90" stroke="#94a3b8" strokeWidth="2" strokeOpacity="0.5" />
+                    
+                    {/* PulseX Branding (Larger: 48px, Centered Vertically at y=90) */}
+                    {/* y = 90 - 24 = 66 */}
+                    <foreignObject x="35" y="66" width="48" height="48">
+                       <img src={PulseXLogo} alt="PulseX" className={styles.svgPulseX} />
+                    </foreignObject>
+
+                    {/* Top Branch (HolyC - Blue) - Starts FROM PulseX Center/Right */}
+                    {/* Start x ~ 35+48=83. Let's say 82 for overlap. */}
+                    {/* End Y=40. x shifted 10px left -> 140 */}
+                    <path d="M82,90 C112,90 112,40 140,40" fill="none" stroke="url(#gradHolyC)" strokeWidth="2" />
+                    
+                    {/* Bottom Branch (JIT - Red) - Starts FROM PulseX Center/Right */}
+                    {/* End Y=140 */}
+                    <path d="M82,90 C112,90 112,140 140,140" fill="none" stroke="url(#gradJIT)" strokeWidth="2" />
+
+                    {/* Gradients */}
+                    <defs>
+                      <linearGradient id="gradHolyC" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#a5b4fc" />
+                      </linearGradient>
+                      <linearGradient id="gradJIT" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#94a3b8" stopOpacity="0.5" />
+                        <stop offset="100%" stopColor="#fb7185" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Token Logos (Larger: 48px, Centered at Tips) */}
+                    {/* HolyC at y=40 -> y = 40-24=16 */}
+                    <foreignObject x="140" y="16" width="48" height="48">
+                      <img src={HolyCLogo} alt="HolyC" className={styles.svgLogo} />
+                    </foreignObject>
+                    
+                    {/* JIT at y=140 -> y = 140-24=116 */}
+                    <foreignObject x="140" y="116" width="48" height="48">
+                      <img src={JITLogo} alt="JIT" className={styles.svgLogo} />
+                    </foreignObject>
+                  </svg>
+                </div>
+                <p className={styles.stepDesc}>Prices depeg.</p>
+              </div>
+              
+              <div className={styles.stepConnector}>
+                <ArrowRight className={styles.connectorIcon} />
+              </div>
+
+              {/* Step 2: The Capture (Radar/Scanner) */}
+              <div className={styles.automationStep}>
+                <div className={styles.captureVisualAbstract}>
+                  <div className={styles.scannerRadar}>
+                    <div className={styles.scannerSweep} />
+                    <div className={styles.scannerTarget} />
                   </div>
                 </div>
-              )
-            })}
+                <p className={styles.stepDesc}>Manager executes the loop.</p>
+              </div>
+
+              <div className={styles.stepConnector}>
+                <ArrowRight className={styles.connectorIcon} />
+              </div>
+
+              {/* Step 3: The Result (Static: +Tokens & Burn) */}
+              <div className={styles.automationStep}>
+                <div className={styles.resultVisualStatic}>
+                  <div className={styles.resultLeft}>
+                    <div className={styles.resultPlus}>+</div>
+                    <div className={styles.resultLogos}>
+                      <img src={HolyCLogo} alt="HolyC" className={styles.resultLogoLeft} />
+                      <img src={JITLogo} alt="JIT" className={styles.resultLogoRight} />
+                    </div>
+                  </div>
+                  <div className={styles.resultDivider} />
+                  <div className={styles.resultRight}>
+                    <Flame className={styles.resultBurnStatic} />
+                  </div>
+                </div>
+                <p className={styles.stepDesc}>Supply Burned + Vault Filled.</p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -392,9 +394,6 @@ export function LandingPage() {
 
               <div className={styles.sideCard}>
                 <h3 className={styles.sideSectionTitle}>Token stats</h3>
-                <p className={styles.sideSectionDescription}>
-                  Supply-side HolyC + JIT metrics with quick, plain-English notes.
-                </p>
                 <ul className={styles.tokenStatsList}>
                   {keyTokenStats.map((stat) => {
                     const isOpen = openStatId === stat.id
@@ -405,9 +404,10 @@ export function LandingPage() {
                     else if (stat.accent === 'locked') valueClass = styles.tokenStatValueLocked
                     else if (stat.accent === 'lp') valueClass = styles.tokenStatValueLp
                     else if (stat.accent === 'burned') valueClass = styles.tokenStatValueBurned
+                    else if (stat.accent === 'compiler') valueClass = styles.tokenStatValueCompiler
 
                     let icon
-                    if (stat.accent === 'holyc') {
+                    if (stat.accent === 'holyc' || stat.accent === 'compiler') {
                       icon = <img src={HolyCLogo} alt="HolyC" className={styles.tokenStatIcon} />
                     } else if (stat.accent === 'jit') {
                       icon = <img src={JITLogo} alt="JIT" className={styles.tokenStatIcon} />
