@@ -619,6 +619,12 @@
   margin: 0 auto;
 }
 
+@media (max-width: 900px) {
+  .managerCard {
+    padding: 24px 12px 32px;
+  }
+}
+
 .howHeader {
   display: none; /* Replaced by .managerCard .cardHeader */
 }
@@ -934,26 +940,31 @@
     gap: 6px;
     flex-wrap: nowrap;
   }
-
-  .stepConnector {
-    transform: none;
-    margin: 0;
-    min-width: 12px;
-  }
-  
-  .connectorIcon {
-    width: 16px;
-    height: 16px;
-  }
   
   .automationStep {
     width: auto;
     flex: 1;
     max-width: none;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .stepConnector {
+    transform: none;
+    margin: 0;
+    min-width: 8px;
+  }
+  
+  .connectorIcon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .automationStep {
     flex-direction: column;
     text-align: center;
     padding: 0;
-    min-width: 0;
     gap: 8px;
     background: transparent;
     border: none;
@@ -984,7 +995,7 @@
 
   /* Scale visuals down on mobile */
   .gapVisualSvg, .captureVisualAbstract, .resultVisualStatic {
-    height: 70px;
+    height: 60px;
     margin-bottom: 0;
     border-radius: 12px;
     background: transparent;
@@ -993,48 +1004,56 @@
   }
   
   .gapSvg {
-    transform: scale(0.95); /* Scale back up */
+    transform: scale(0.85); /* Scale back up */
     overflow: visible;
   }
   
   /* Scale up internal SVG elements on mobile */
   .gapSvg foreignObject {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     transform: translate(-6px, -6px);
   }
   
   .resultVisualStatic {
-    gap: 6px; /* Tighten gap */
+    gap: 1px; /* Tighten gap */
     justify-content: center;
   }
 
+  .resultLeft {
+    gap: 0;
+  }
+
   .resultPlus {
-    font-size: 14px;
-    margin: 0 2px;
+    font-size: 16px;
+    margin-right: -3px;
+    transform: translateY(-3px);
+    position: relative;
+    z-index: 2;
+    line-height: 1;
   }
   
   .resultLogoLeft, .resultLogoRight {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
   }
   
   .resultLogoRight {
-    margin-left: -14px;
+    margin-left: -10px;
   }
 
   .resultDivider {
-    height: 24px;
-    margin: 0 2px;
+    height: 20px;
+    margin: 0;
   }
   
   .resultBurnStatic {
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
   }
   
-  .scannerRadar::before { width: 50px; height: 50px; }
-  .scannerRadar::after { width: 80px; height: 80px; }
+  .scannerRadar::before { width: 30px; height: 30px; }
+  .scannerRadar::after { width: 50px; height: 50px; }
 }
 
 
@@ -1619,26 +1638,43 @@
 
 @media (max-width: 640px) {
   .activityHeader {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+  }
+
+  .activityHeading {
+    min-width: 0;
+    flex: 1;
+    padding-right: 8px;
+  }
+  
+  .sectionTitle {
+    font-size: 20px;
+    margin-bottom: 4px;
   }
 
   .activitySummary {
     width: 100%;
   }
 
-  .activityRefreshButton {
-    align-self: flex-start;
-  }
-
   .activityControls {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
   }
-
-  .burnToggle {
-    width: 100%;
+  
+  .viewToggleButton {
+    padding: 6px 10px;
+    font-size: 10px;
+    height: 28px;
+    white-space: nowrap;
+  }
+  
+  .activityRefreshButton {
+    width: 28px;
+    height: 28px;
   }
 }
 
