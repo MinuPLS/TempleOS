@@ -1512,64 +1512,45 @@
   flex-wrap: wrap;
 }
 
+.activityHeaderRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .activityControls {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.burnToggle {
-  position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.02);
-  color: rgba(255, 255, 255, 0.7);
-  padding: 4px 12px 4px 42px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.burnToggleIndicator {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+.viewToggleButton {
   display: inline-flex;
   align-items: center;
-  padding: 0 3px;
-  transition: background 0.2s ease;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 34px;
 }
 
-.burnToggleKnob {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #f97316;
-  box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.viewToggleButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
-.burnToggleActive {
-  border-color: rgba(6, 182, 212, 0.5);
-  background: rgba(6, 182, 212, 0.1);
-  color: #f8fafc;
-}
-
-.burnToggleActive .burnToggleIndicator {
-  background: rgba(6, 182, 212, 0.25);
-}
-
-.burnToggleActive .burnToggleKnob {
-  transform: translateX(11px);
-  box-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+.buttonIconFlame {
+  color: #f97316;
 }
 
 .activityHeading {
@@ -1684,6 +1665,65 @@
   border-color: rgba(255, 255, 255, 0.4);
 }
 
+.burnStatsPill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(249, 115, 22, 0.08), rgba(249, 115, 22, 0.04));
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 12px;
+  margin-top: 4px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+.burnStatGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+.burnStatLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(253, 186, 116, 0.6);
+  font-weight: 600;
+}
+
+.burnStatValue {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fed7aa;
+}
+
+.burnStatValueUsd {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fb923c;
+}
+
+.burnStatIcon {
+  color: #f97316;
+  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.5));
+}
+
+.burnStatSeparator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .activityFooter {
   display: flex;
   align-items: center;
@@ -1735,42 +1775,6 @@
   margin: 0;
 }
 
-.burnPanel {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  background: rgba(9, 12, 28, 0.75);
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.burnPanelHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  align-items: flex-start;
-}
-
-.burnPanelTitle {
-  margin: 4px 0 0;
-  font-size: 20px;
-  color: #f8fafc;
-}
-
-.burnPanelActions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.burnList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 
 .burnRow {
   background: linear-gradient(120deg, rgba(6, 182, 212, 0.08), rgba(255, 255, 255, 0.02));
@@ -1819,7 +1823,7 @@
 
 .burnUsdValue {
   font-size: 18px;
-  color: #6ee7b7;
+  color: #fb923c;
 }
 
 

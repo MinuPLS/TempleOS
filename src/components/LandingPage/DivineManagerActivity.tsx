@@ -78,8 +78,9 @@ export const DivineManagerActivity = ({
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD } = tokenPrices
   const [page, setPage] = useState(1)
-  const [showBurnPanel, setShowBurnPanel] = useState(false)
-  const [burnAutoRequested, setBurnAutoRequested] = useState(false)
+  const [viewMode, setViewMode] = useState<'arbs' | 'burns'>('arbs')
+  const isViewingBurns = viewMode === 'burns'
+
   const {
     executions: burnExecutions,
     isLoading: isBurnLoading,
@@ -91,166 +92,186 @@ export const DivineManagerActivity = ({
 
   useEffect(() => {
     setPage(1)
-  }, [executions])
+  }, [viewMode, executions, burnExecutions])
 
   useEffect(() => {
-    if (!showBurnPanel || burnAutoRequested) return
-    setBurnAutoRequested(true)
-    void refreshBurns()
-  }, [showBurnPanel, burnAutoRequested, refreshBurns])
-
-  useEffect(() => {
-    if (!showBurnPanel) {
-      setBurnAutoRequested(false)
+    if (isViewingBurns) {
+      void refreshBurns()
     }
-  }, [showBurnPanel])
+  }, [isViewingBurns, refreshBurns])
 
-  const totalPages = Math.max(1, Math.ceil(executions.length / PAGE_SIZE))
+  const currentData = useMemo(() => {
+    const data = isViewingBurns ? burnExecutions : executions
+    // Ensure descending sort (newest first)
+    return [...data].sort((a, b) => b.timestamp - a.timestamp)
+  }, [isViewingBurns, burnExecutions, executions])
+
+  const totalBriahBurned = useMemo(() => {
+    return burnExecutions.reduce((acc, burn) => acc + burn.briahBurned, 0n)
+  }, [burnExecutions])
+
+  const totalBurnedUsd = useMemo(() => {
+    if (!briahUsdPrice) return null
+    const amount = Number(formatUnits(totalBriahBurned, 18))
+    return amount * briahUsdPrice
+  }, [totalBriahBurned, briahUsdPrice])
+
+  const currentLoading = isViewingBurns ? isBurnLoading : isLoading
+  const currentError = isViewingBurns ? burnError : error
+  const currentLastUpdated = isViewingBurns ? burnLastUpdated : lastUpdated
+  const handleRefresh = isViewingBurns ? () => void refreshBurns() : onRefresh
+
+  const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
   const start = (pageIndex - 1) * PAGE_SIZE
   const pageItems = useMemo(
-    () => executions.slice(start, start + PAGE_SIZE),
-    [executions, start]
+    () => currentData.slice(start, start + PAGE_SIZE),
+    [currentData, start]
   )
 
   const handlePrev = () => setPage((prev) => Math.max(1, prev - 1))
   const handleNext = () => setPage((prev) => Math.min(totalPages, prev + 1))
-  const handleToggleBurnPanel = () => setShowBurnPanel((prev) => !prev)
-  const handleRefreshBurns = () => {
-    void refreshBurns()
-  }
+  const toggleView = () => setViewMode((prev) => (prev === 'arbs' ? 'burns' : 'arbs'))
 
   const explorerBase = 'https://otter.pulsechain.com'
-  const burnRows = burnExecutions.slice(0, 5)
 
   return (
     <div className={styles.divineActivity}>
       <div className={styles.activityHeader}>
         <div className={styles.activityHeading}>
-          <p className={styles.sectionEyebrow}>Live Divine Manager executes</p>
-          <h3 className={styles.sectionTitle}>Automated arbs</h3>
+          <p className={styles.sectionEyebrow}>
+            {isViewingBurns ? 'Buy & burn' : 'Live Divine Manager executes'}
+          </p>
+          <h3 className={styles.sectionTitle}>
+            {isViewingBurns ? 'Briah Burn Tracker' : 'Automated Arbs'}
+          </h3>
           <p className={styles.sectionSubtitle}>
-            {lastUpdated ? `Updated ${formatRelativeTime(lastUpdated)}` : 'Syncing live data'}
+            {currentLastUpdated
+              ? `Updated ${formatRelativeTime(currentLastUpdated)}`
+              : isViewingBurns
+                ? 'Reading direct from vault'
+                : 'Syncing live data'}
           </p>
         </div>
-        <div className={styles.activityControls}>
-          <button
-            type="button"
-            className={`${styles.burnToggle} ${showBurnPanel ? styles.burnToggleActive : ''}`}
-            onClick={handleToggleBurnPanel}
-            aria-pressed={showBurnPanel}
-          >
-            <span>Briah burns</span>
-            <span className={styles.burnToggleIndicator}>
-              <span className={styles.burnToggleKnob} />
-            </span>
-          </button>
-          <button
-            className={styles.activityRefreshButton}
-            onClick={onRefresh}
-            disabled={isLoading}
-            aria-label="Refresh Divine Manager feed"
-          >
-            <RotateCcw size={16} />
-          </button>
+        <div className={styles.activityHeaderRight}>
+          <div className={styles.activityControls}>
+            <button
+              type="button"
+              className={styles.viewToggleButton}
+              onClick={toggleView}
+            >
+              {isViewingBurns ? (
+                <>
+                  <ChevronLeft size={16} /> Back to Arbs
+                </>
+              ) : (
+                <>
+                  View Briah Burns <Flame size={14} className={styles.buttonIconFlame} />
+                </>
+              )}
+            </button>
+            <button
+              className={styles.activityRefreshButton}
+              onClick={handleRefresh}
+              disabled={currentLoading}
+              aria-label="Refresh feed"
+            >
+              <RotateCcw size={16} />
+            </button>
+          </div>
+          {isViewingBurns && !currentLoading && burnExecutions.length > 0 && (
+            <div className={styles.burnStatsPill}>
+              <div className={styles.burnStatGroup}>
+                <span className={styles.burnStatLabel}>Burned</span>
+                <span className={styles.burnStatValue}>
+                  {formatAmount(totalBriahBurned, 2)} BRIAH
+                </span>
+              </div>
+              {totalBurnedUsd !== null && (
+                <>
+                  <div className={styles.burnStatSeparator} />
+                  <div className={styles.burnStatGroup}>
+                    <span className={styles.burnStatLabel}>Value</span>
+                    <span className={styles.burnStatValueUsd}>
+                      {usdFormatter.format(totalBurnedUsd)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {error && (
+      {currentError && (
         <div className={styles.activityError}>
-          <p>{error}</p>
-        </div>
-      )}
-
-      {showBurnPanel && (
-        <div className={styles.burnPanel}>
-          <div className={styles.burnPanelHeader}>
-            <div>
-              <p className={styles.sectionEyebrow}>Buy &amp; burn</p>
-              <h4 className={styles.burnPanelTitle}>Briah burn tracker</h4>
-              <p className={styles.sectionSubtitle}>
-                {burnLastUpdated
-                  ? `Updated ${formatRelativeTime(burnLastUpdated)}`
-                  : 'Reading direct from the buy-and-burn vault'}
-              </p>
-            </div>
-            <div className={styles.burnPanelActions}>
-              <button
-                className={styles.activityRefreshButton}
-                onClick={handleRefreshBurns}
-                disabled={isBurnLoading}
-                aria-label="Refresh Briah burn feed"
-              >
-                <RotateCcw size={16} />
-              </button>
-            </div>
-          </div>
-          {burnError && (
-            <div className={styles.activityError}>
-              <p>{burnError}</p>
-            </div>
-          )}
-          <div className={styles.burnList}>
-            {isBurnLoading && burnRows.length === 0 && (
-              <p className={styles.activityHint}>Summoning buy-and-burn logs…</p>
-            )}
-            {!isBurnLoading && burnRows.length === 0 && !burnError && (
-              <p className={styles.activityHint}>
-                No burn executions yet. Toggle back anytime — we pull straight from the contract when it fires.
-              </p>
-            )}
-            {burnRows.map((burn) => {
-              const briahAmount = Number(formatUnits(burn.briahBurned, 18))
-              const usdValue = briahUsdPrice ? usdFormatter.format(briahAmount * briahUsdPrice) : '—'
-
-              return (
-                <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
-                  <div className={styles.txRowHeader}>
-                    <div className={styles.txRowMain}>
-                      <p>Burn</p>
-                      <span>{shortenHex(burn.transactionHash, 6)}</span>
-                    </div>
-                    <div className={styles.txRowHeaderMeta}>
-                      <div className={styles.txRowMetaGroup}>
-                        <span className={styles.txRowTime}>{formatRelativeTime(burn.timestamp)}</span>
-                        <a
-                          href={`${explorerBase}/tx/${burn.transactionHash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={styles.txRowLink}
-                        >
-                          Otterscan <ExternalLink size={13} />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                  <div className={styles.burnValueRow}>
-                    <div className={styles.burnTokenSummary}>
-                      <img src={BriahLogo} alt="Briah logo" />
-                      <div className={styles.burnTokenCopy}>
-                        <span className={styles.valueLabel}>Briah burned</span>
-                        <strong className={styles.burnAmount}>{formatAmount(burn.briahBurned, 4)} BRIAH</strong>
-                      </div>
-                    </div>
-                    <div className={styles.burnUsdBlock}>
-                      <span className={styles.valueLabel}>Est. USD value</span>
-                      <strong className={styles.burnUsdValue}>{usdValue}</strong>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          <p>{currentError}</p>
         </div>
       )}
 
       <div className={styles.txList}>
-        {isLoading && executions.length === 0 && <p className={styles.activityHint}>Loading Divine Manager executions…</p>}
-        {!isLoading && executions.length === 0 && (
-          <p className={styles.activityHint}>No Execute transactions yet. Arb Guardian will post here once the next spread clears.</p>
+        {currentLoading && pageItems.length === 0 && (
+          <p className={styles.activityHint}>
+            {isViewingBurns ? 'Summoning buy-and-burn logs…' : 'Loading Divine Manager executions…'}
+          </p>
+        )}
+        {!currentLoading && pageItems.length === 0 && !currentError && (
+          <p className={styles.activityHint}>
+            {isViewingBurns
+              ? 'No burn executions yet.'
+              : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
+          </p>
         )}
 
-        {pageItems.map((tx) => {
+        {pageItems.map((item) => {
+          if (isViewingBurns) {
+            // Burn Row
+            const burn = item as (typeof burnExecutions)[0]
+            const briahAmount = Number(formatUnits(burn.briahBurned, 18))
+            const usdValue = briahUsdPrice ? usdFormatter.format(briahAmount * briahUsdPrice) : '—'
+
+            return (
+              <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
+                <div className={styles.txRowHeader}>
+                  <div className={styles.txRowMain}>
+                    <p>Burn</p>
+                    <span>{shortenHex(burn.transactionHash, 6)}</span>
+                  </div>
+                  <div className={styles.txRowHeaderMeta}>
+                    <div className={styles.txRowMetaGroup}>
+                      <span className={styles.txRowTime}>{formatRelativeTime(burn.timestamp)}</span>
+                      <a
+                        href={`${explorerBase}/tx/${burn.transactionHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.txRowLink}
+                      >
+                        Otterscan <ExternalLink size={13} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.burnValueRow}>
+                  <div className={styles.burnTokenSummary}>
+                    <img src={BriahLogo} alt="Briah logo" />
+                    <div className={styles.burnTokenCopy}>
+                      <span className={styles.valueLabel}>Briah burned</span>
+                      <strong className={styles.burnAmount}>
+                        {formatAmount(burn.briahBurned, 4)} BRIAH
+                      </strong>
+                    </div>
+                  </div>
+                  <div className={styles.burnUsdBlock}>
+                    <span className={styles.valueLabel}>Est. USD value</span>
+                    <strong className={styles.burnUsdValue}>{usdValue}</strong>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
+          // Arb Row
+          const tx = item as DivineManagerExecution
           const netHoly = tx.holyIn - tx.holyOut
           const netJit = tx.jitIn - tx.jitOut
           const usdNumber =
@@ -285,7 +306,9 @@ export const DivineManagerActivity = ({
                 <div className={styles.valueCard}>
                   <div className={styles.valueHeader}>
                     <span className={styles.valueLabel}>Tokens gained</span>
-                    <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
+                    <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>
+                      Value gained
+                    </span>
                   </div>
                   <div className={styles.valueContent}>
                     <div className={styles.tokenStack}>
