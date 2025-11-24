@@ -68,6 +68,15 @@ const MAX_RETRIES = 3
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
 
+type DivineCache = {
+  executions: DivineManagerExecution[]
+  nextFromBlock: bigint | null
+  lastUpdated: number | null
+  hasMore: boolean
+}
+
+let cachedDivineState: DivineCache | null = null
+
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 const withRetry = async <T>(fn: () => Promise<T>, retries = MAX_RETRIES, delayMs = RETRY_DELAY_MS): Promise<T> => {
@@ -110,16 +119,17 @@ const parseTransfer = (log: RawLog) => {
 }
 
 export const useDivineManagerActivity = () => {
-  const [executions, setExecutions] = useState<DivineManagerExecution[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [executions, setExecutions] = useState<DivineManagerExecution[]>(cachedDivineState?.executions ?? [])
+  const [isLoading, setIsLoading] = useState(cachedDivineState ? false : true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
+  const [hasMore, setHasMore] = useState(cachedDivineState?.hasMore ?? true)
   const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
-  const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(cachedDivineState?.lastUpdated ?? null)
+  const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(cachedDivineState?.nextFromBlock ?? null)
   const executionsRef = useRef<DivineManagerExecution[]>([])
   const nextFromBlockRef = useRef<bigint | null>(null)
   const isFetchingRef = useRef(false)
+  const hasCachedDataRef = useRef(Boolean(cachedDivineState?.executions?.length))
 
   useEffect(() => {
     executionsRef.current = executions
@@ -487,6 +497,12 @@ export const useDivineManagerActivity = () => {
         setLastUpdated(Date.now())
         setNextFromBlock(nextCursor)
         setHasMore(nextCursor !== null)
+        cachedDivineState = {
+          executions: ordered,
+          nextFromBlock: nextCursor,
+          lastUpdated: Date.now(),
+          hasMore: nextCursor !== null,
+        }
       } catch (err) {
         console.error('Error fetching Divine Manager activity:', err)
         setError(err instanceof Error ? err.message : 'Failed to load Divine Manager activity')
@@ -504,7 +520,11 @@ export const useDivineManagerActivity = () => {
   )
 
   useEffect(() => {
-    fetchActivity({ reset: true, targetCount: TARGET_EXECUTION_COUNT })
+    fetchActivity({
+      reset: !hasCachedDataRef.current,
+      silent: hasCachedDataRef.current,
+      targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
+    })
     const interval = setInterval(() => {
       fetchActivity({
         silent: true,

@@ -36,6 +36,16 @@ const RETRY_DELAY_MS = 300
 const MAX_RETRIES = 3
 const REFRESH_INTERVAL = 300_000
 
+type BurnCache = {
+  executions: BuyAndBurnExecution[]
+  nextFromBlock: bigint | null
+  lastUpdated: number | null
+  hasMore: boolean
+  briahUsdPrice: number | null
+}
+
+let cachedBurnState: BurnCache | null = null
+
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 const withRetry = async <T>(fn: () => Promise<T>, retries = MAX_RETRIES, delayMs = RETRY_DELAY_MS): Promise<T> => {
@@ -54,17 +64,18 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = MAX_RETRIES, delayMs
 }
 
 export const useBuyAndBurnActivity = () => {
-  const [executions, setExecutions] = useState<BuyAndBurnExecution[]>([])
+  const [executions, setExecutions] = useState<BuyAndBurnExecution[]>(cachedBurnState?.executions ?? [])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
+  const [hasMore, setHasMore] = useState(cachedBurnState?.hasMore ?? true)
   const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null)
-  const [briahUsdPrice, setBriahUsdPrice] = useState<number | null>(null)
-  const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<number | null>(cachedBurnState?.lastUpdated ?? null)
+  const [briahUsdPrice, setBriahUsdPrice] = useState<number | null>(cachedBurnState?.briahUsdPrice ?? null)
+  const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(cachedBurnState?.nextFromBlock ?? null)
   const executionsRef = useRef<BuyAndBurnExecution[]>([])
   const nextFromBlockRef = useRef<bigint | null>(null)
   const isFetchingRef = useRef(false)
+  const hasCachedDataRef = useRef(Boolean(cachedBurnState?.executions?.length))
 
   useEffect(() => {
     executionsRef.current = executions
@@ -83,6 +94,13 @@ export const useBuyAndBurnActivity = () => {
         const parsedPrice = price ? Number(price) : null
         if (parsedPrice && Number.isFinite(parsedPrice)) {
           setBriahUsdPrice(parsedPrice)
+          cachedBurnState = {
+            executions: executionsRef.current,
+            nextFromBlock: nextFromBlockRef.current,
+            lastUpdated,
+            hasMore,
+            briahUsdPrice: parsedPrice,
+          }
         }
       }
     } catch (priceError) {
@@ -228,6 +246,13 @@ export const useBuyAndBurnActivity = () => {
         setLastUpdated(Date.now())
         setNextFromBlock(nextCursor)
         setHasMore(nextCursor !== null)
+        cachedBurnState = {
+          executions: ordered,
+          nextFromBlock: nextCursor,
+          lastUpdated: Date.now(),
+          hasMore: nextCursor !== null,
+          briahUsdPrice,
+        }
         void fetchPrice()
       } catch (fetchError) {
         console.error('Error fetching Briah burn activity:', fetchError)
@@ -247,8 +272,14 @@ export const useBuyAndBurnActivity = () => {
   )
 
   useEffect(() => {
-    fetchData({ reset: true, targetCount: TARGET_EXECUTION_COUNT })
-    void fetchPrice()
+    fetchData({
+      reset: !hasCachedDataRef.current,
+      silent: hasCachedDataRef.current,
+      targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
+    })
+    if (!briahUsdPrice) {
+      void fetchPrice()
+    }
     const interval = setInterval(() => {
       fetchData({
         silent: true,

@@ -113,6 +113,7 @@
   display: block;
   background: linear-gradient(90deg, #e118e5, #f97316, #1b63ff);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
 }
 
