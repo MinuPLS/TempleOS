@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
-import { ArrowRight, Flame, BookOpen, Bot } from 'lucide-react'
+import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
 import StatsDashboard from '../StatsDashboard/StatsDashboard'
@@ -9,6 +10,7 @@ import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
 export function LandingPage() {
+  const [showPartnerDetails, setShowPartnerDetails] = useState(false)
   const { tokenPrices } = usePoolData()
   const {
     executions: divineExecutions,
@@ -300,12 +302,42 @@ export function LandingPage() {
           <div className={styles.divineLayout}>
             <aside className={styles.divineSideColumn}>
               <div className={`${styles.sideCard} ${styles.divineSummaryCard}`}>
-                <h3 className={styles.sideSectionTitle}>Divine Manager, summarized</h3>
-                <p className={styles.sideSectionDescription}>
-                  The off-chain Arb Guardian watches HolyC/JIT markets and only wakes the Divine Manager when a route is
-                  safely profitable. Each execute turns price gaps into HolyC burns and vault growth – the feed is its
-                  mission log.
-                </p>
+                <div className={styles.sideCardHeader}>
+                  <h3 className={styles.sideSectionTitle}>
+                    {showPartnerDetails ? 'Briah Partnership' : 'The Arb Guardian'}
+                  </h3>
+                  <button
+                    type="button"
+                    className={`${styles.viewToggleButton} ${styles.partnerToggleButton}`}
+                    onClick={() => setShowPartnerDetails((prev) => !prev)}
+                  >
+                    {showPartnerDetails ? (
+                      <>
+                        <ChevronLeft size={14} />
+                        Back to Arb
+                      </>
+                    ) : (
+                      <>
+                        Partner projects
+                        <Sparkles size={14} className={styles.partnerToggleIcon} />
+                      </>
+                    )}
+                  </button>
+                </div>
+                {showPartnerDetails ? (
+                  <>
+                    <p className={styles.sideSectionDescription}>
+                      Briah is the first official partner plugged directly into the HolyC engine. Every profitable HolyC/JIT arb sends 25% of the take into the JIT/Briah pool.
+                    </p>
+                    <p className={styles.sideSectionDescription}>
+                      The pool market buys BRIAH and ships it to the dead address - a permanent burn. When HolyC moves, the engine fires, and Briah gets burned.
+                    </p>
+                  </>
+                ) : (
+                  <p className={styles.sideSectionDescription}>
+                    When a route is safely profitable after all fees and gas, the off-chain Arb Guardian bot calls the Divine Manager on-chain to run the loop and return extra HolyC or JIT to the protocol. It scans roughly hourly, and every time it fires the vault grows and HolyC supply shrinks.
+                  </p>
+                )}
               </div>
 
               <div className={styles.tokenStatsWrapper}>

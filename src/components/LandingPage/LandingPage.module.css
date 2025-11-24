@@ -1352,6 +1352,13 @@
   gap: 10px;
 }
 
+.sideCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .sideSectionTitle {
   font-size: 18px;
   margin: 0;
@@ -1750,7 +1757,28 @@
   transform: translateY(-1px);
 }
 
+.partnerToggleButton.viewToggleButton {
+  height: 32px;
+  padding: 6px 12px;
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.08), rgba(249, 115, 22, 0.1));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.12);
+  flex-shrink: 0;
+}
+
+.partnerToggleButton.viewToggleButton:hover {
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.14), rgba(249, 115, 22, 0.16));
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
 .buttonIconFlame {
+  color: #f97316;
+}
+
+.partnerToggleIcon {
   color: #f97316;
 }
 
