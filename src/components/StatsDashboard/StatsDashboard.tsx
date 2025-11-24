@@ -12,9 +12,10 @@ import { useState, memo } from 'react';
 interface StatsDashboardProps {
   currentPanel?: number;
   onPanelChange?: (panel: number) => void;
+  showHeader?: boolean;
 }
 
-const StatsDashboard = ({}: StatsDashboardProps = {}) => {
+const StatsDashboard = ({ showHeader = true }: StatsDashboardProps = {}) => {
   const { tokenPrices } = usePoolData();
   const { tokenStats, isLoading, error, refresh: refreshTokenStats } = useTokenStats();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -35,26 +36,28 @@ const StatsDashboard = ({}: StatsDashboardProps = {}) => {
     <div className={styles.poolsContainer}>
 
 
-      <div className={styles.header}>
-        <div className={styles.headerActions}>
+      {showHeader && (
+        <div className={styles.header}>
+          <div className={styles.headerActions}>
+            <Tooltip 
+              content="Refresh stats with a new on-chain fetch" 
+              variant="info"
+              position="bottom"
+            >
+              <button onClick={refreshTokenStats} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
+                <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
+              </button>
+            </Tooltip>
+          </div>
           <Tooltip 
-            content="Refresh stats with a new on-chain fetch" 
+            content="Key metrics to track the ecosystem and help make trading decisions" 
             variant="info"
             position="bottom"
           >
-            <button onClick={refreshTokenStats} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
-              <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
-            </button>
+            <h2 className={styles.title}>Token Stats</h2>
           </Tooltip>
         </div>
-        <Tooltip 
-          content="Key metrics to track the ecosystem and help make trading decisions" 
-          variant="info"
-          position="bottom"
-        >
-          <h2 className={styles.title}>Token Stats</h2>
-        </Tooltip>
-      </div>
+      )}
       <div className={styles.poolsGrid}>
         {/* Token Prices Section */}
         <div className={styles.tokenPricesCard}>

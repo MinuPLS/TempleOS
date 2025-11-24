@@ -1,20 +1,15 @@
-import { useState } from 'react'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
 import { ArrowRight, Flame, BookOpen, Bot } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
-import { useTokenStats } from '../StatsDashboard/hooks/useTokenStats'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
-import { formatCurrency, formatBigIntTokenAmount } from '@/lib/utils'
+import StatsDashboard from '../StatsDashboard/StatsDashboard'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
-type TokenStatAccent = 'holyc' | 'jit' | 'locked' | 'burned' | 'lp' | 'compiler'
-
 export function LandingPage() {
   const { tokenPrices } = usePoolData()
-  const { tokenStats } = useTokenStats()
   const {
     executions: divineExecutions,
     isLoading: isDivineLoading,
@@ -25,83 +20,6 @@ export function LandingPage() {
     refresh: refreshDivine,
     loadMore: loadMoreDivine,
   } = useDivineManagerActivity()
-
-  const [openStatId, setOpenStatId] = useState<string | null>(null)
-
-  const keyTokenStats: {
-    id: string
-    label: string
-    value: string
-    description: string
-    accent: TokenStatAccent
-  }[] = [
-    {
-      id: 'holyc-price',
-      label: 'HolyC Price',
-      value: formatCurrency(tokenPrices.holycUSD),
-      description: 'Current market price of HolyC on PulseX.',
-      accent: 'holyc',
-    },
-    {
-      id: 'jit-price',
-      label: 'JIT Price',
-      value: formatCurrency(tokenPrices.jitUSD),
-      description: 'Current market price of JIT on PulseX.',
-      accent: 'jit',
-    },
-    {
-      id: 'circulating-holyc',
-      label: 'HolyC circulating',
-      value: `${formatBigIntTokenAmount(tokenStats.circulatingHolyC, 0)} HOLYC`,
-      description:
-        'All available HolyC held in wallets and contracts, including the portion in the Compiler that can still be redeemed by restoring JIT.',
-      accent: 'holyc',
-    },
-    {
-      id: 'jit-supply',
-      label: 'JIT supply',
-      value: `${formatBigIntTokenAmount(tokenStats.jitCirculating, 0)} JIT`,
-      description:
-        'JIT compiled from HolyC – the tradable, deflationary wrapper. Backed 1:1 by HolyC, but compile/restore/transfer fees mean you always get slightly less back.',
-      accent: 'jit',
-    },
-    {
-      id: 'holyc-compiler',
-      label: 'HolyC in Compiler',
-      value: `${formatBigIntTokenAmount(tokenStats.holycLocked, 0)} HOLYC`,
-      description:
-        "HolyC held in the Compiler contract to back the current JIT supply. Contains some Locked HolyC that can never be redeemed, since there isn't enough circulating JIT to Restore all of it into HolyC. The redeemable portion is already counted in HolyC Circulating.",
-      accent: 'compiler',
-    },
-    {
-      id: 'burned-lp',
-      label: 'Burned LP',
-      value: `${formatBigIntTokenAmount(tokenStats.holycLockedAsLP, 0)} HOLYC`,
-      description:
-        'HolyC currently deposited as liquidity on the DEX. The LP tokens were burned, so liquidity cannot be withdrawn; the HolyC stays in the pool for trading and moves into circulating supply as it is bought.',
-      accent: 'lp',
-    },
-    {
-      id: 'locked-holyc',
-      label: 'Locked HolyC',
-      value: `${formatBigIntTokenAmount(tokenStats.permanentlyLockedHolyC, 0)} HOLYC`,
-      description:
-        'HolyC permanently trapped in the Compiler by JIT transfer burns and fees. It can never be withdrawn or redeemed, because there is not enough JIT in circulation to restore it.',
-      accent: 'locked',
-    },
-    {
-      id: 'burned-holyc',
-      label: 'Burned HolyC',
-      value: `${formatBigIntTokenAmount(tokenStats.holycFeesBurned, 0)} HOLYC`,
-      description:
-        'HolyC sent to the burn address from compile/restore fees or manual burns – permanently removed from supply.',
-      accent: 'burned',
-    },
-  ]
-
-  const handleToggleStat = (id: string) => {
-    setOpenStatId((prev) => (prev === id ? null : id))
-  }
 
   const heroLinks = [
     {
@@ -390,74 +308,8 @@ export function LandingPage() {
                 </p>
               </div>
 
-              <div className={styles.sideCard}>
-                <h3 className={styles.sideSectionTitle}>Token stats</h3>
-                <ul className={styles.tokenStatsList}>
-                  {keyTokenStats.map((stat) => {
-                    const isOpen = openStatId === stat.id
-
-                    let valueClass = ''
-                    if (stat.accent === 'holyc') valueClass = styles.tokenStatValueHolyc
-                    else if (stat.accent === 'jit') valueClass = styles.tokenStatValueJit
-                    else if (stat.accent === 'locked') valueClass = styles.tokenStatValueLocked
-                    else if (stat.accent === 'lp') valueClass = styles.tokenStatValueLp
-                    else if (stat.accent === 'burned') valueClass = styles.tokenStatValueBurned
-                    else if (stat.accent === 'compiler') valueClass = styles.tokenStatValueCompiler
-
-                    let icon
-                    if (stat.accent === 'holyc' || stat.accent === 'compiler') {
-                      icon = <img src={HolyCLogo} alt="HolyC" className={styles.tokenStatIcon} />
-                    } else if (stat.accent === 'jit') {
-                      icon = <img src={JITLogo} alt="JIT" className={styles.tokenStatIcon} />
-                    } else if (stat.accent === 'lp') {
-                      icon = <img src={PulseXLogo} alt="PulseX" className={styles.tokenStatIcon} />
-                    } else if (stat.accent === 'locked') {
-                      icon = (
-                        <div className={styles.tokenStatEmoji} aria-hidden="true">
-                          🔒
-                        </div>
-                      )
-                    } else {
-                      icon = (
-                        <div className={styles.tokenStatEmoji} aria-hidden="true">
-                          🔥
-                        </div>
-                      )
-                    }
-
-                    return (
-                      <li key={stat.id} className={styles.tokenStatRow}>
-                        <button
-                          type="button"
-                          className={styles.tokenStatHeader}
-                          onClick={() => handleToggleStat(stat.id)}
-                        >
-                          <div className={styles.tokenStatMain}>
-                            <div className={styles.tokenStatLabelGroup}>
-                              {icon}
-                              <span className={styles.tokenStatLabel}>{stat.label}</span>
-                            </div>
-                            <span className={`${styles.tokenStatValue} ${valueClass}`}>{stat.value}</span>
-                          </div>
-                          <span
-                            className={`${styles.tokenStatToggle} ${
-                              isOpen ? styles.tokenStatToggleOpen : ''
-                            }`}
-                          >
-                            ▾
-                          </span>
-                        </button>
-                        <div
-                          className={`${styles.tokenStatBody} ${
-                            isOpen ? styles.tokenStatBodyOpen : ''
-                          }`}
-                        >
-                          <p className={styles.tokenStatBodyText}>{stat.description}</p>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
+              <div className={styles.tokenStatsWrapper}>
+                <StatsDashboard showHeader={false} />
               </div>
             </aside>
             <div className={styles.divineFeedColumn}>
