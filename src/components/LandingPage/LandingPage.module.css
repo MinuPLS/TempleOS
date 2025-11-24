@@ -2245,25 +2245,30 @@
 .valueBurn {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
   font-size: 13px;
+  opacity: 0.9;
 }
 
 .valueBurnCopy {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   line-height: 1.2;
-  text-align: left;
+  text-align: right;
 }
 
 .burnUsd {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
 }
 
 .valueBurn svg {
   color: rgba(248, 113, 113, 0.95);
+  flex-shrink: 0;
+  margin-top: 1px; /* Optical alignment with text line */
 }
 
 @media (max-width: 480px) {
