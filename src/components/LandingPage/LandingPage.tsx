@@ -19,9 +19,12 @@ export function LandingPage() {
   const {
     executions: divineExecutions,
     isLoading: isDivineLoading,
+    isLoadingMore: isDivineLoadingMore,
+    hasMore: hasMoreDivine,
     error: divineError,
     lastUpdated: divineLastUpdated,
     refresh: refreshDivine,
+    loadMore: loadMoreDivine,
   } = useDivineManagerActivity()
 
   const [openStatId, setOpenStatId] = useState<string | null>(null)
@@ -466,9 +469,12 @@ export function LandingPage() {
               <DivineManagerActivity
                 executions={divineExecutions}
                 isLoading={isDivineLoading}
+                isLoadingMore={isDivineLoadingMore}
                 error={divineError}
                 lastUpdated={divineLastUpdated}
                 onRefresh={refreshDivine}
+                onLoadMore={loadMoreDivine}
+                hasMore={hasMoreDivine}
                 tokenPrices={tokenPrices}
               />
             </div>

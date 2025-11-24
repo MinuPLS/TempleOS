@@ -11,6 +11,7 @@ import styles from './LandingPage.module.css'
 import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 
 const PAGE_SIZE = 5
+const PAGE_BLOCK = 20
 
 const usdFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -62,43 +63,53 @@ const formatUsdSigned = (value: number) => {
 interface DivineManagerActivityProps {
   executions: DivineManagerExecution[]
   isLoading: boolean
+  isLoadingMore: boolean
   error: string | null
   lastUpdated: number | null
   onRefresh: () => void
+  onLoadMore: () => void
+  hasMore: boolean
   tokenPrices: TokenPrices
 }
 
 export const DivineManagerActivity = ({
   executions,
   isLoading,
+  isLoadingMore,
   error,
   lastUpdated,
   onRefresh,
+  onLoadMore,
+  hasMore,
   tokenPrices,
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD } = tokenPrices
-  const [page, setPage] = useState(1)
+  const [pageByView, setPageByView] = useState<{ arbs: number; burns: number }>({ arbs: 1, burns: 1 })
   const [viewMode, setViewMode] = useState<'arbs' | 'burns'>('arbs')
   const isViewingBurns = viewMode === 'burns'
 
   const {
     executions: burnExecutions,
     isLoading: isBurnLoading,
+    isLoadingMore: isBurnLoadingMore,
+    hasMore: hasMoreBurns,
     error: burnError,
     refresh: refreshBurns,
+    loadMore: loadMoreBurns,
     lastUpdated: burnLastUpdated,
     briahUsdPrice,
   } = useBuyAndBurnActivity()
 
-  useEffect(() => {
-    setPage(1)
-  }, [viewMode, executions, burnExecutions])
+  const page = pageByView[viewMode]
+
+  const [hasLoadedBurns, setHasLoadedBurns] = useState(false)
 
   useEffect(() => {
-    if (isViewingBurns) {
+    if (isViewingBurns && !hasLoadedBurns) {
+      setHasLoadedBurns(true)
       void refreshBurns()
     }
-  }, [isViewingBurns, refreshBurns])
+  }, [isViewingBurns, hasLoadedBurns, refreshBurns])
 
   const currentData = useMemo(() => {
     const data = isViewingBurns ? burnExecutions : executions
@@ -117,9 +128,12 @@ export const DivineManagerActivity = ({
   }, [totalBriahBurned, briahUsdPrice])
 
   const currentLoading = isViewingBurns ? isBurnLoading : isLoading
+  const currentLoadingMore = isViewingBurns ? isBurnLoadingMore : isLoadingMore
   const currentError = isViewingBurns ? burnError : error
   const currentLastUpdated = isViewingBurns ? burnLastUpdated : lastUpdated
   const handleRefresh = isViewingBurns ? () => void refreshBurns() : onRefresh
+  const currentHasMore = isViewingBurns ? hasMoreBurns : hasMore
+  const handleLoadMore = isViewingBurns ? () => void loadMoreBurns() : onLoadMore
 
   const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
@@ -128,9 +142,22 @@ export const DivineManagerActivity = ({
     () => currentData.slice(start, start + PAGE_SIZE),
     [currentData, start]
   )
+  const totalPageDisplay =
+    totalPages > PAGE_BLOCK && currentHasMore
+      ? `${Math.floor(totalPages / PAGE_BLOCK) * PAGE_BLOCK}+`
+      : totalPages
+  const shouldShowLoadMore = currentHasMore && pageIndex === totalPages
 
-  const handlePrev = () => setPage((prev) => Math.max(1, prev - 1))
-  const handleNext = () => setPage((prev) => Math.min(totalPages, prev + 1))
+  const handlePrev = () =>
+    setPageByView((prev) => {
+      const current = prev[viewMode]
+      return { ...prev, [viewMode]: Math.max(1, current - 1) }
+    })
+  const handleNext = () =>
+    setPageByView((prev) => {
+      const current = prev[viewMode]
+      return { ...prev, [viewMode]: Math.min(totalPages, current + 1) }
+    })
   const toggleView = () => setViewMode((prev) => (prev === 'arbs' ? 'burns' : 'arbs'))
 
   const explorerBase = 'https://otter.pulsechain.com'
@@ -172,14 +199,17 @@ export const DivineManagerActivity = ({
             </button>
             <button
               className={styles.activityRefreshButton}
-              onClick={handleRefresh}
-              disabled={currentLoading}
+              onClick={() => {
+                if (currentLoadingMore) return
+                handleRefresh()
+              }}
+              disabled={currentLoadingMore}
               aria-label="Refresh feed"
             >
               <RotateCcw size={16} />
             </button>
           </div>
-          {isViewingBurns && !currentLoading && burnExecutions.length > 0 && (
+          {isViewingBurns && burnExecutions.length > 0 && (
             <div className={styles.burnStatsPill}>
               <div className={styles.burnStatGroup}>
                 <span className={styles.burnStatLabel}>Burned</span>
@@ -338,12 +368,24 @@ export const DivineManagerActivity = ({
           )
         })}
       </div>
+      {shouldShowLoadMore && (
+        <div className={styles.activityLoadMoreRow}>
+          <button
+            type="button"
+            className={styles.activityLoadMoreButton}
+            onClick={handleLoadMore}
+            disabled={currentLoadingMore || currentLoading}
+          >
+            {currentLoadingMore ? 'Loading more…' : 'Load older activity'}
+          </button>
+        </div>
+      )}
       <div className={styles.activityFooter}>
         <button onClick={handlePrev} disabled={pageIndex === 1} aria-label="Previous page">
           <ChevronLeft size={16} />
         </button>
         <span className={styles.pageIndicator}>
-          {pageIndex}/{totalPages}
+          {pageIndex}/{totalPageDisplay}
         </span>
         <button onClick={handleNext} disabled={pageIndex === totalPages} aria-label="Next page">
           <ChevronRight size={16} />
