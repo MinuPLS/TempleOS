@@ -269,7 +269,8 @@
   max-width: 600px;
 }
 
-.tokenomicsButton {
+.tokenomicsButton,
+.divineGuideButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -292,7 +293,14 @@
   overflow: hidden;
 }
 
-.tokenomicsButton::before {
+.divineGuideButton {
+  border-color: rgba(192, 132, 252, 0.35);
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.28) 0%, rgba(59, 130, 246, 0.14) 100%);
+  color: #ede9fe;
+}
+
+.tokenomicsButton::before,
+.divineGuideButton::before {
   content: '';
   position: absolute;
   top: 0;
@@ -304,7 +312,8 @@
   transition: transform 0.6s ease;
 }
 
-.tokenomicsButton:hover::before {
+.tokenomicsButton:hover::before,
+.divineGuideButton:hover::before {
   transform: translateX(100%);
 }
 
@@ -314,6 +323,14 @@
   color: #fff;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.divineGuideButton:hover {
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.5) 0%, rgba(59, 130, 246, 0.3) 100%);
+  border-color: rgba(192, 132, 252, 0.65);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 20px rgba(147, 51, 234, 0.35);
 }
 
 .flowGrid {
@@ -995,7 +1012,17 @@
   }
 
   /* Scale visuals down on mobile */
-  .gapVisualSvg, .captureVisualAbstract, .resultVisualStatic {
+  .gapVisualSvg {
+    height: 72px;
+    margin-bottom: 0;
+    border-radius: 12px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .captureVisualAbstract, .resultVisualStatic {
     height: 60px;
     margin-bottom: 0;
     border-radius: 12px;
@@ -1003,9 +1030,10 @@
     border: none;
     box-shadow: none;
   }
-  
+
   .gapSvg {
-    transform: scale(0.85); /* Scale back up */
+    transform: scale(1.2);
+    transform-origin: center;
     overflow: visible;
   }
   
@@ -1013,7 +1041,7 @@
   .gapSvg foreignObject {
     width: 50px;
     height: 50px;
-    transform: translate(-6px, -6px);
+    transform: translate(-4px, -4px);
   }
   
   .resultVisualStatic {
@@ -1483,28 +1511,6 @@
 
 .divineSummaryCard {
   margin-top: 4px;
-}
-
-.divineSummaryButton {
-  margin-top: 4px;
-  align-self: flex-start;
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(147, 197, 253, 0.7);
-  background: rgba(15, 23, 42, 0.9);
-  color: rgba(248, 250, 252, 0.95);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-}
-
-.divineSummaryButton:hover {
-  transform: translateY(-1px);
-  border-color: rgba(129, 140, 248, 0.95);
-  background: rgba(30, 64, 175, 0.9);
 }
 
 @media (max-width: 900px) {

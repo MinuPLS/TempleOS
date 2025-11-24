@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
-import { ArrowRight, Zap, Flame, BookOpen } from 'lucide-react'
+import { ArrowRight, Flame, BookOpen, Bot } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useTokenStats } from '../StatsDashboard/hooks/useTokenStats'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
@@ -9,7 +9,6 @@ import { formatCurrency, formatBigIntTokenAmount } from '@/lib/utils'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
-import CompilerLogo from '../../assets/TokenLogos/Compilerv0.png'
 
 type TokenStatAccent = 'holyc' | 'jit' | 'locked' | 'burned' | 'lp' | 'compiler'
 
@@ -284,6 +283,14 @@ export function LandingPage() {
               <p className={styles.cardDescription}>
                 As a HolyC holder, your job is easy: just buy, sell, or hold. The system turns volatility into a lighter float and a deeper vault.
               </p>
+              <button
+                type="button"
+                className={styles.divineGuideButton}
+                onClick={handleOpenDivineGuide}
+              >
+                <Bot size={16} />
+                <span>Divine Manager</span>
+              </button>
             </div>
 
             <div className={styles.automationSteps}>
@@ -381,13 +388,6 @@ export function LandingPage() {
                   safely profitable. Each execute turns price gaps into HolyC burns and vault growth – the feed is its
                   mission log.
                 </p>
-                <button
-                  type="button"
-                  className={styles.divineSummaryButton}
-                  onClick={handleOpenDivineGuide}
-                >
-                  Open Divine Manager guide
-                </button>
               </div>
 
               <div className={styles.sideCard}>
