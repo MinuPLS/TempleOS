@@ -290,24 +290,19 @@ export function LandingPage() {
               {/* Step 1: The Gap (SVG Split + Central PulseX) */}
               <div className={styles.automationStep}>
                 <div className={styles.gapVisualSvg}>
-                  <svg viewBox="0 0 200 180" className={styles.gapSvg} preserveAspectRatio="xMidYMid meet">
-                    {/* Base Line (Shortened, stops before PulseX) */}
-                    <line x1="10" y1="90" x2="35" y2="90" stroke="#94a3b8" strokeWidth="2" strokeOpacity="0.5" />
-                    
+                  <svg viewBox="0 0 160 180" className={styles.gapSvg} preserveAspectRatio="xMidYMid meet">
                     {/* PulseX Branding (Larger: 48px, Centered Vertically at y=90) */}
                     {/* y = 90 - 24 = 66 */}
-                    <foreignObject x="35" y="66" width="48" height="48">
+                    <foreignObject x="5" y="66" width="48" height="48">
                        <img src={PulseXLogo} alt="PulseX" className={styles.svgPulseX} />
                     </foreignObject>
 
                     {/* Top Branch (HolyC - Blue) - Starts FROM PulseX Center/Right */}
-                    {/* Start x ~ 35+48=83. Let's say 82 for overlap. */}
-                    {/* End Y=40. x shifted 10px left -> 140 */}
-                    <path d="M82,90 C112,90 112,40 140,40" fill="none" stroke="url(#gradHolyC)" strokeWidth="2" />
+                    {/* Start x ~ 5+48=53. Let's say 52 for overlap. */}
+                    <path d="M52,90 C82,90 82,40 110,40" fill="none" stroke="url(#gradHolyC)" strokeWidth="2" />
                     
                     {/* Bottom Branch (JIT - Red) - Starts FROM PulseX Center/Right */}
-                    {/* End Y=140 */}
-                    <path d="M82,90 C112,90 112,140 140,140" fill="none" stroke="url(#gradJIT)" strokeWidth="2" />
+                    <path d="M52,90 C82,90 82,140 110,140" fill="none" stroke="url(#gradJIT)" strokeWidth="2" />
 
                     {/* Gradients */}
                     <defs>
@@ -323,12 +318,12 @@ export function LandingPage() {
 
                     {/* Token Logos (Larger: 48px, Centered at Tips) */}
                     {/* HolyC at y=40 -> y = 40-24=16 */}
-                    <foreignObject x="140" y="16" width="48" height="48">
+                    <foreignObject x="110" y="16" width="48" height="48">
                       <img src={HolyCLogo} alt="HolyC" className={styles.svgLogo} />
                     </foreignObject>
                     
                     {/* JIT at y=140 -> y = 140-24=116 */}
-                    <foreignObject x="140" y="116" width="48" height="48">
+                    <foreignObject x="110" y="116" width="48" height="48">
                       <img src={JITLogo} alt="JIT" className={styles.svgLogo} />
                     </foreignObject>
                   </svg>
