@@ -36,11 +36,9 @@ function toTokens(raw?: string) {
 
 function formatTokenAmount(value: number) {
   if (!Number.isFinite(value)) return '0'
-  const abs = Math.abs(value)
-  const maximumFractionDigits = abs >= 1_000_000 ? 0 : abs >= 10_000 ? 1 : 2
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits,
+    maximumFractionDigits: 0,
   })
 }
 
@@ -120,9 +118,9 @@ export function LandingPage() {
 
   const burnMetrics = useMemo(
     () => [
-      { label: 'Past 24h', value: toTokens(burnStats?.burnedJit24h) },
-      { label: 'Past 7 days', value: toTokens(burnStats?.burnedJit7d) },
-      { label: 'Past 30 days', value: toTokens(burnStats?.burnedJit30d) },
+      { label: 'Past 24h', value: toTokens(burnStats?.burnedJit24h), intensity: 'low' },
+      { label: 'Past 7 days', value: toTokens(burnStats?.burnedJit7d), intensity: 'medium' },
+      { label: 'Past 30 days', value: toTokens(burnStats?.burnedJit30d), intensity: 'high' },
     ],
     [burnStats]
   )
@@ -470,9 +468,21 @@ export function LandingPage() {
                   >
                     <div className={styles.burnMeterGridCompact}>
                       {burnMetrics.map((metric) => (
-                        <div key={metric.label} className={styles.burnMetricPill}>
-                          <div className={styles.burnMetricPillLabel}>{metric.label}</div>
-                          <div className={styles.burnMetricPillValue}>{formatTokenAmount(metric.value)} JIT</div>
+                        <div
+                          key={metric.label}
+                          className={`${styles.burnMetricPill} ${styles[`burnPill${metric.intensity.charAt(0).toUpperCase() + metric.intensity.slice(1)}`]}`}
+                        >
+                          <div className={styles.burnPillBackground} />
+                          <div className={styles.burnMetricHeader}>
+                            <div className={styles.burnIconWrapper}>
+                              <Flame size={12} className={styles.burnIcon} />
+                            </div>
+                            <span className={styles.burnMetricLabel}>{metric.label}</span>
+                          </div>
+                          <div className={styles.burnMetricValueGroup}>
+                            <span className={styles.burnMetricValue}>{formatTokenAmount(metric.value)}</span>
+                            <span className={styles.burnMetricUnit}>JIT</span>
+                          </div>
                         </div>
                       ))}
                     </div>

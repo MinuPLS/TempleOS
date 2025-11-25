@@ -11,6 +11,7 @@ import { DivineManagerGuideModal } from './GuideModal/DivineManagerGuideModal'
 import { throttle } from '../lib/performanceOptimizer'
 import styles from './NavBar.module.css'
 import { Link, useLocation } from 'react-router-dom'
+import { BookOpen, Coins, Zap, ChevronRight } from 'lucide-react'
 
 export function NavBar() {
   const { address, isConnected } = useAccount()
@@ -302,6 +303,7 @@ export function NavBar() {
               aria-haspopup="true"
               aria-expanded={isGuidesMenuOpen}
             >
+              <BookOpen size={16} className={styles.guideIcon} />
               <span className={styles.guideButtonText}>Guides</span>
             </button>
             <AnimatePresence>
@@ -321,7 +323,14 @@ export function NavBar() {
                       setIsGuideOpen(true)
                     }}
                   >
-                    Tokenomics
+                    <div className={styles.guideItemIconWrapper}>
+                      <Coins size={18} />
+                    </div>
+                    <div className={styles.guideItemContent}>
+                      <span className={styles.guideItemTitle}>Tokenomics</span>
+                      <span className={styles.guideItemDesc}>Supply & Mechanics</span>
+                    </div>
+                    <ChevronRight size={14} className={styles.guideItemArrow} />
                   </button>
                   <button
                     type="button"
@@ -331,7 +340,14 @@ export function NavBar() {
                       setIsDivineGuideOpen(true)
                     }}
                   >
-                    Divine Manager
+                    <div className={styles.guideItemIconWrapper}>
+                      <Zap size={18} />
+                    </div>
+                    <div className={styles.guideItemContent}>
+                      <span className={styles.guideItemTitle}>Divine Manager</span>
+                      <span className={styles.guideItemDesc}>JIT/HolyC Automation</span>
+                    </div>
+                    <ChevronRight size={14} className={styles.guideItemArrow} />
                   </button>
                 </motion.div>
               )}
