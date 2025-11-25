@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getPublicClient } from '@wagmi/core';
 import { config, pulseChain } from '@/config/wagmi';
 import {
@@ -33,10 +33,16 @@ export const useTokenStats = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
-  const fetchTokenStats = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchTokenStats = useCallback(async (options?: { manual?: boolean }) => {
+    const manual = options?.manual === true;
+    const shouldShowLoading = manual || !hasLoadedRef.current;
+
+    if (shouldShowLoading) {
+      setIsLoading(true);
+      setError(null);
+    }
     
     try {
       console.log('Fetching token stats...');
@@ -127,12 +133,16 @@ export const useTokenStats = () => {
         circulatingHolyC:       circulatingHolyC,
         holycLockedAsLP:        holycLockedAsLP,
       });
+      setError(null);
+      hasLoadedRef.current = true;
 
     } catch (error) {
       console.error('Error fetching token stats:', error);
       setError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
-      setIsLoading(false);
+      if (shouldShowLoading) {
+        setIsLoading(false);
+      }
     }
   }, []);
 

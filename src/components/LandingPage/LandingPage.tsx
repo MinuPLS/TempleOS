@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
-import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft } from 'lucide-react'
+import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft, RotateCcw, Info } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
 import StatsDashboard from '../StatsDashboard/StatsDashboard'
@@ -9,8 +9,47 @@ import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
+const BURN_API_URL = 'https://jit-burn-tracker.info-megainu.workers.dev/jit-burn/stats?hours=720'
+const JIT_DECIMALS = 18n
+const DECIMAL_DIVISOR = 10n ** JIT_DECIMALS
+
+type BurnHour = {
+  hour: string
+  burned: string
+}
+
+type BurnStats = {
+  updatedAt?: string
+  burnedJit24h?: string
+  burnedJit7d?: string
+  burnedJit30d?: string
+  hours?: BurnHour[]
+}
+
+function toTokens(raw?: string) {
+  if (!raw) return 0
+  const value = BigInt(raw)
+  const whole = value / DECIMAL_DIVISOR
+  const fraction = value % DECIMAL_DIVISOR
+  return Number(whole) + Number(fraction) / 1e18
+}
+
+function formatTokenAmount(value: number) {
+  if (!Number.isFinite(value)) return '0'
+  const abs = Math.abs(value)
+  const maximumFractionDigits = abs >= 1_000_000 ? 0 : abs >= 10_000 ? 1 : 2
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  })
+}
+
 export function LandingPage() {
   const [showPartnerDetails, setShowPartnerDetails] = useState(false)
+  const [burnStats, setBurnStats] = useState<BurnStats | null>(null)
+  const [isBurnLoading, setIsBurnLoading] = useState(false)
+  const [burnError, setBurnError] = useState<string | null>(null)
+  const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false)
   const { tokenPrices } = usePoolData()
   const {
     executions: divineExecutions,
@@ -37,6 +76,56 @@ export function LandingPage() {
       label: 'Telegram',
     },
   ]
+
+  const fetchBurnStats = useCallback(async (options?: { manual?: boolean }) => {
+    const manual = options?.manual === true
+    if (manual) {
+      setIsBurnLoading(true)
+      setBurnError(null)
+    }
+    try {
+      const response = await fetch(BURN_API_URL)
+      if (!response.ok) {
+        throw new Error(`Burn API error ${response.status}`)
+      }
+      const data: BurnStats = await response.json()
+      setBurnStats((prev) => data || prev)
+    } catch (error) {
+      console.error('Failed to fetch JIT burn stats', error)
+      if (manual) {
+        setBurnError('Unable to load burn data right now. Please retry.')
+      }
+    } finally {
+      if (manual) {
+        setIsBurnLoading(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        await fetchBurnStats({ manual: false })
+      } catch {
+        // already handled in fetchBurnStats
+      }
+    }
+
+    load()
+    const intervalId = setInterval(load, 60 * 60 * 1000)
+    return () => {
+      clearInterval(intervalId)
+    }
+  }, [fetchBurnStats])
+
+  const burnMetrics = useMemo(
+    () => [
+      { label: 'Past 24h', value: toTokens(burnStats?.burnedJit24h) },
+      { label: 'Past 7 days', value: toTokens(burnStats?.burnedJit7d) },
+      { label: 'Past 30 days', value: toTokens(burnStats?.burnedJit30d) },
+    ],
+    [burnStats]
+  )
 
 
   const handleOpenDivineGuide = () => {
@@ -341,7 +430,69 @@ export function LandingPage() {
               </div>
 
               <div className={styles.tokenStatsWrapper}>
-                <StatsDashboard showHeader={false} />
+                <StatsDashboard />
+              </div>
+
+              <div className={`${styles.sideCard} ${styles.burnMeterCard}`}>
+                <div className={styles.burnMeterHeader}>
+                  <div>
+                    <p className={styles.sectionEyebrow}>LIVE INDEX</p>
+                    <h3 className={styles.burnMeterTitle}>JIT Burn Volume</h3>
+                  </div>
+                  <div className={styles.burnMeterActions}>
+                    <button
+                      type="button"
+                      className={`${styles.activityRefreshButton} ${isBurnInfoOpen ? styles.infoButtonActive : ''}`}
+                      onClick={() => setIsBurnInfoOpen((prev) => !prev)}
+                      aria-label={isBurnInfoOpen ? 'Hide burn meter info' : 'Show burn meter info'}
+                      aria-pressed={isBurnInfoOpen}
+                    >
+                      <Info size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.activityRefreshButton}
+                      onClick={() => fetchBurnStats({ manual: true })}
+                      disabled={isBurnLoading}
+                      aria-label="Refresh burn stats"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {burnError ? <span className={styles.burnErrorText}>{burnError}</span> : null}
+
+                <div className={styles.burnMeterPanels}>
+                  <div
+                    className={`${styles.burnPanel} ${isBurnInfoOpen ? styles.burnPanelHidden : styles.burnPanelVisible}`}
+                    aria-hidden={isBurnInfoOpen}
+                  >
+                    <div className={styles.burnMeterGridCompact}>
+                      {burnMetrics.map((metric) => (
+                        <div key={metric.label} className={styles.burnMetricPill}>
+                          <div className={styles.burnMetricPillLabel}>{metric.label}</div>
+                          <div className={styles.burnMetricPillValue}>{formatTokenAmount(metric.value)} JIT</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`${styles.burnPanel} ${isBurnInfoOpen ? styles.burnPanelVisible : styles.burnPanelHidden}`}
+                    aria-hidden={!isBurnInfoOpen}
+                  >
+                    <div className={styles.burnInfoBox}>
+                      <p className={styles.burnInfoLead}>How this meter works</p>
+                      <ul className={styles.burnInfoList}>
+                        <li>Block-scans the JIT contract for burn-triggering transfers (fee on transfer + compile/restore); it is a volume counter, not a supply calculator.</li>
+                        <li>Each Restore burns 100% of the JIT and unlocks ~96% HolyC. If that HolyC is later Compiled back to JIT and Restored again, every cycle stacks here as burn volume.</li>
+                        <li>The Tokenstats "Permanently Removed" view nets out recoverable HolyC (checks the 0x369 burn address) to show true locked supply; this meter simply tracks protocol burn activity.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </aside>
             <div className={styles.divineFeedColumn}>

@@ -5,8 +5,8 @@ import { formatCurrency, formatBigIntTokenAmount } from '@/lib/utils';
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png';
 import JITLogo from '../../assets/TokenLogos/JIT.png';
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png';
-import RefreshIcon from '../../assets/refresh-icon.svg';
 import { Tooltip } from '../Tooltip';
+import { RotateCcw } from 'lucide-react';
 import { useState, memo } from 'react';
 
 interface StatsDashboardProps {
@@ -38,24 +38,18 @@ const StatsDashboard = ({ showHeader = true }: StatsDashboardProps = {}) => {
 
       {showHeader && (
         <div className={styles.header}>
+          <h3 className={styles.headerTitle}>Token Stats</h3>
           <div className={styles.headerActions}>
             <Tooltip 
               content="Refresh stats with a new on-chain fetch" 
               variant="info"
               position="bottom"
             >
-              <button onClick={refreshTokenStats} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
-                <img src={RefreshIcon} alt="Refresh" className={`${styles.refreshIcon} ${isLoading ? styles.loadingIcon : ''}`} />
+              <button onClick={() => refreshTokenStats({ manual: true })} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
+                <RotateCcw size={16} className={isLoading ? styles.loadingIcon : ''} />
               </button>
             </Tooltip>
           </div>
-          <Tooltip 
-            content="Key metrics to track the ecosystem and help make trading decisions" 
-            variant="info"
-            position="bottom"
-          >
-            <h2 className={styles.title}>Token Stats</h2>
-          </Tooltip>
         </div>
       )}
       <div className={styles.poolsGrid}>
