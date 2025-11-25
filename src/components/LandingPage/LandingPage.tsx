@@ -270,7 +270,7 @@ export function LandingPage() {
                     <div className={styles.scannerTarget} />
                   </div>
                 </div>
-                <p className={styles.stepDesc}>Manager executes the loop.</p>
+                <p className={styles.stepDesc}>Manager finds the arb.</p>
               </div>
 
               <div className={styles.stepConnector}>
@@ -327,15 +327,15 @@ export function LandingPage() {
                 {showPartnerDetails ? (
                   <>
                     <p className={styles.sideSectionDescription}>
-                      Briah is the first official partner plugged directly into the HolyC engine. Every profitable HolyC/JIT arb sends 25% of the take into the JIT/Briah pool.
+                      Briah is the first official partner plugged directly into the HolyC engine. Every profitable HolyC/JIT arb sends 25% of the take into the JIT/Briah pool. When the engine fires, Briah gets burned.
                     </p>
                     <p className={styles.sideSectionDescription}>
-                      The pool market buys BRIAH and ships it to the dead address - a permanent burn. When HolyC moves, the engine fires, and Briah gets burned.
+                      
                     </p>
                   </>
                 ) : (
                   <p className={styles.sideSectionDescription}>
-                    When a route is safely profitable after all fees and gas, the off-chain Arb Guardian bot calls the Divine Manager on-chain to run the loop and return extra HolyC or JIT to the protocol. It scans roughly hourly, and every time it fires the vault grows and HolyC supply shrinks.
+                    When a route is safely profitable, the off-chain Arb Guardian bot calls the Divine Manager to run the loop. Every time it fires, the vault grows whilst supply shrinks.
                   </p>
                 )}
               </div>

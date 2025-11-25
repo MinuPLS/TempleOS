@@ -56,8 +56,9 @@ const formatCompact = (amount: bigint) => {
 }
 
 const formatUsdSigned = (value: number) => {
-  const formatted = usdFormatter.format(Math.abs(value))
-  return `${value >= 0 ? '+' : '-'} ${formatted}`
+  const normalized = value < 0 ? 0 : value
+  const formatted = usdFormatter.format(normalized)
+  return normalized > 0 ? `+ ${formatted}` : formatted
 }
 
 interface DivineManagerActivityProps {
