@@ -1,16 +1,16 @@
 {
-  "lastProcessedBlock": "25672514",
-  "lastProcessedTxHash": null,
-  "lastDailySummaryAt": 1769894140419,
+  "lastProcessedBlock": "25652894",
+  "lastProcessedTxHash": "0x9a9970540271bbc34e5a6683056d48e564d382397b63797c48be657e05fc3715",
+  "lastDailySummaryAt": 1769894700346,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "19711365112105539091657998",
     "holycFeesBurned": "9152166782927880980000000"
   },
   "lastBuyBurn": {
-    "blockNumber": null,
-    "txHash": null,
-    "briahBurned": "0",
-    "jitSpent": "0",
-    "timestamp": null
+    "blockNumber": "25652895",
+    "txHash": "0x9cc3f24793cfa71e37eec7e52a4c11518129bfa350412f423ad5e4c9cc28c90d",
+    "briahBurned": "925792623010274901775",
+    "jitSpent": "23292629090285626415337",
+    "timestamp": 1769691125000
   }
 }
