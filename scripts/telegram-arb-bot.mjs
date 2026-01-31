@@ -11,6 +11,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 const DRY_RUN = process.env.DRY_RUN === 'true'
 const POST_ON_BOOTSTRAP = process.env.POST_ON_BOOTSTRAP === 'true'
+const FORCE_DAILY_POST = process.env.FORCE_DAILY_POST === 'true'
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000
 
@@ -283,6 +284,15 @@ const formatRoundedCompact = (amount) => {
   }
 
   return Math.round(value).toLocaleString()
+}
+
+const formatRoundedWholeTokens = (amount) => {
+  const DECIMALS = 10n ** 18n
+  const isNegative = amount < 0n
+  const magnitude = isNegative ? amount * -1n : amount
+  const roundedUp = magnitude === 0n ? 0n : (magnitude + DECIMALS - 1n) / DECIMALS
+  const value = isNegative ? -roundedUp : roundedUp
+  return value.toString()
 }
 
 const formatExactUnits = (amount) => {
@@ -827,19 +837,22 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   }
 
   lines.push('')
-  lines.push(bold('Token Supply'))
-  lines.push(`HolyC Circulating: ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))}`)
-  lines.push(`JIT Supply: ${escapeHtml(formatRoundedCompact(tokenStats.jitCirculating))}`)
+  lines.push(DAILY_LINE)
+  lines.push(bold('Circulating Supply'))
+  lines.push(`HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))}`)
+  lines.push(`JIT: ${escapeHtml(formatRoundedCompact(tokenStats.jitCirculating))}`)
 
   lines.push('')
+  lines.push(DAILY_LINE)
   lines.push(bold('Reserves & Liquidity'))
   lines.push(`HolyC in Compiler: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))}`)
   lines.push(`Burned LP: ${escapeHtml(formatRoundedCompact(tokenStats.holycLockedAsLP))}`)
 
   lines.push('')
+  lines.push(DAILY_LINE)
   lines.push(bold('Permanently Removed'))
-  lines.push(`🔒Locked HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.permanentlyLockedHolyC))}`)
-  lines.push(`🔥Burned HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))}`)
+  lines.push(`Locked HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.permanentlyLockedHolyC))}`)
+  lines.push(`Burned HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))}`)
 
   const prevLocked = parseBigInt(state.lastDailyStats?.permanentlyLockedHolyC)
   const prevBurned = parseBigInt(state.lastDailyStats?.holycFeesBurned)
@@ -849,7 +862,7 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   lines.push('')
   lines.push(
     italic(
-      `In the past 24h ${formatExactUnits(deltaLocked)} HolyC got locked forever in the Compiler, and ${formatExactUnits(deltaBurned)} HolyC is send forever to the burn address`
+      `In the past 24h ${formatRoundedWholeTokens(deltaLocked)} HolyC got locked forever in the Compiler, and ${formatRoundedWholeTokens(deltaBurned)} HolyC is send forever to the burn address`
     )
   )
 
@@ -939,7 +952,7 @@ const main = async () => {
 
   const now = Date.now()
   const lastDaily = typeof state.lastDailySummaryAt === 'number' ? state.lastDailySummaryAt : null
-  const shouldPostDaily = !lastDaily || now - lastDaily >= DAILY_INTERVAL_MS
+  const shouldPostDaily = FORCE_DAILY_POST || !lastDaily || now - lastDaily >= DAILY_INTERVAL_MS
 
   if (shouldPostDaily) {
     const tokenStats = await fetchTokenStats()

@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      force_daily:
+        description: 'Force 24h summary post'
+        required: false
+        default: 'false'
+      force_bootstrap:
+        description: 'Treat as first run (post latest execute)'
+        required: false
+        default: 'false'
 
 concurrency:
   group: telegram-arb-bot
@@ -37,7 +46,8 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
           MAX_LOOKBACK_BLOCKS: ${{ vars.MAX_LOOKBACK_BLOCKS }}
-          POST_ON_BOOTSTRAP: ${{ vars.POST_ON_BOOTSTRAP }}
+          POST_ON_BOOTSTRAP: ${{ inputs.force_bootstrap || vars.POST_ON_BOOTSTRAP }}
+          FORCE_DAILY_POST: ${{ inputs.force_daily }}
 
       - name: Commit state if changed
         run: |
