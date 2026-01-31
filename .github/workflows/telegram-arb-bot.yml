@@ -5,6 +5,10 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
+      force_arb:
+        description: 'Force latest arb post'
+        required: false
+        default: 'false'
       force_daily:
         description: 'Force 24h summary post'
         required: false
@@ -48,6 +52,7 @@ jobs:
           MAX_LOOKBACK_BLOCKS: ${{ vars.MAX_LOOKBACK_BLOCKS }}
           POST_ON_BOOTSTRAP: ${{ inputs.force_bootstrap || vars.POST_ON_BOOTSTRAP }}
           FORCE_DAILY_POST: ${{ inputs.force_daily }}
+          FORCE_ARB_POST: ${{ inputs.force_arb || inputs.force_bootstrap }}
 
       - name: Commit state if changed
         run: |

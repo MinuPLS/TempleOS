@@ -4,14 +4,13 @@ import process from 'node:process'
 import { createPublicClient, defineChain, formatUnits, getAddress, http } from 'viem'
 
 const HR_LINE = '———————————————-'
-const DAILY_LINE = '———————————'
-
 const RPC_URL = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 const DRY_RUN = process.env.DRY_RUN === 'true'
 const POST_ON_BOOTSTRAP = process.env.POST_ON_BOOTSTRAP === 'true'
 const FORCE_DAILY_POST = process.env.FORCE_DAILY_POST === 'true'
+const FORCE_ARB_POST = process.env.FORCE_ARB_POST === 'true'
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000
 
@@ -818,7 +817,6 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
 
 const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const lines = []
-  lines.push(DAILY_LINE)
   lines.push(bold('Token Prices'))
   lines.push(`HolyC: ${escapeHtml(formatCurrency(tokenPrices.holycUSD))}`)
   lines.push(`JIT: ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
@@ -831,25 +829,21 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
       const percentageDiff = holycPrice > jitPrice
         ? ((holycPrice / jitPrice) - 1) * 100
         : ((jitPrice / holycPrice) - 1) * 100
-      lines.push('')
       lines.push(italic(`${moreExpensiveTokenName} is more expensive by ${percentageDiff.toFixed(2)}%`))
     }
   }
 
   lines.push('')
-  lines.push(DAILY_LINE)
   lines.push(bold('Circulating Supply'))
   lines.push(`HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))}`)
   lines.push(`JIT: ${escapeHtml(formatRoundedCompact(tokenStats.jitCirculating))}`)
 
   lines.push('')
-  lines.push(DAILY_LINE)
   lines.push(bold('Reserves & Liquidity'))
-  lines.push(`HolyC in Compiler: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))}`)
+  lines.push(`In Compiler: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))}`)
   lines.push(`Burned LP: ${escapeHtml(formatRoundedCompact(tokenStats.holycLockedAsLP))}`)
 
   lines.push('')
-  lines.push(DAILY_LINE)
   lines.push(bold('Permanently Removed'))
   lines.push(`Locked HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.permanentlyLockedHolyC))}`)
   lines.push(`Burned HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))}`)
@@ -859,7 +853,6 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const deltaLocked = tokenStats.permanentlyLockedHolyC - prevLocked
   const deltaBurned = tokenStats.holycFeesBurned - prevBurned
 
-  lines.push('')
   lines.push(
     italic(
       `In the past 24h ${formatRoundedWholeTokens(deltaLocked)} HolyC got locked forever in the Compiler, and ${formatRoundedWholeTokens(deltaBurned)} HolyC is send forever to the burn address`
@@ -897,8 +890,11 @@ const main = async () => {
   const latestBlock = await withRetry(() => client.getBlockNumber())
   const tokenPrices = await fetchTokenPrices()
 
+  const forceArbPost = FORCE_ARB_POST
   let fromBlock = null
-  if (state.lastProcessedBlock === null) {
+  if (forceArbPost) {
+    fromBlock = latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
+  } else if (state.lastProcessedBlock === null) {
     if (POST_ON_BOOTSTRAP) {
       const fallback = latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
       fromBlock = fallback
@@ -923,16 +919,30 @@ const main = async () => {
       toBlock: latestBlock,
     })
 
-    for (const log of logs) {
-      const execution = await buildExecutionFromLog(log)
-      if (execution) executions.push(execution)
-    }
-
-    executions.sort((a, b) => {
-      const blockDiff = Number(a.blockNumber - b.blockNumber)
+    const orderedLogs = [...logs].sort((a, b) => {
+      const blockDiff = Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n))
       if (blockDiff !== 0) return blockDiff
-      return a.timestamp - b.timestamp
+      const logIndexA = typeof a.logIndex === 'number' ? a.logIndex : 0
+      const logIndexB = typeof b.logIndex === 'number' ? b.logIndex : 0
+      return logIndexA - logIndexB
     })
+
+    if (forceArbPost) {
+      const latestLog = orderedLogs[orderedLogs.length - 1]
+      if (latestLog) {
+        const execution = await buildExecutionFromLog(latestLog)
+        if (execution) executions.push(execution)
+      }
+    } else {
+      for (const log of orderedLogs) {
+        const execution = await buildExecutionFromLog(log)
+        if (!execution) continue
+        if (state.lastProcessedTxHash && execution.transactionHash === state.lastProcessedTxHash) {
+          continue
+        }
+        executions.push(execution)
+      }
+    }
   }
 
   if (executions.length > 0) {
