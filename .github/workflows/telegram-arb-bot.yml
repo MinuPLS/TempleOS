@@ -2,7 +2,7 @@ name: Telegram Arb Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       force_arb:
@@ -49,6 +49,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
+          DAILY_TIMEZONE: ${{ vars.DAILY_TIMEZONE }}
+          DAILY_HOUR: ${{ vars.DAILY_HOUR }}
           MAX_LOOKBACK_BLOCKS: ${{ vars.MAX_LOOKBACK_BLOCKS }}
           POST_ON_BOOTSTRAP: ${{ inputs.force_bootstrap || vars.POST_ON_BOOTSTRAP }}
           FORCE_DAILY_POST: ${{ inputs.force_daily }}

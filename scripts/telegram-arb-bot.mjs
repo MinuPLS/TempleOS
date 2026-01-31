@@ -10,8 +10,9 @@ const DRY_RUN = process.env.DRY_RUN === 'true'
 const POST_ON_BOOTSTRAP = process.env.POST_ON_BOOTSTRAP === 'true'
 const FORCE_DAILY_POST = process.env.FORCE_DAILY_POST === 'true'
 const FORCE_ARB_POST = process.env.FORCE_ARB_POST === 'true'
+const DAILY_TIMEZONE = process.env.DAILY_TIMEZONE || 'Europe/Amsterdam'
+const DAILY_HOUR = Number.parseInt(process.env.DAILY_HOUR || '21', 10)
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
-const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 if (!DRY_RUN) {
   if (!TELEGRAM_BOT_TOKEN) throw new Error('Missing TELEGRAM_BOT_TOKEN')
@@ -294,6 +295,36 @@ const formatExactUnits = (amount) => {
   const raw = formatUnits(magnitude, 18)
   const trimmed = raw.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')
   return `${sign}${trimmed === '' ? '0' : trimmed}`
+}
+
+const getTimeParts = (timestamp, timeZone) => {
+  const formatter = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  const parts = formatter.formatToParts(new Date(timestamp))
+  const map = {}
+  for (const part of parts) {
+    if (part.type === 'literal') continue
+    map[part.type] = part.value
+  }
+  return {
+    year: map.year ?? '0000',
+    month: map.month ?? '00',
+    day: map.day ?? '00',
+    hour: Number(map.hour ?? 0),
+    minute: Number(map.minute ?? 0),
+  }
+}
+
+const getDateKey = (timestamp, timeZone) => {
+  const parts = getTimeParts(timestamp, timeZone)
+  return `${parts.year}-${parts.month}-${parts.day}`
 }
 
 const getTopicAddress = (topic) => {
@@ -966,7 +997,11 @@ const main = async () => {
 
   const now = Date.now()
   const lastDaily = typeof state.lastDailySummaryAt === 'number' ? state.lastDailySummaryAt : null
-  const shouldPostDaily = FORCE_DAILY_POST || !lastDaily || now - lastDaily >= DAILY_INTERVAL_MS
+  const todayKey = getDateKey(now, DAILY_TIMEZONE)
+  const lastDailyKey = lastDaily ? getDateKey(lastDaily, DAILY_TIMEZONE) : null
+  const nowParts = getTimeParts(now, DAILY_TIMEZONE)
+  const inDailyWindow = nowParts.hour === DAILY_HOUR
+  const shouldPostDaily = FORCE_DAILY_POST || (inDailyWindow && lastDailyKey !== todayKey)
 
   if (shouldPostDaily) {
     const tokenStats = await fetchTokenStats()
