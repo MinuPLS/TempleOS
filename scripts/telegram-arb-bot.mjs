@@ -3,7 +3,6 @@ import path from 'node:path'
 import process from 'node:process'
 import { createPublicClient, defineChain, formatUnits, getAddress, http } from 'viem'
 
-const HR_LINE = '———————————————-'
 const RPC_URL = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
@@ -187,7 +186,6 @@ const escapeHtml = (value) =>
     .replace(/"/g, '&quot;')
 
 const bold = (value) => `<b>${escapeHtml(value)}</b>`
-const italic = (value) => `<i>${escapeHtml(value)}</i>`
 
 const parseBigInt = (value, fallback = 0n) => {
   if (typeof value === 'string') {
@@ -233,11 +231,7 @@ const formatCompact = (amount) => {
   return `${sign}${formatAmount(abs)}`
 }
 
-const formatUsdSigned = (value) => {
-  const normalized = value < 0 ? 0 : value
-  const formatted = usdFormatter.format(normalized)
-  return normalized > 0 ? `+ ${formatted}` : formatted
-}
+const formatUsdPlain = (value) => usdFormatter.format(value < 0 ? 0 : value)
 
 const formatUnitsSigned = (amount, decimals = 18) => {
   const sign = amount < 0n ? -1 : 1
@@ -781,17 +775,22 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
   const usdNumber =
     formatUnitsSigned(netHoly, 18) * tokenPrices.holycUSD +
     formatUnitsSigned(netJit, 18) * tokenPrices.jitUSD
-  const usdValue = formatUsdSigned(usdNumber)
+  const usdValue = formatUsdPlain(usdNumber)
 
   const lines = []
-  lines.push(HR_LINE)
-  lines.push(bold('Divine Manager Activity'))
-  lines.push(`HolyC Gained: ${escapeHtml(formatCompact(netHoly))}`)
-  lines.push(`JIT Gained: ${escapeHtml(formatCompact(netJit))}`)
+  lines.push(bold('Divine Manager Activity — Latest Arb'))
+  lines.push('Execution by Divine Manager, metrics sourced from the HolyC Dashboard')
+  lines.push('https://holycpls.vercel.app/')
   lines.push('')
-  lines.push(`Value gained: ${escapeHtml(usdValue)}`)
-  lines.push(`HolyC burned: ${escapeHtml(formatAmount(execution.holyBurned))} HC`)
+  lines.push(bold('Tokens Gained'))
+  lines.push(`HolyC: ${escapeHtml(formatCompact(netHoly))}`)
+  lines.push(`JIT: ${escapeHtml(formatCompact(netJit))}`)
   lines.push('')
+  lines.push(bold('Value Gained'))
+  lines.push(escapeHtml(usdValue))
+  lines.push('')
+  lines.push(bold('Tokens Burned'))
+  lines.push(`${escapeHtml(formatAmount(execution.holyBurned))} HolyC`)
 
   if (buyBurnInfo?.txHash) {
     const briahBurned = parseBigInt(buyBurnInfo.briahBurned)
@@ -801,22 +800,26 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
         ? usdFormatter.format(Number(formatUnits(briahBurned, 18)) * briahUsdPrice)
         : '—'
 
-      lines.push(bold('Partner Buy&Burn'))
-      lines.push(`${escapeHtml(briahAmount)} Briah`)
-      lines.push(`Value: ${escapeHtml(briahValue)}`)
       lines.push('')
+      lines.push(bold('Partner Buy & Burn'))
+      lines.push(`Briah: ${escapeHtml(briahAmount)}`)
+      lines.push(`Value: ${escapeHtml(briahValue)}`)
     }
   }
 
-  lines.push(bold('OtterScan Transaction'))
+  lines.push('')
+  lines.push('OtterScan Transaction')
   lines.push(`https://otter.pulsechain.com/tx/${execution.transactionHash}`)
-  lines.push(HR_LINE)
 
   return lines.join('\n')
 }
 
 const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const lines = []
+  lines.push(bold('Divine Manager Activity — 24h Snapshot'))
+  lines.push('Live metrics sourced from the HolyC Dashboard')
+  lines.push('https://holycpls.vercel.app/')
+  lines.push('')
   lines.push(bold('Token Prices'))
   lines.push(`HolyC: ${escapeHtml(formatCurrency(tokenPrices.holycUSD))}`)
   lines.push(`JIT: ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
@@ -825,11 +828,13 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
     const holycPrice = tokenPrices.holycUSD
     const jitPrice = tokenPrices.jitUSD
     if (holycPrice !== jitPrice) {
-      const moreExpensiveTokenName = holycPrice > jitPrice ? 'HolyC' : 'JIT'
-      const percentageDiff = holycPrice > jitPrice
-        ? ((holycPrice / jitPrice) - 1) * 100
-        : ((jitPrice / holycPrice) - 1) * 100
-      lines.push(italic(`${moreExpensiveTokenName} is more expensive by ${percentageDiff.toFixed(2)}%`))
+      if (holycPrice > jitPrice) {
+        const percentageDiff = ((holycPrice / jitPrice) - 1) * 100
+        lines.push(`HolyC is trading ${bold(`${percentageDiff.toFixed(2)}% higher`)} than JIT`)
+      } else {
+        const percentageDiff = ((jitPrice / holycPrice) - 1) * 100
+        lines.push(`JIT is trading ${bold(`${percentageDiff.toFixed(2)}% higher`)} than HolyC`)
+      }
     }
   }
 
@@ -840,11 +845,11 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
 
   lines.push('')
   lines.push(bold('Reserves & Liquidity'))
-  lines.push(`In Compiler: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))}`)
-  lines.push(`Burned LP: ${escapeHtml(formatRoundedCompact(tokenStats.holycLockedAsLP))}`)
+  lines.push(`Compiler Reserves: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))} HolyC`)
+  lines.push(`Burned LP: ${escapeHtml(formatRoundedCompact(tokenStats.holycLockedAsLP))} HolyC`)
 
   lines.push('')
-  lines.push(bold('Permanently Removed'))
+  lines.push(bold('Permanently Removed Supply'))
   lines.push(`Locked HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.permanentlyLockedHolyC))}`)
   lines.push(`Burned HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))}`)
 
@@ -853,11 +858,10 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const deltaLocked = tokenStats.permanentlyLockedHolyC - prevLocked
   const deltaBurned = tokenStats.holycFeesBurned - prevBurned
 
-  lines.push(
-    italic(
-      `In the past 24h ${formatRoundedWholeTokens(deltaLocked)} HolyC got locked forever in the Compiler, and ${formatRoundedWholeTokens(deltaBurned)} HolyC is send forever to the burn address`
-    )
-  )
+  lines.push('')
+  lines.push(bold('Past 24h activity'))
+  lines.push(`${formatRoundedWholeTokens(deltaLocked)} HolyC permanently locked by the Divine Manager`)
+  lines.push(`${formatRoundedWholeTokens(deltaBurned)} HolyC permanently sent to the burn address`)
 
   return lines.join('\n')
 }
