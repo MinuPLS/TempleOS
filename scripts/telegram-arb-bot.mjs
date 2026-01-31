@@ -779,7 +779,6 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
 
   const lines = []
   lines.push(bold('Divine Manager Activity — Latest Arb'))
-  lines.push('')
   lines.push('Live metrics sourced from the HolyC Dashboard')
   lines.push('https://holycpls.vercel.app/')
   lines.push('')
