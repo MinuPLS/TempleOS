@@ -7,11 +7,11 @@ on:
     inputs:
       force_daily:
         description: 'Force 24h summary post'
-        required: true
+        required: false
         default: 'false'
       force_bootstrap:
         description: 'Treat as first run (post latest execute)'
-        required: true
+        required: false
         default: 'false'
 
 concurrency:
