@@ -1,0 +1,16 @@
+{
+  "lastProcessedBlock": null,
+  "lastProcessedTxHash": null,
+  "lastDailySummaryAt": null,
+  "lastDailyStats": {
+    "permanentlyLockedHolyC": "0",
+    "holycFeesBurned": "0"
+  },
+  "lastBuyBurn": {
+    "blockNumber": null,
+    "txHash": null,
+    "briahBurned": "0",
+    "jitSpent": "0",
+    "timestamp": null
+  }
+}

@@ -85,9 +85,15 @@ export const DivineManagerActivity = ({
   tokenPrices,
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD } = tokenPrices
-  const [pageByView, setPageByView] = useState<{ arbs: number; burns: number }>({ arbs: 1, burns: 1 })
-  const [viewMode, setViewMode] = useState<'arbs' | 'burns'>('arbs')
+  const [pageByView, setPageByView] = useState<{ arbs: number; burns: number; mafia: number }>({
+    arbs: 1,
+    burns: 1,
+    mafia: 1,
+  })
+  const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia'>('arbs')
   const isViewingBurns = viewMode === 'burns'
+  const isViewingMafia = viewMode === 'mafia'
+  const isViewingArbs = viewMode === 'arbs'
 
   const {
     executions: burnExecutions,
@@ -113,28 +119,27 @@ export const DivineManagerActivity = ({
   }, [isViewingBurns, hasLoadedBurns, refreshBurns])
 
   const currentData = useMemo(() => {
+    if (isViewingMafia) return []
     const data = isViewingBurns ? burnExecutions : executions
     // Ensure descending sort (newest first)
     return [...data].sort((a, b) => b.timestamp - a.timestamp)
-  }, [isViewingBurns, burnExecutions, executions])
+  }, [isViewingBurns, isViewingMafia, burnExecutions, executions])
 
-  const totalBriahBurned = useMemo(() => {
-    return burnExecutions.reduce((acc, burn) => acc + burn.briahBurned, 0n)
-  }, [burnExecutions])
-
-  const totalBurnedUsd = useMemo(() => {
-    if (!briahUsdPrice) return null
-    const amount = Number(formatUnits(totalBriahBurned, 18))
-    return amount * briahUsdPrice
-  }, [totalBriahBurned, briahUsdPrice])
-
-  const currentLoading = isViewingBurns ? isBurnLoading : isLoading
-  const currentLoadingMore = isViewingBurns ? isBurnLoadingMore : isLoadingMore
-  const currentError = isViewingBurns ? burnError : error
-  const currentLastUpdated = isViewingBurns ? burnLastUpdated : lastUpdated
-  const handleRefresh = isViewingBurns ? () => void refreshBurns() : onRefresh
-  const currentHasMore = isViewingBurns ? hasMoreBurns : hasMore
-  const handleLoadMore = isViewingBurns ? () => void loadMoreBurns() : onLoadMore
+  const currentLoading = isViewingBurns ? isBurnLoading : isViewingMafia ? false : isLoading
+  const currentLoadingMore = isViewingBurns ? isBurnLoadingMore : isViewingMafia ? false : isLoadingMore
+  const currentError = isViewingBurns ? burnError : isViewingMafia ? null : error
+  const currentLastUpdated = isViewingBurns ? burnLastUpdated : isViewingMafia ? null : lastUpdated
+  const handleRefresh = isViewingBurns
+    ? () => void refreshBurns()
+    : isViewingMafia
+      ? () => undefined
+      : onRefresh
+  const currentHasMore = isViewingBurns ? hasMoreBurns : isViewingMafia ? false : hasMore
+  const handleLoadMore = isViewingBurns
+    ? () => void loadMoreBurns()
+    : isViewingMafia
+      ? () => undefined
+      : onLoadMore
 
   const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
@@ -159,7 +164,9 @@ export const DivineManagerActivity = ({
       const current = prev[viewMode]
       return { ...prev, [viewMode]: Math.min(totalPages, current + 1) }
     })
-  const toggleView = () => setViewMode((prev) => (prev === 'arbs' ? 'burns' : 'arbs'))
+  const showBurns = () => setViewMode('burns')
+  const showMafia = () => setViewMode('mafia')
+  const showArbs = () => setViewMode('arbs')
 
   const explorerBase = 'https://otter.pulsechain.com'
 
@@ -168,36 +175,53 @@ export const DivineManagerActivity = ({
       <div className={styles.activityHeader}>
         <div className={styles.activityHeading}>
           <p className={styles.sectionEyebrow}>
-            {isViewingBurns ? 'Buy & burn' : 'Live Divine Manager executes'}
+            {isViewingArbs ? 'Live Divine Manager executes' : 'Buy & burn'}
           </p>
           <h3 className={styles.sectionTitle}>
-            {isViewingBurns ? 'Briah Burn Tracker' : 'Automated Arbs'}
+            {isViewingBurns
+              ? 'Briah Burn Tracker'
+              : isViewingMafia
+                ? 'CoinMafia Burn Tracker'
+                : 'Automated Arbs'}
           </h3>
           <p className={styles.sectionSubtitle}>
             {currentLastUpdated
               ? `Updated ${formatRelativeTime(currentLastUpdated)}`
-              : isViewingBurns
+              : isViewingBurns || isViewingMafia
                 ? 'Reading direct from vault'
                 : 'Syncing live data'}
           </p>
         </div>
         <div className={styles.activityHeaderRight}>
           <div className={styles.activityControls}>
-            <button
-              type="button"
-              className={styles.viewToggleButton}
-              onClick={toggleView}
-            >
-              {isViewingBurns ? (
+            <div className={styles.activityToggleStack}>
+              {isViewingArbs ? (
                 <>
-                  <ChevronLeft size={16} /> Back to Arbs
+                  <button
+                    type="button"
+                    className={styles.viewToggleButton}
+                    onClick={showBurns}
+                  >
+                    View Briah Burns <Flame size={14} className={styles.buttonIconFlame} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.viewToggleButton}
+                    onClick={showMafia}
+                  >
+                    VIEW MAFIA BURNS <Flame size={14} className={styles.buttonIconFlame} />
+                  </button>
                 </>
               ) : (
-                <>
-                  View Briah Burns <Flame size={14} className={styles.buttonIconFlame} />
-                </>
+                <button
+                  type="button"
+                  className={styles.viewToggleButton}
+                  onClick={showArbs}
+                >
+                  <ChevronLeft size={16} /> Back to Arbs
+                </button>
               )}
-            </button>
+            </div>
             <button
               className={styles.activityRefreshButton}
               onClick={() => {
@@ -210,27 +234,6 @@ export const DivineManagerActivity = ({
               <RotateCcw size={16} />
             </button>
           </div>
-          {isViewingBurns && burnExecutions.length > 0 && (
-            <div className={styles.burnStatsPill}>
-              <div className={styles.burnStatGroup}>
-                <span className={styles.burnStatLabel}>Burned</span>
-                <span className={styles.burnStatValue}>
-                  {formatAmount(totalBriahBurned, 2)} BRIAH
-                </span>
-              </div>
-              {totalBurnedUsd !== null && (
-                <>
-                  <div className={styles.burnStatSeparator} />
-                  <div className={styles.burnStatGroup}>
-                    <span className={styles.burnStatLabel}>Value</span>
-                    <span className={styles.burnStatValueUsd}>
-                      {usdFormatter.format(totalBurnedUsd)}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -243,14 +246,20 @@ export const DivineManagerActivity = ({
       <div className={styles.txList}>
         {currentLoading && pageItems.length === 0 && (
           <p className={styles.activityHint}>
-            {isViewingBurns ? 'Summoning buy-and-burn logs…' : 'Loading Divine Manager executions…'}
+            {isViewingBurns
+              ? 'Summoning buy-and-burn logs…'
+              : isViewingMafia
+                ? 'Summoning CoinMafia burns…'
+                : 'Loading Divine Manager executions…'}
           </p>
         )}
         {!currentLoading && pageItems.length === 0 && !currentError && (
           <p className={styles.activityHint}>
             {isViewingBurns
               ? 'No burn executions yet.'
-              : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
+              : isViewingMafia
+                ? 'No CoinMafia burn executions yet.'
+                : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
           </p>
         )}
 

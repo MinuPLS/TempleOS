@@ -1,0 +1,52 @@
+name: Telegram Arb Bot
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: telegram-arb-bot
+  cancel-in-progress: false
+
+jobs:
+  post-updates:
+    runs-on: ubuntu-latest
+    environment: Telegram_BOT
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Telegram bot
+        run: node scripts/telegram-arb-bot.mjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
+          MAX_LOOKBACK_BLOCKS: ${{ vars.MAX_LOOKBACK_BLOCKS }}
+          POST_ON_BOOTSTRAP: ${{ vars.POST_ON_BOOTSTRAP }}
+
+      - name: Commit state if changed
+        run: |
+          if git status --porcelain | grep -q "\.github/arb-bot/state.json"; then
+            git config user.name "telegram-arb-bot"
+            git config user.email "telegram-arb-bot@users.noreply.github.com"
+            git add .github/arb-bot/state.json
+            git commit -m "chore(bot): update arb state"
+            git push
+          else
+            echo "No state changes"
+          fi
