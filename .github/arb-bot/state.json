@@ -1,10 +1,10 @@
 {
-  "lastProcessedBlock": null,
+  "lastProcessedBlock": "25672514",
   "lastProcessedTxHash": null,
-  "lastDailySummaryAt": null,
+  "lastDailySummaryAt": 1769893303520,
   "lastDailyStats": {
-    "permanentlyLockedHolyC": "0",
-    "holycFeesBurned": "0"
+    "permanentlyLockedHolyC": "19711365112105539091657998",
+    "holycFeesBurned": "9152166782927880980000000"
   },
   "lastBuyBurn": {
     "blockNumber": null,
