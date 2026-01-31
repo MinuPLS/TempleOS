@@ -779,7 +779,8 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
 
   const lines = []
   lines.push(bold('Divine Manager Activity — Latest Arb'))
-  lines.push('Execution by Divine Manager, metrics sourced from the HolyC Dashboard')
+  lines.push('')
+  lines.push('Live metrics sourced from the HolyC Dashboard')
   lines.push('https://holycpls.vercel.app/')
   lines.push('')
   lines.push(bold('Tokens Gained'))
@@ -808,7 +809,7 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
   }
 
   lines.push('')
-  lines.push('OtterScan Transaction')
+  lines.push(bold('OtterScan Transaction'))
   lines.push(`https://otter.pulsechain.com/tx/${execution.transactionHash}`)
 
   return lines.join('\n')
@@ -859,8 +860,8 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const deltaBurned = tokenStats.holycFeesBurned - prevBurned
 
   lines.push('')
-  lines.push(bold('Past 24h activity'))
-  lines.push(`${formatRoundedWholeTokens(deltaLocked)} HolyC permanently locked by the Divine Manager`)
+  lines.push(bold('Past 24h Activity'))
+  lines.push(`${formatRoundedWholeTokens(deltaLocked)} HolyC permanently locked in the Compiler`)
   lines.push(`${formatRoundedWholeTokens(deltaBurned)} HolyC permanently sent to the burn address`)
 
   return lines.join('\n')
