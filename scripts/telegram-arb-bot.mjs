@@ -859,6 +859,7 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
     const holycPrice = tokenPrices.holycUSD
     const jitPrice = tokenPrices.jitUSD
     if (holycPrice !== jitPrice) {
+      lines.push('')
       if (holycPrice > jitPrice) {
         const percentageDiff = ((holycPrice / jitPrice) - 1) * 100
         lines.push(`HolyC is trading ${bold(`${percentageDiff.toFixed(2)}% higher`)} than JIT`)
@@ -1000,7 +1001,7 @@ const main = async () => {
   const todayKey = getDateKey(now, DAILY_TIMEZONE)
   const lastDailyKey = lastDaily ? getDateKey(lastDaily, DAILY_TIMEZONE) : null
   const nowParts = getTimeParts(now, DAILY_TIMEZONE)
-  const inDailyWindow = nowParts.hour === DAILY_HOUR
+  const inDailyWindow = nowParts.hour >= DAILY_HOUR
   const shouldPostDaily = FORCE_DAILY_POST || (inDailyWindow && lastDailyKey !== todayKey)
 
   if (shouldPostDaily) {
