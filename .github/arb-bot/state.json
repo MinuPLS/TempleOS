@@ -9,8 +9,16 @@
   "lastBuyBurn": {
     "blockNumber": "25652895",
     "txHash": "0x9cc3f24793cfa71e37eec7e52a4c11518129bfa350412f423ad5e4c9cc28c90d",
-    "briahBurned": "925792623010274901775",
+    "tokenBurned": "925792623010274901775",
     "jitSpent": "23292629090285626415337",
-    "timestamp": 1769691125000
+    "timestamp": 1769691125000,
+    "briahBurned": "925792623010274901775"
+  },
+  "lastMafiaBuyBurn": {
+    "blockNumber": null,
+    "txHash": null,
+    "tokenBurned": "0",
+    "jitSpent": "0",
+    "timestamp": null
   }
 }
