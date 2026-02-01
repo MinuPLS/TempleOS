@@ -89,7 +89,7 @@ export const GuideModal: React.FC<GuideModalProps> = ({ isOpen, onClose }) => {
                   <span className={styles.tokenBadge}>Fixed</span>
                 </div>
                 <p className={styles.tokenDesc}><span className={styles.keyword}>Role:</span> The foundational reserve currency.</p>
-                <div className={styles.tokenStat}><span>Properties</span><strong>Fixed Supply · 1T</strong></div>
+                <div className={styles.tokenStat}><span>Properties</span><strong>Fixed Supply · 1B</strong></div>
                 <div className={styles.tokenStat}><span>Tax</span><strong>0% · Renounced</strong></div>
                 <div className={styles.tokenStat}><span>User Action</span><strong>Buy &amp; Hold</strong></div>
               </div>
