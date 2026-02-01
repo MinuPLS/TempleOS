@@ -43,6 +43,7 @@ const STATE_PATH = path.resolve(process.cwd(), '.github/arb-bot/state.json')
 
 const DEFAULT_BUY_BURN_STATE = {
   blockNumber: null,
+  logIndex: null,
   txHash: null,
   tokenBurned: '0',
   jitSpent: '0',
@@ -436,6 +437,16 @@ const fetchEventsInRange = async ({ address, abi, eventName, fromBlock, toBlock 
   return results
 }
 
+const orderLogsByBlock = (logs) =>
+  [...logs].sort((a, b) => {
+    const blockA = a.blockNumber ?? 0n
+    const blockB = b.blockNumber ?? 0n
+    if (blockA !== blockB) return blockA < blockB ? -1 : 1
+    const logIndexA = typeof a.logIndex === 'number' ? a.logIndex : 0
+    const logIndexB = typeof b.logIndex === 'number' ? b.logIndex : 0
+    return logIndexA - logIndexB
+  })
+
 const fetchTokenPrices = async () => {
   let wplsDaiReserves
   let holycWplsReserves
@@ -682,13 +693,40 @@ const fetchTokenUsdPrice = async (endpoint) => {
   }
 }
 
-const fetchLatestBuyBurn = async (state, latestBlock, source) => {
-  const previousBlock = state[source.stateKey]?.blockNumber
-    ? parseBigInt(state[source.stateKey].blockNumber)
-    : null
+const buildBuyBurnEntry = (log, fallbackBlock) => {
+  const blockNumber = log.blockNumber ?? fallbackBlock
+  const tokenBurned = log.args?.tokenBurned ? BigInt(log.args.tokenBurned) : 0n
+  const jitSpent = log.args?.jitSpent ? BigInt(log.args.jitSpent) : 0n
+
+  return {
+    blockNumber: blockNumber.toString(),
+    logIndex: typeof log.logIndex === 'number' ? log.logIndex : null,
+    txHash: log.transactionHash,
+    tokenBurned: tokenBurned.toString(),
+    jitSpent: jitSpent.toString(),
+    timestamp: null,
+  }
+}
+
+const filterBuyBurnLogs = (logs, lastBlock, lastLogIndex) => {
+  if (lastBlock === null || lastLogIndex === null) return logs
+  return logs.filter((log) => {
+    const blockNumber = log.blockNumber ?? 0n
+    if (blockNumber > lastBlock) return true
+    if (blockNumber < lastBlock) return false
+    const logIndex = typeof log.logIndex === 'number' ? log.logIndex : -1
+    return logIndex > lastLogIndex
+  })
+}
+
+const fetchUnpostedBuyBurns = async (state, latestBlock, source) => {
+  const lastState = state[source.stateKey]
+  const lastBlock = lastState?.blockNumber ? BigInt(lastState.blockNumber) : null
+  const lastLogIndex = typeof lastState?.logIndex === 'number' ? lastState.logIndex : null
   const fallbackFromBlock =
     latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
-  const fromBlock = previousBlock !== null ? previousBlock + 1n : fallbackFromBlock
+  const fromBlock =
+    lastBlock !== null ? (lastLogIndex !== null ? lastBlock : lastBlock + 1n) : fallbackFromBlock
 
   const logs = await fetchEventsInRange({
     address: source.contractAddress,
@@ -698,34 +736,26 @@ const fetchLatestBuyBurn = async (state, latestBlock, source) => {
     toBlock: latestBlock,
   })
 
-  if (!logs.length) {
-    return state[source.stateKey]?.txHash ? state[source.stateKey] : null
+  if (!logs.length) return []
+
+  const ordered = orderLogsByBlock(logs)
+  const filtered = filterBuyBurnLogs(ordered, lastBlock, lastLogIndex)
+  if (!filtered.length) return []
+
+  return filtered.map((log) => buildBuyBurnEntry(log, latestBlock))
+}
+
+const hydrateBuyBurnState = async (entry, blockCache) => {
+  if (!entry) return null
+  if (typeof entry.timestamp === 'number') return entry
+  const blockNumber = BigInt(entry.blockNumber)
+  const cacheKey = blockNumber.toString()
+  let block = blockCache.get(cacheKey)
+  if (!block) {
+    block = await withRetry(() => client.getBlock({ blockNumber }))
+    blockCache.set(cacheKey, block)
   }
-
-  const ordered = [...logs].sort((a, b) => {
-    const blockDiff = Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n))
-    if (blockDiff !== 0) return blockDiff
-    const logIndexA = typeof a.logIndex === 'number' ? a.logIndex : 0
-    const logIndexB = typeof b.logIndex === 'number' ? b.logIndex : 0
-    return logIndexA - logIndexB
-  })
-
-  const latest = ordered[ordered.length - 1]
-  const blockNumber = latest.blockNumber ?? latestBlock
-  const block = await withRetry(() => client.getBlock({ blockNumber }))
-  const tokenBurned = latest.args?.tokenBurned ? BigInt(latest.args.tokenBurned) : 0n
-  const jitSpent = latest.args?.jitSpent ? BigInt(latest.args.jitSpent) : 0n
-
-  const updated = {
-    blockNumber: blockNumber.toString(),
-    txHash: latest.transactionHash,
-    tokenBurned: tokenBurned.toString(),
-    jitSpent: jitSpent.toString(),
-    timestamp: Number(block.timestamp) * 1000,
-  }
-
-  state[source.stateKey] = updated
-  return updated
+  return { ...entry, timestamp: Number(block.timestamp) * 1000 }
 }
 
 const parseExecutionMetrics = (receiptLogs) => {
@@ -989,13 +1019,7 @@ const main = async () => {
       toBlock: latestBlock,
     })
 
-    const orderedLogs = [...logs].sort((a, b) => {
-      const blockDiff = Number((a.blockNumber ?? 0n) - (b.blockNumber ?? 0n))
-      if (blockDiff !== 0) return blockDiff
-      const logIndexA = typeof a.logIndex === 'number' ? a.logIndex : 0
-      const logIndexB = typeof b.logIndex === 'number' ? b.logIndex : 0
-      return logIndexA - logIndexB
-    })
+    const orderedLogs = orderLogsByBlock(logs)
 
     if (forceArbPost) {
       const latestLog = orderedLogs[orderedLogs.length - 1]
@@ -1016,33 +1040,48 @@ const main = async () => {
   }
 
   if (executions.length > 0) {
-    const briahBuyBurn = await fetchLatestBuyBurn(state, latestBlock, BUY_AND_BURN_SOURCES.briah)
-    const mafiaBuyBurn = await fetchLatestBuyBurn(state, latestBlock, BUY_AND_BURN_SOURCES.mafia)
+    const buyBurnQueues = Object.fromEntries(
+      await Promise.all(
+        Object.entries(BUY_AND_BURN_SOURCES).map(async ([key, source]) => [
+          key,
+          await fetchUnpostedBuyBurns(state, latestBlock, source),
+        ])
+      )
+    )
     let briahUsdPrice = null
-    if (briahBuyBurn?.txHash && parseBigInt(briahBuyBurn.tokenBurned) > 0n) {
+    if (buyBurnQueues.briah?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
       briahUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.briah.dexEndpoint)
     }
     let mafiaUsdPrice = null
-    if (mafiaBuyBurn?.txHash && parseBigInt(mafiaBuyBurn.tokenBurned) > 0n) {
+    if (buyBurnQueues.mafia?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
       mafiaUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.mafia.dexEndpoint)
     }
-    const partnerBurns = [
-      {
-        label: BUY_AND_BURN_SOURCES.briah.label,
-        symbol: BUY_AND_BURN_SOURCES.briah.symbol,
-        burnInfo: briahBuyBurn,
-        usdPrice: briahUsdPrice,
-      },
-      {
-        label: BUY_AND_BURN_SOURCES.mafia.label,
-        symbol: BUY_AND_BURN_SOURCES.mafia.symbol,
-        burnInfo: mafiaBuyBurn,
-        usdPrice: mafiaUsdPrice,
-      },
-    ]
+    const blockCache = new Map()
     for (const execution of executions) {
+      const briahBuyBurn = buyBurnQueues.briah?.shift() ?? null
+      const mafiaBuyBurn = buyBurnQueues.mafia?.shift() ?? null
+      const partnerBurns = [
+        {
+          label: BUY_AND_BURN_SOURCES.briah.label,
+          symbol: BUY_AND_BURN_SOURCES.briah.symbol,
+          burnInfo: briahBuyBurn,
+          usdPrice: briahUsdPrice,
+        },
+        {
+          label: BUY_AND_BURN_SOURCES.mafia.label,
+          symbol: BUY_AND_BURN_SOURCES.mafia.symbol,
+          burnInfo: mafiaBuyBurn,
+          usdPrice: mafiaUsdPrice,
+        },
+      ]
       const message = buildArbMessage(execution, tokenPrices, partnerBurns)
       await sendTelegram(message)
+      if (briahBuyBurn) {
+        state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
+      }
+      if (mafiaBuyBurn) {
+        state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
+      }
     }
     const lastExecution = executions[executions.length - 1]
     state.lastProcessedBlock = lastExecution.blockNumber.toString()
