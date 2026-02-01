@@ -40,6 +40,7 @@ const client = createPublicClient({
 })
 
 const STATE_PATH = path.resolve(process.cwd(), '.github/arb-bot/state.json')
+const ARB_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/TgBotMediaArbitrage.mp4')
 
 const DEFAULT_BUY_BURN_STATE = {
   blockNumber: null,
@@ -962,7 +963,7 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   return lines.join('\n')
 }
 
-const sendTelegram = async (message) => {
+const sendTelegramMessage = async (message) => {
   if (DRY_RUN) {
     console.log(message)
     return
@@ -977,6 +978,39 @@ const sendTelegram = async (message) => {
       parse_mode: 'HTML',
       disable_web_page_preview: true,
     }),
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Telegram API error: ${response.status} ${response.statusText} - ${body}`)
+  }
+}
+
+const sendTelegramArbUpdate = async (message) => {
+  if (DRY_RUN) {
+    console.log(message)
+    return
+  }
+
+  let fileBuffer
+  try {
+    await fs.access(ARB_MEDIA_PATH)
+    fileBuffer = await fs.readFile(ARB_MEDIA_PATH)
+  } catch (error) {
+    await sendTelegramMessage(message)
+    return
+  }
+
+  const form = new FormData()
+  form.append('chat_id', TELEGRAM_CHAT_ID)
+  form.append('caption', message)
+  form.append('parse_mode', 'HTML')
+  form.append('disable_web_page_preview', 'true')
+  form.append('video', new Blob([fileBuffer]), path.basename(ARB_MEDIA_PATH))
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, {
+    method: 'POST',
+    body: form,
   })
 
   if (!response.ok) {
@@ -1075,7 +1109,7 @@ const main = async () => {
         },
       ]
       const message = buildArbMessage(execution, tokenPrices, partnerBurns)
-      await sendTelegram(message)
+      await sendTelegramArbUpdate(message)
       if (briahBuyBurn) {
         state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
       }
@@ -1099,7 +1133,7 @@ const main = async () => {
   if (shouldPostDaily) {
     const tokenStats = await fetchTokenStats()
     const dailyMessage = buildDailyMessage(tokenPrices, tokenStats, state)
-    await sendTelegram(dailyMessage)
+    await sendTelegramMessage(dailyMessage)
     state.lastDailySummaryAt = now
     state.lastDailyStats = {
       permanentlyLockedHolyC: tokenStats.permanentlyLockedHolyC.toString(),
