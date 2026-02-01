@@ -8,6 +8,7 @@
   },
   "lastBuyBurn": {
     "blockNumber": "25674290",
+    "logIndex": null,
     "txHash": "0xaa83ec61739ce7cac2ca471d5e1babb693388e41128789a41690b2d9202772fb",
     "tokenBurned": "1642888125120151342795",
     "jitSpent": "30668741204885391344691",
@@ -15,6 +16,7 @@
   },
   "lastMafiaBuyBurn": {
     "blockNumber": "25674291",
+    "logIndex": null,
     "txHash": "0x1f376e43dc0282c8242f1324e7a24774e13112659d62cfc4ad5877906ed1d7c5",
     "tokenBurned": "209342699488225211",
     "jitSpent": "29561278164355323344691",
