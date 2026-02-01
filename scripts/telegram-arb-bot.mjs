@@ -41,6 +41,14 @@ const client = createPublicClient({
 
 const STATE_PATH = path.resolve(process.cwd(), '.github/arb-bot/state.json')
 
+const DEFAULT_BUY_BURN_STATE = {
+  blockNumber: null,
+  txHash: null,
+  tokenBurned: '0',
+  jitSpent: '0',
+  timestamp: null,
+}
+
 const DEFAULT_STATE = {
   lastProcessedBlock: null,
   lastProcessedTxHash: null,
@@ -49,13 +57,8 @@ const DEFAULT_STATE = {
     permanentlyLockedHolyC: '0',
     holycFeesBurned: '0',
   },
-  lastBuyBurn: {
-    blockNumber: null,
-    txHash: null,
-    briahBurned: '0',
-    jitSpent: '0',
-    timestamp: null,
-  },
+  lastBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
+  lastMafiaBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
 }
 
 const DIVINE_MANAGER_ADDRESS = '0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de'
@@ -70,9 +73,29 @@ const HOLYC_WPLS_PAIR_ADDRESS = '0x28be4ad6d58ab4aacea3cb42bde457b7da251bac'
 const JIT_WPLS_PAIR_ADDRESS = '0xc68a84655fa4ef48f8dd5273821183216da4de37'
 const HOLYC_INITIAL_SUPPLY = 1_000_000_000n * 10n ** 18n
 
-const BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4'
+const BRIAH_BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4'
+const COINMAFIA_BUY_AND_BURN_CONTRACT = '0xbC289B8a84ACf05d1aA9Ec72cdf5F22dE4bb3A39'
 const BRIAH_TOKEN = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a'
-const DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${BRIAH_TOKEN}`
+const COINMAFIA_TOKEN = '0x562866b6483894240739211049E109312E9A9A67'
+const BRIAH_DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${BRIAH_TOKEN}`
+const COINMAFIA_DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${COINMAFIA_TOKEN}`
+
+const BUY_AND_BURN_SOURCES = {
+  briah: {
+    contractAddress: BRIAH_BUY_AND_BURN_CONTRACT,
+    dexEndpoint: BRIAH_DEXSCREENER_ENDPOINT,
+    label: 'Briah',
+    stateKey: 'lastBuyBurn',
+    symbol: 'BRIAH',
+  },
+  mafia: {
+    contractAddress: COINMAFIA_BUY_AND_BURN_CONTRACT,
+    dexEndpoint: COINMAFIA_DEXSCREENER_ENDPOINT,
+    label: 'CoinMafia',
+    stateKey: 'lastMafiaBuyBurn',
+    symbol: 'COINMAFIA',
+  },
+}
 
 const DIVINE_MANAGER_ABI = [
   {
@@ -93,7 +116,7 @@ const BUY_AND_BURN_ABI = [
     inputs: [
       { indexed: true, internalType: 'address', name: 'caller', type: 'address' },
       { indexed: false, internalType: 'uint256', name: 'jitSpent', type: 'uint256' },
-      { indexed: false, internalType: 'uint256', name: 'briahBurned', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'tokenBurned', type: 'uint256' },
     ],
     name: 'BuyAndBurn',
     type: 'event',
@@ -345,6 +368,15 @@ const parseTransfer = (log) => {
   return { from, to, value }
 }
 
+const normalizeBuyBurnState = (value) => {
+  if (!value) return { ...DEFAULT_BUY_BURN_STATE }
+  return {
+    ...DEFAULT_BUY_BURN_STATE,
+    ...value,
+    tokenBurned: value.tokenBurned ?? value.briahBurned ?? DEFAULT_BUY_BURN_STATE.tokenBurned,
+  }
+}
+
 const loadState = async () => {
   try {
     const raw = await fs.readFile(STATE_PATH, 'utf8')
@@ -356,10 +388,8 @@ const loadState = async () => {
         ...DEFAULT_STATE.lastDailyStats,
         ...(parsed?.lastDailyStats ?? {}),
       },
-      lastBuyBurn: {
-        ...DEFAULT_STATE.lastBuyBurn,
-        ...(parsed?.lastBuyBurn ?? {}),
-      },
+      lastBuyBurn: normalizeBuyBurnState(parsed?.lastBuyBurn),
+      lastMafiaBuyBurn: normalizeBuyBurnState(parsed?.lastMafiaBuyBurn),
     }
   } catch (error) {
     if (error && error.code !== 'ENOENT') {
@@ -638,9 +668,9 @@ const fetchTokenStats = async () => {
   }
 }
 
-const fetchBriahUsdPrice = async () => {
+const fetchTokenUsdPrice = async (endpoint) => {
   try {
-    const response = await fetch(DEXSCREENER_ENDPOINT)
+    const response = await fetch(endpoint)
     if (!response.ok) return null
     const json = await response.json()
     const price = json?.pairs?.find((pair) => pair?.priceUsd)?.priceUsd
@@ -652,16 +682,16 @@ const fetchBriahUsdPrice = async () => {
   }
 }
 
-const fetchLatestBuyBurn = async (state, latestBlock) => {
-  const previousBlock = state.lastBuyBurn?.blockNumber
-    ? parseBigInt(state.lastBuyBurn.blockNumber)
+const fetchLatestBuyBurn = async (state, latestBlock, source) => {
+  const previousBlock = state[source.stateKey]?.blockNumber
+    ? parseBigInt(state[source.stateKey].blockNumber)
     : null
   const fallbackFromBlock =
     latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
   const fromBlock = previousBlock !== null ? previousBlock + 1n : fallbackFromBlock
 
   const logs = await fetchEventsInRange({
-    address: BUY_AND_BURN_CONTRACT,
+    address: source.contractAddress,
     abi: BUY_AND_BURN_ABI,
     eventName: 'BuyAndBurn',
     fromBlock,
@@ -669,7 +699,7 @@ const fetchLatestBuyBurn = async (state, latestBlock) => {
   })
 
   if (!logs.length) {
-    return state.lastBuyBurn?.txHash ? state.lastBuyBurn : null
+    return state[source.stateKey]?.txHash ? state[source.stateKey] : null
   }
 
   const ordered = [...logs].sort((a, b) => {
@@ -683,18 +713,18 @@ const fetchLatestBuyBurn = async (state, latestBlock) => {
   const latest = ordered[ordered.length - 1]
   const blockNumber = latest.blockNumber ?? latestBlock
   const block = await withRetry(() => client.getBlock({ blockNumber }))
-  const briahBurned = latest.args?.briahBurned ? BigInt(latest.args.briahBurned) : 0n
+  const tokenBurned = latest.args?.tokenBurned ? BigInt(latest.args.tokenBurned) : 0n
   const jitSpent = latest.args?.jitSpent ? BigInt(latest.args.jitSpent) : 0n
 
   const updated = {
     blockNumber: blockNumber.toString(),
     txHash: latest.transactionHash,
-    briahBurned: briahBurned.toString(),
+    tokenBurned: tokenBurned.toString(),
     jitSpent: jitSpent.toString(),
     timestamp: Number(block.timestamp) * 1000,
   }
 
-  state.lastBuyBurn = updated
+  state[source.stateKey] = updated
   return updated
 }
 
@@ -800,7 +830,7 @@ const buildExecutionFromLog = async (log) => {
   }
 }
 
-const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => {
+const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   const netHoly = execution.holyIn - execution.holyOut
   const netJit = execution.jitIn - execution.jitOut
   const usdNumber =
@@ -823,19 +853,23 @@ const buildArbMessage = (execution, tokenPrices, buyBurnInfo, briahUsdPrice) => 
   lines.push(bold('Tokens Burned'))
   lines.push(`${escapeHtml(formatAmount(execution.holyBurned))} HolyC`)
 
-  if (buyBurnInfo?.txHash) {
-    const briahBurned = parseBigInt(buyBurnInfo.briahBurned)
-    if (briahBurned > 0n) {
-      const briahAmount = formatAmount(briahBurned, 4)
-      const briahValue = briahUsdPrice
-        ? usdFormatter.format(Number(formatUnits(briahBurned, 18)) * briahUsdPrice)
+  const partnerEntries =
+    partnerBurns?.filter((entry) => entry?.burnInfo?.txHash && parseBigInt(entry.burnInfo.tokenBurned) > 0n) ?? []
+
+  if (partnerEntries.length > 0) {
+    lines.push('')
+    lines.push(bold('Partner Buy & Burn'))
+    partnerEntries.forEach((entry, index) => {
+      const burned = parseBigInt(entry.burnInfo.tokenBurned)
+      const amount = formatAmount(burned, 4)
+      const usdValue = entry.usdPrice
+        ? usdFormatter.format(Number(formatUnits(burned, 18)) * entry.usdPrice)
         : '—'
 
-      lines.push('')
-      lines.push(bold('Partner Buy & Burn'))
-      lines.push(`Briah: ${escapeHtml(briahAmount)}`)
-      lines.push(`Value: ${escapeHtml(briahValue)}`)
-    }
+      if (index > 0) lines.push('')
+      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} ${escapeHtml(entry.symbol)}`)
+      lines.push(`Value: ${escapeHtml(usdValue)}`)
+    })
   }
 
   lines.push('')
@@ -982,13 +1016,32 @@ const main = async () => {
   }
 
   if (executions.length > 0) {
-    const buyBurnInfo = await fetchLatestBuyBurn(state, latestBlock)
+    const briahBuyBurn = await fetchLatestBuyBurn(state, latestBlock, BUY_AND_BURN_SOURCES.briah)
+    const mafiaBuyBurn = await fetchLatestBuyBurn(state, latestBlock, BUY_AND_BURN_SOURCES.mafia)
     let briahUsdPrice = null
-    if (buyBurnInfo?.txHash && parseBigInt(buyBurnInfo.briahBurned) > 0n) {
-      briahUsdPrice = await fetchBriahUsdPrice()
+    if (briahBuyBurn?.txHash && parseBigInt(briahBuyBurn.tokenBurned) > 0n) {
+      briahUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.briah.dexEndpoint)
     }
+    let mafiaUsdPrice = null
+    if (mafiaBuyBurn?.txHash && parseBigInt(mafiaBuyBurn.tokenBurned) > 0n) {
+      mafiaUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.mafia.dexEndpoint)
+    }
+    const partnerBurns = [
+      {
+        label: BUY_AND_BURN_SOURCES.briah.label,
+        symbol: BUY_AND_BURN_SOURCES.briah.symbol,
+        burnInfo: briahBuyBurn,
+        usdPrice: briahUsdPrice,
+      },
+      {
+        label: BUY_AND_BURN_SOURCES.mafia.label,
+        symbol: BUY_AND_BURN_SOURCES.mafia.symbol,
+        burnInfo: mafiaBuyBurn,
+        usdPrice: mafiaUsdPrice,
+      },
+    ]
     for (const execution of executions) {
-      const message = buildArbMessage(execution, tokenPrices, buyBurnInfo, briahUsdPrice)
+      const message = buildArbMessage(execution, tokenPrices, partnerBurns)
       await sendTelegram(message)
     }
     const lastExecution = executions[executions.length - 1]

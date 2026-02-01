@@ -4,23 +4,32 @@ import { config, pulseChain } from '@/config/wagmi'
 
 export interface BuyAndBurnExecution {
   transactionHash: string
-  briahBurned: bigint
+  tokenBurned: bigint
   jitSpent: bigint
   timestamp: number
   blockNumber: number
   caller: `0x${string}`
 }
 
-const BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4' as const
+type BuyAndBurnConfig = {
+  cacheKey: string
+  contractAddress: `0x${string}`
+  tokenAddress?: `0x${string}`
+  logLabel: string
+}
+
+const BRIAH_BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4' as const
 const BRIAH_TOKEN = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a' as const
-const DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${BRIAH_TOKEN}`
+const COINMAFIA_BUY_AND_BURN_CONTRACT = '0xbC289B8a84ACf05d1aA9Ec72cdf5F22dE4bb3A39' as const
+const COINMAFIA_TOKEN = '0x562866b6483894240739211049E109312E9A9A67' as const
+
 const BUY_AND_BURN_ABI = [
   {
     anonymous: false,
     inputs: [
       { indexed: true, internalType: 'address', name: 'caller', type: 'address' },
       { indexed: false, internalType: 'uint256', name: 'jitSpent', type: 'uint256' },
-      { indexed: false, internalType: 'uint256', name: 'briahBurned', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'tokenBurned', type: 'uint256' },
     ],
     name: 'BuyAndBurn',
     type: 'event',
@@ -41,10 +50,29 @@ type BurnCache = {
   nextFromBlock: bigint | null
   lastUpdated: number | null
   hasMore: boolean
-  briahUsdPrice: number | null
+  tokenUsdPrice: number | null
 }
 
-let cachedBurnState: BurnCache | null = null
+const burnCacheByKey = new Map<string, BurnCache>()
+
+const getCachedState = (cacheKey: string) => burnCacheByKey.get(cacheKey) ?? null
+const setCachedState = (cacheKey: string, state: BurnCache) => {
+  burnCacheByKey.set(cacheKey, state)
+}
+
+const BRIAH_CONFIG: BuyAndBurnConfig = {
+  cacheKey: 'briah-buy-and-burn',
+  contractAddress: BRIAH_BUY_AND_BURN_CONTRACT,
+  tokenAddress: BRIAH_TOKEN,
+  logLabel: 'Briah',
+}
+
+const COINMAFIA_CONFIG: BuyAndBurnConfig = {
+  cacheKey: 'coinmafia-buy-and-burn',
+  contractAddress: COINMAFIA_BUY_AND_BURN_CONTRACT,
+  tokenAddress: COINMAFIA_TOKEN,
+  logLabel: 'CoinMafia',
+}
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -63,19 +91,23 @@ const withRetry = async <T>(fn: () => Promise<T>, retries = MAX_RETRIES, delayMs
   }
 }
 
-export const useBuyAndBurnActivity = () => {
+const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
+  const cachedBurnState = getCachedState(buyAndBurnConfig.cacheKey)
   const [executions, setExecutions] = useState<BuyAndBurnExecution[]>(cachedBurnState?.executions ?? [])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(cachedBurnState?.hasMore ?? true)
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<number | null>(cachedBurnState?.lastUpdated ?? null)
-  const [briahUsdPrice, setBriahUsdPrice] = useState<number | null>(cachedBurnState?.briahUsdPrice ?? null)
+  const [tokenUsdPrice, setTokenUsdPrice] = useState<number | null>(cachedBurnState?.tokenUsdPrice ?? null)
   const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(cachedBurnState?.nextFromBlock ?? null)
   const executionsRef = useRef<BuyAndBurnExecution[]>([])
   const nextFromBlockRef = useRef<bigint | null>(null)
   const isFetchingRef = useRef(false)
   const hasCachedDataRef = useRef(Boolean(cachedBurnState?.executions?.length))
+  const tokenUsdPriceRef = useRef<number | null>(cachedBurnState?.tokenUsdPrice ?? null)
+  const lastUpdatedRef = useRef<number | null>(cachedBurnState?.lastUpdated ?? null)
+  const hasMoreRef = useRef<boolean>(cachedBurnState?.hasMore ?? true)
 
   useEffect(() => {
     executionsRef.current = executions
@@ -85,28 +117,44 @@ export const useBuyAndBurnActivity = () => {
     nextFromBlockRef.current = nextFromBlock
   }, [nextFromBlock])
 
+  useEffect(() => {
+    tokenUsdPriceRef.current = tokenUsdPrice
+  }, [tokenUsdPrice])
+
+  useEffect(() => {
+    lastUpdatedRef.current = lastUpdated
+  }, [lastUpdated])
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore
+  }, [hasMore])
+
   const fetchPrice = useCallback(async () => {
+    if (!buyAndBurnConfig.tokenAddress) return
+
     try {
-      const priceResponse = await fetch(DEXSCREENER_ENDPOINT)
+      const priceResponse = await fetch(
+        `https://api.dexscreener.com/latest/dex/tokens/${buyAndBurnConfig.tokenAddress}`
+      )
       if (priceResponse.ok) {
         const priceJson = await priceResponse.json()
         const price = priceJson?.pairs?.find((pair: { priceUsd?: string }) => pair?.priceUsd)?.priceUsd
         const parsedPrice = price ? Number(price) : null
         if (parsedPrice && Number.isFinite(parsedPrice)) {
-          setBriahUsdPrice(parsedPrice)
-          cachedBurnState = {
+          setTokenUsdPrice(parsedPrice)
+          setCachedState(buyAndBurnConfig.cacheKey, {
             executions: executionsRef.current,
             nextFromBlock: nextFromBlockRef.current,
-            lastUpdated,
-            hasMore,
-            briahUsdPrice: parsedPrice,
-          }
+            lastUpdated: lastUpdatedRef.current,
+            hasMore: hasMoreRef.current,
+            tokenUsdPrice: parsedPrice,
+          })
         }
       }
     } catch (priceError) {
-      console.error('Error fetching BRIAH price:', priceError)
+      console.error(`Error fetching ${buyAndBurnConfig.logLabel} price:`, priceError)
     }
-  }, [])
+  }, [buyAndBurnConfig.cacheKey, buyAndBurnConfig.logLabel, buyAndBurnConfig.tokenAddress])
 
   const fetchData = useCallback(
     async ({
@@ -163,7 +211,7 @@ export const useBuyAndBurnActivity = () => {
             logs = await withRetry(
               () =>
                 publicClient.getContractEvents({
-                  address: BUY_AND_BURN_CONTRACT,
+                  address: buyAndBurnConfig.contractAddress,
                   abi: BUY_AND_BURN_ABI,
                   eventName: 'BuyAndBurn',
                   fromBlock,
@@ -176,7 +224,10 @@ export const useBuyAndBurnActivity = () => {
               currentChunk = grown > BLOCK_CHUNK ? BLOCK_CHUNK : grown
             }
           } catch (logError) {
-            console.warn(`Failed to fetch Buy & Burn logs for range ${fromBlock} - ${toBlock}`, logError)
+            console.warn(
+              `Failed to fetch ${buyAndBurnConfig.logLabel} Buy & Burn logs for range ${fromBlock} - ${toBlock}`,
+              logError
+            )
             if (currentChunk > MIN_BLOCK_CHUNK) {
               let nextChunk = currentChunk / 2n
               if (nextChunk < MIN_BLOCK_CHUNK) {
@@ -209,7 +260,7 @@ export const useBuyAndBurnActivity = () => {
             const blockResults = await Promise.allSettled(
               chunk.map((blockNumber) => withRetry(() => publicClient.getBlock({ blockNumber }), MAX_RETRIES))
             )
-            
+
             blockResults.forEach((result) => {
               if (result.status === 'fulfilled') {
                 const blockNumber = result.value.number ?? 0n
@@ -221,13 +272,13 @@ export const useBuyAndBurnActivity = () => {
           logs.forEach((log) => {
             const blockNumber = log.blockNumber ?? toBlock
             const timestamp = blockTimestamps.get(blockNumber) ?? Date.now()
-            const briahBurned = log.args?.briahBurned ? BigInt(log.args.briahBurned) : 0n
+            const tokenBurned = log.args?.tokenBurned ? BigInt(log.args.tokenBurned) : 0n
             const jitSpent = log.args?.jitSpent ? BigInt(log.args.jitSpent) : 0n
             const caller = (log.args?.caller as `0x${string}`) ?? '0x0000000000000000000000000000000000000000'
 
             executionMap.set(log.transactionHash, {
               transactionHash: log.transactionHash,
-              briahBurned,
+              tokenBurned,
               jitSpent,
               timestamp,
               blockNumber: Number(blockNumber),
@@ -246,16 +297,16 @@ export const useBuyAndBurnActivity = () => {
         setLastUpdated(Date.now())
         setNextFromBlock(nextCursor)
         setHasMore(nextCursor !== null)
-        cachedBurnState = {
+        setCachedState(buyAndBurnConfig.cacheKey, {
           executions: ordered,
           nextFromBlock: nextCursor,
           lastUpdated: Date.now(),
           hasMore: nextCursor !== null,
-          briahUsdPrice,
-        }
+          tokenUsdPrice: tokenUsdPriceRef.current,
+        })
         void fetchPrice()
       } catch (fetchError) {
-        console.error('Error fetching Briah burn activity:', fetchError)
+        console.error(`Error fetching ${buyAndBurnConfig.logLabel} burn activity:`, fetchError)
         const message = fetchError instanceof Error ? fetchError.message : 'Failed to load burn activity'
         setError(message)
       } finally {
@@ -268,7 +319,7 @@ export const useBuyAndBurnActivity = () => {
         }
       }
     },
-    [fetchPrice]
+    [buyAndBurnConfig.cacheKey, buyAndBurnConfig.contractAddress, buyAndBurnConfig.logLabel, fetchPrice]
   )
 
   useEffect(() => {
@@ -277,7 +328,7 @@ export const useBuyAndBurnActivity = () => {
       silent: hasCachedDataRef.current,
       targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
     })
-    if (!briahUsdPrice) {
+    if (!tokenUsdPriceRef.current) {
       void fetchPrice()
     }
     const interval = setInterval(() => {
@@ -307,6 +358,9 @@ export const useBuyAndBurnActivity = () => {
         targetCount: executionsRef.current.length + TARGET_EXECUTION_COUNT,
       }),
     lastUpdated,
-    briahUsdPrice,
+    tokenUsdPrice,
   }
 }
+
+export const useBuyAndBurnActivity = () => useBuyAndBurnActivityBase(BRIAH_CONFIG)
+export const useCoinMafiaBuyAndBurnActivity = () => useBuyAndBurnActivityBase(COINMAFIA_CONFIG)
