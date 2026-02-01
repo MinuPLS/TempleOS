@@ -7,10 +7,17 @@
     "holycFeesBurned": "9152166782927880980000000"
   },
   "lastBuyBurn": {
-    "blockNumber": "25652895",
-    "txHash": "0x9cc3f24793cfa71e37eec7e52a4c11518129bfa350412f423ad5e4c9cc28c90d",
-    "briahBurned": "925792623010274901775",
-    "jitSpent": "23292629090285626415337",
-    "timestamp": 1769691125000
+    "blockNumber": "25673883",
+    "txHash": "0x5efa974ac912a57d6d9f23afe0e4f0317075b82eb68f22e7a042011804154bd2",
+    "tokenBurned": "130878122427592586",
+    "jitSpent": "2901457870063288923",
+    "timestamp": 1769907295000
+  },
+  "lastMafiaBuyBurn": {
+    "blockNumber": "25673884",
+    "txHash": "0x2e770125ee4ef31646aa6468f9567f2723686f49d8cd760d8cbc92807ceefeea",
+    "tokenBurned": "16740158696659",
+    "jitSpent": "2785399555260757367",
+    "timestamp": 1769907305000
   }
 }
