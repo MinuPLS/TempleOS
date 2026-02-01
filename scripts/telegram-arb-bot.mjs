@@ -867,7 +867,7 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
         : '—'
 
       if (index > 0) lines.push('')
-      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} ${escapeHtml(entry.symbol)}`)
+      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)}`)
       lines.push(`Value: ${escapeHtml(usdValue)}`)
     })
   }
