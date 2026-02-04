@@ -41,6 +41,7 @@ const client = createPublicClient({
 
 const STATE_PATH = path.resolve(process.cwd(), '.github/arb-bot/state.json')
 const ARB_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/TgBotMediaArbitrage.mp4')
+const DAILY_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/24hsnapshotmedia.png')
 
 const DEFAULT_BUY_BURN_STATE = {
   blockNumber: null,
@@ -312,6 +313,14 @@ const formatRoundedWholeTokens = (amount) => {
   const roundedUp = magnitude === 0n ? 0n : (magnitude + DECIMALS - 1n) / DECIMALS
   const value = isNegative ? -roundedUp : roundedUp
   return value.toString()
+}
+
+const formatSignedWholeTokens = (amount) => {
+  const raw = formatRoundedWholeTokens(amount)
+  const sign = raw.startsWith('-') ? '-' : '+'
+  const magnitude = raw.replace('-', '')
+  const withCommas = magnitude.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  return `${sign}${withCommas}`
 }
 
 const formatExactUnits = (amount) => {
@@ -908,44 +917,43 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
 }
 
 const buildDailyMessage = (tokenPrices, tokenStats, state) => {
+  const dashboardUrl = 'https://holycpls.vercel.app/'
+  const link = (label, url) => `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`
   const lines = []
-  lines.push(bold('Divine Manager Activity — 24h Snapshot'))
-  lines.push('Live metrics sourced from the HolyC Dashboard')
-  lines.push('https://holycpls.vercel.app/')
+  lines.push(bold('TempleOS - 24h Snapshot'))
   lines.push('')
-  lines.push(bold('Token Prices'))
-  lines.push(`HolyC: ${escapeHtml(formatCurrency(tokenPrices.holycUSD))}`)
-  lines.push(`JIT: ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
+  lines.push(
+    `${bold('Prices:')} HolyC ${escapeHtml(formatCurrency(tokenPrices.holycUSD))} | JIT ${escapeHtml(
+      formatCurrency(tokenPrices.jitUSD),
+    )}`,
+  )
 
   if (tokenPrices.holycUSD !== 0 && tokenPrices.jitUSD !== 0) {
     const holycPrice = tokenPrices.holycUSD
     const jitPrice = tokenPrices.jitUSD
     if (holycPrice !== jitPrice) {
-      lines.push('')
       if (holycPrice > jitPrice) {
         const percentageDiff = ((holycPrice / jitPrice) - 1) * 100
-        lines.push(`HolyC is trading ${bold(`${percentageDiff.toFixed(2)}% higher`)} than JIT`)
+        lines.push(`${bold('Spread:')} HolyC ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs JIT`)
       } else {
         const percentageDiff = ((jitPrice / holycPrice) - 1) * 100
-        lines.push(`JIT is trading ${bold(`${percentageDiff.toFixed(2)}% higher`)} than HolyC`)
+        lines.push(`${bold('Spread:')} JIT ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs HolyC`)
       }
     }
   }
 
   lines.push('')
-  lines.push(bold('Circulating Supply'))
-  lines.push(`HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))}`)
-  lines.push(`JIT: ${escapeHtml(formatRoundedCompact(tokenStats.jitCirculating))}`)
+  lines.push(
+    `${bold('Supply:')} HolyC ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))} | JIT ${escapeHtml(
+      formatRoundedCompact(tokenStats.jitCirculating),
+    )}`,
+  )
 
-  lines.push('')
-  lines.push(bold('Reserves & Liquidity'))
-  lines.push(`Compiler Reserves: ${escapeHtml(formatRoundedCompact(tokenStats.holycLocked))} HolyC`)
-  lines.push(`Burned LP: ${escapeHtml(formatRoundedCompact(tokenStats.holycLockedAsLP))} HolyC`)
-
-  lines.push('')
-  lines.push(bold('Permanently Removed Supply'))
-  lines.push(`Locked HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.permanentlyLockedHolyC))}`)
-  lines.push(`Burned HolyC: ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))}`)
+  lines.push(
+    `${bold('Removed:')} Locked ${escapeHtml(
+      formatRoundedCompact(tokenStats.permanentlyLockedHolyC),
+    )} HolyC | Burned ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))} HolyC`,
+  )
 
   const prevLocked = parseBigInt(state.lastDailyStats?.permanentlyLockedHolyC)
   const prevBurned = parseBigInt(state.lastDailyStats?.holycFeesBurned)
@@ -953,9 +961,12 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const deltaBurned = tokenStats.holycFeesBurned - prevBurned
 
   lines.push('')
-  lines.push(bold('Past 24h Activity'))
-  lines.push(`${formatRoundedWholeTokens(deltaLocked)} HolyC permanently locked in the Compiler`)
-  lines.push(`${formatRoundedWholeTokens(deltaBurned)} HolyC permanently sent to the burn address`)
+  lines.push(
+    `${bold('24h:')} ${escapeHtml(formatSignedWholeTokens(deltaLocked))} locked | ${escapeHtml(
+      formatSignedWholeTokens(deltaBurned),
+    )} burned`,
+  )
+  lines.push(`(${link('Dashboard', dashboardUrl)})`)
 
   return lines.join('\n')
 }
@@ -1006,6 +1017,38 @@ const sendTelegramArbUpdate = async (message) => {
   form.append('video', new Blob([fileBuffer]), path.basename(ARB_MEDIA_PATH))
 
   const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, {
+    method: 'POST',
+    body: form,
+  })
+
+  if (!response.ok) {
+    const body = await response.text()
+    throw new Error(`Telegram API error: ${response.status} ${response.statusText} - ${body}`)
+  }
+}
+
+const sendTelegramDailyUpdate = async (message) => {
+  if (DRY_RUN) {
+    console.log(message)
+    return
+  }
+
+  let fileBuffer
+  try {
+    await fs.access(DAILY_MEDIA_PATH)
+    fileBuffer = await fs.readFile(DAILY_MEDIA_PATH)
+  } catch (error) {
+    await sendTelegramMessage(message)
+    return
+  }
+
+  const form = new FormData()
+  form.append('chat_id', TELEGRAM_CHAT_ID)
+  form.append('caption', message)
+  form.append('parse_mode', 'HTML')
+  form.append('photo', new Blob([fileBuffer]), path.basename(DAILY_MEDIA_PATH))
+
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
     method: 'POST',
     body: form,
   })
@@ -1130,7 +1173,7 @@ const main = async () => {
   if (shouldPostDaily) {
     const tokenStats = await fetchTokenStats()
     const dailyMessage = buildDailyMessage(tokenPrices, tokenStats, state)
-    await sendTelegramMessage(dailyMessage)
+    await sendTelegramDailyUpdate(dailyMessage)
     state.lastDailySummaryAt = now
     state.lastDailyStats = {
       permanentlyLockedHolyC: tokenStats.permanentlyLockedHolyC.toString(),
