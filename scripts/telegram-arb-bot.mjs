@@ -922,11 +922,8 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const lines = []
   lines.push(bold('TempleOS - 24h Snapshot'))
   lines.push('')
-  lines.push(
-    `${bold('Prices:')} HolyC ${escapeHtml(formatCurrency(tokenPrices.holycUSD))} | JIT ${escapeHtml(
-      formatCurrency(tokenPrices.jitUSD),
-    )}`,
-  )
+  lines.push(`${bold('Prices:')} HolyC ${escapeHtml(formatCurrency(tokenPrices.holycUSD))} |`)
+  lines.push(`JIT ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
 
   if (tokenPrices.holycUSD !== 0 && tokenPrices.jitUSD !== 0) {
     const holycPrice = tokenPrices.holycUSD
@@ -966,7 +963,7 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
       formatSignedWholeTokens(deltaBurned),
     )} burned`,
   )
-  lines.push(`(${link('Dashboard', dashboardUrl)})`)
+  lines.push(`${link('Dashboard', dashboardUrl)}`)
 
   return lines.join('\n')
 }
