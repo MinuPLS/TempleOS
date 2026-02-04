@@ -868,21 +868,20 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
     formatUnitsSigned(netHoly, 18) * tokenPrices.holycUSD +
     formatUnitsSigned(netJit, 18) * tokenPrices.jitUSD
   const usdValue = formatUsdPlain(usdNumber)
+  const burnedHoly = formatAmount(execution.holyBurned)
+  const burnedUsd = formatUsdPlain(Number(formatUnits(execution.holyBurned, 18)) * tokenPrices.holycUSD)
+  const dashboardUrl = 'https://holycpls.vercel.app/'
+  const txUrl = `https://otter.pulsechain.com/tx/${execution.transactionHash}`
+  const link = (label, url) => `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`
 
   const lines = []
-  lines.push(bold('Divine Manager Activity — Latest Arb'))
-  lines.push('Live metrics sourced from the HolyC Dashboard')
-  lines.push('https://holycpls.vercel.app/')
+  lines.push(bold('Divine Manager Activity'))
   lines.push('')
-  lines.push(bold('Tokens Gained'))
-  lines.push(`HolyC: ${escapeHtml(formatCompact(netHoly))}`)
-  lines.push(`JIT: ${escapeHtml(formatCompact(netJit))}`)
-  lines.push('')
-  lines.push(bold('Value Gained'))
-  lines.push(escapeHtml(usdValue))
-  lines.push('')
-  lines.push(bold('Tokens Burned'))
-  lines.push(`${escapeHtml(formatAmount(execution.holyBurned))} HolyC`)
+  lines.push(
+    `${bold('Tokens Gained:')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
+  )
+  lines.push(`${bold('Value Gained:')} ${escapeHtml(usdValue)}`)
+  lines.push(`${bold('HolyC Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
 
   const partnerEntries =
     partnerBurns?.filter((entry) => entry?.burnInfo?.txHash && parseBigInt(entry.burnInfo.tokenBurned) > 0n) ?? []
@@ -890,22 +889,20 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   if (partnerEntries.length > 0) {
     lines.push('')
     lines.push(bold('Partner Buy & Burn'))
-    partnerEntries.forEach((entry, index) => {
+    partnerEntries.forEach((entry) => {
       const burned = parseBigInt(entry.burnInfo.tokenBurned)
       const amount = formatAmount(burned, 4)
       const usdValue = entry.usdPrice
         ? usdFormatter.format(Number(formatUnits(burned, 18)) * entry.usdPrice)
         : '—'
 
-      if (index > 0) lines.push('')
-      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)}`)
-      lines.push(`Value: ${escapeHtml(usdValue)}`)
+      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
     })
   }
 
   lines.push('')
-  lines.push(bold('OtterScan Transaction'))
-  lines.push(`https://otter.pulsechain.com/tx/${execution.transactionHash}`)
+  lines.push(`${bold('Source:')} HolyC Dashboard`)
+  lines.push(`${link('TX', txUrl)} | ${link('Dashboard', dashboardUrl)}`)
 
   return lines.join('\n')
 }
