@@ -1,25 +1,25 @@
 {
-  "lastProcessedBlock": "25693090",
-  "lastProcessedTxHash": "0x7bfbb6709c72ea7ca60ba5bea39a7a46a499d8a9a1faa28ca3dc75c062ced93e",
-  "lastDailySummaryAt": 1770178753649,
+  "lastProcessedBlock": "25938836",
+  "lastProcessedTxHash": "0xaa4957a29b1d9ed6e472ee95bbc34d49c30568c106e37ca2057f8e5abae874ed",
+  "lastDailySummaryAt": 1772570505525,
   "lastDailyStats": {
-    "permanentlyLockedHolyC": "20989738730574987768392004",
+    "permanentlyLockedHolyC": "21523626691822244832309285",
     "holycFeesBurned": "9964309965651618698531556"
   },
   "lastBuyBurn": {
-    "blockNumber": "25693092",
-    "logIndex": 244,
-    "txHash": "0xace4f9a6a9a887a5fda6d150468b2d0fb3d62976d18dd10a3fa9c60b2d45b8f6",
-    "tokenBurned": "2933762911708408136666",
-    "jitSpent": "45777825857642607397121",
-    "timestamp": 1770104435000
+    "blockNumber": "25938847",
+    "logIndex": 2167,
+    "txHash": "0x1fa557ab4614195862b7ac54725d1ec7d16b82776acb0c88b31846da24c5adff",
+    "tokenBurned": "3023551476384694584198",
+    "jitSpent": "46186244457346448614315",
+    "timestamp": 1772624565000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25693093",
-    "logIndex": 93,
-    "txHash": "0x087196cee9d69a96a10c6e2901897551f2391ff596d31c16d24c5b7d84a6b9ea",
-    "tokenBurned": "359742126767316714",
-    "jitSpent": "44471741937035104897122",
-    "timestamp": 1770104445000
+    "blockNumber": "25938848",
+    "logIndex": 52,
+    "txHash": "0x3e151acf93fea51f54d99fbbdc6e56822fb3beb259375bb4edaa324ad38b01bd",
+    "tokenBurned": "456105567116265788",
+    "jitSpent": "44874955119958121614316",
+    "timestamp": 1772624575000
   }
 }
