@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import NavBar from './components/NavBar'
 import { CompileRestoreInterface } from './components/CompileRestore'
 import UniswapPools from './components/UniswapPools/UniswapPools'
@@ -9,6 +9,7 @@ import { useAccount } from 'wagmi'
 import { useState } from 'react'
 import styles from './App.module.css'
 import LandingPage from './components/LandingPage/LandingPage'
+import DumbMoneyPage from './components/DumbMoneyPage/DumbMoneyPage'
 
 const MainPage = () => {
   useAccount()
@@ -50,13 +51,17 @@ const MainPage = () => {
 }
 
 function App() {
+  const location = useLocation()
+  const isDumbMoneyRoute = location.pathname.toLowerCase() === '/dumbmoney'
+
   return (
     <div>
-      <NavBar />
+      {!isDumbMoneyRoute && <NavBar />}
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/dashboard" element={<LandingPage />} />
         <Route path="/compiler" element={<MainPage />} />
+        <Route path="/DumbMoney" element={<DumbMoneyPage />} />
       </Routes>
     </div>
   )
