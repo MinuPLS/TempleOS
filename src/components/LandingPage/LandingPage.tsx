@@ -391,7 +391,7 @@ export function LandingPage() {
               <div className={`${styles.sideCard} ${styles.divineSummaryCard}`}>
                 <div className={styles.sideCardHeader}>
                   <h3 className={styles.sideSectionTitle}>
-                    {showPartnerDetails ? 'Briah Partnership' : 'The Arb Guardian'}
+                    {showPartnerDetails ? 'Partner Buy&Burn' : 'The Arb Guardian'}
                   </h3>
                   <button
                     type="button"
@@ -414,10 +414,7 @@ export function LandingPage() {
                 {showPartnerDetails ? (
                   <>
                     <p className={styles.sideSectionDescription}>
-                      Briah is the first official partner plugged directly into the HolyC engine. Every profitable HolyC/JIT arb sends 25% of the take into the JIT/Briah pool. When the engine fires, Briah gets burned.
-                    </p>
-                    <p className={styles.sideSectionDescription}>
-                      
+                      Every profitable HolyC/JIT arb shares 75% of its take with partnered tokens. Partners are supplied with their own JIT pool — enough for the engine to buy&burn their token after each successful arb.
                     </p>
                   </>
                 ) : (

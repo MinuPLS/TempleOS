@@ -261,20 +261,24 @@ export const DivineManagerActivity = ({
           <div className={styles.activityControls}>
             <div className={styles.activityToggleStack}>
               {isViewingArbs ? (
-                <>
-                  <button type="button" className={styles.viewToggleButton} onClick={showBurns}>
-                    View Briah Burns <Flame size={14} className={styles.buttonIconFlame} />
+                <div className={styles.partnerLogosRow}>
+                  <button type="button" className={`${styles.partnerLogoBtn} ${styles.partnerLogoBriah}`} onClick={showBurns} title="Briah Burns">
+                    <img src={BriahLogo} alt="Briah" />
                   </button>
-                  <button type="button" className={styles.viewToggleButton} onClick={showMafia}>
-                    VIEW MAFIA BURNS <Flame size={14} className={styles.buttonIconFlame} />
+                  <button type="button" className={`${styles.partnerLogoBtn} ${styles.partnerLogoMafia}`} onClick={showMafia} title="CoinMafia Burns">
+                    <img src={CoinMafiaLogo} alt="CoinMafia" />
                   </button>
-                  <button type="button" className={styles.viewToggleButton} onClick={showDumb}>
-                    VIEW DUMB BURNS <Flame size={14} className={styles.buttonIconFlame} />
+                  <button type="button" className={`${styles.partnerLogoBtn} ${styles.partnerLogoDumb}`} onClick={showDumb} title="Dumb Burns">
+                    <img src={DumbLogo} alt="Dumb" />
                   </button>
-                </>
+                </div>
               ) : (
-                <button type="button" className={styles.viewToggleButton} onClick={showArbs}>
-                  <ChevronLeft size={16} /> Back to Arbs
+                <button
+                  type="button"
+                  className={`${styles.viewToggleButton} ${styles.partnerBurnTrigger}`}
+                  onClick={showArbs}
+                >
+                  <ChevronLeft size={14} /> Back
                 </button>
               )}
             </div>
