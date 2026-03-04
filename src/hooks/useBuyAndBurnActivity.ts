@@ -22,6 +22,8 @@ const BRIAH_BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4'
 const BRIAH_TOKEN = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a' as const
 const COINMAFIA_BUY_AND_BURN_CONTRACT = '0xbC289B8a84ACf05d1aA9Ec72cdf5F22dE4bb3A39' as const
 const COINMAFIA_TOKEN = '0x562866b6483894240739211049E109312E9A9A67' as const
+const DUMB_BUY_AND_BURN_CONTRACT = '0x3AdC613625D5c2668c921821d91b602c36c7F401' as const
+const DUMB_TOKEN = '0xe65112d2f120c8cb23ADC80D8E8122c0c8b7fF8D' as const
 
 const BUY_AND_BURN_ABI = [
   {
@@ -72,6 +74,13 @@ const COINMAFIA_CONFIG: BuyAndBurnConfig = {
   contractAddress: COINMAFIA_BUY_AND_BURN_CONTRACT,
   tokenAddress: COINMAFIA_TOKEN,
   logLabel: 'CoinMafia',
+}
+
+const DUMB_CONFIG: BuyAndBurnConfig = {
+  cacheKey: 'dumb-buy-and-burn',
+  contractAddress: DUMB_BUY_AND_BURN_CONTRACT,
+  tokenAddress: DUMB_TOKEN,
+  logLabel: 'Dumb',
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -364,3 +373,4 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
 
 export const useBuyAndBurnActivity = () => useBuyAndBurnActivityBase(BRIAH_CONFIG)
 export const useCoinMafiaBuyAndBurnActivity = () => useBuyAndBurnActivityBase(COINMAFIA_CONFIG)
+export const useDumbBuyAndBurnActivity = () => useBuyAndBurnActivityBase(DUMB_CONFIG)

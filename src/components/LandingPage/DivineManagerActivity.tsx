@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
 import type { DivineManagerExecution } from '@/hooks/useDivineManagerActivity'
-import { useBuyAndBurnActivity, useCoinMafiaBuyAndBurnActivity } from '@/hooks/useBuyAndBurnActivity'
+import { useBuyAndBurnActivity, useCoinMafiaBuyAndBurnActivity, useDumbBuyAndBurnActivity } from '@/hooks/useBuyAndBurnActivity'
 import { formatRelativeTime } from '@/lib/time'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import BriahLogo from '../../assets/TokenLogos/Briah.png'
 import CoinMafiaLogo from '../../assets/TokenLogos/CoinMafiaLogo.png'
+import DumbLogo from '../../assets/TokenLogos/Dumb.png'
 import styles from './LandingPage.module.css'
 import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 
@@ -86,14 +87,16 @@ export const DivineManagerActivity = ({
   tokenPrices,
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD } = tokenPrices
-  const [pageByView, setPageByView] = useState<{ arbs: number; burns: number; mafia: number }>({
+  const [pageByView, setPageByView] = useState<{ arbs: number; burns: number; mafia: number; dumb: number }>({
     arbs: 1,
     burns: 1,
     mafia: 1,
+    dumb: 1,
   })
-  const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia'>('arbs')
+  const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia' | 'dumb'>('arbs')
   const isViewingBurns = viewMode === 'burns'
   const isViewingMafia = viewMode === 'mafia'
+  const isViewingDumb = viewMode === 'dumb'
   const isViewingArbs = viewMode === 'arbs'
 
   const {
@@ -120,10 +123,23 @@ export const DivineManagerActivity = ({
     tokenUsdPrice: coinMafiaUsdPrice,
   } = useCoinMafiaBuyAndBurnActivity()
 
+  const {
+    executions: dumbExecutions,
+    isLoading: isDumbLoading,
+    isLoadingMore: isDumbLoadingMore,
+    hasMore: hasMoreDumb,
+    error: dumbError,
+    refresh: refreshDumb,
+    loadMore: loadMoreDumb,
+    lastUpdated: dumbLastUpdated,
+    tokenUsdPrice: dumbUsdPrice,
+  } = useDumbBuyAndBurnActivity()
+
   const page = pageByView[viewMode]
 
   const [hasLoadedBurns, setHasLoadedBurns] = useState(false)
   const [hasLoadedMafia, setHasLoadedMafia] = useState(false)
+  const [hasLoadedDumb, setHasLoadedDumb] = useState(false)
 
   useEffect(() => {
     if (isViewingBurns && !hasLoadedBurns) {
@@ -139,35 +155,56 @@ export const DivineManagerActivity = ({
     }
   }, [isViewingMafia, hasLoadedMafia, refreshMafia])
 
+  useEffect(() => {
+    if (isViewingDumb && !hasLoadedDumb) {
+      setHasLoadedDumb(true)
+      void refreshDumb()
+    }
+  }, [isViewingDumb, hasLoadedDumb, refreshDumb])
+
   const currentData = useMemo(() => {
-    const data = isViewingBurns ? burnExecutions : isViewingMafia ? mafiaExecutions : executions
+    const data = isViewingBurns
+      ? burnExecutions
+      : isViewingMafia
+        ? mafiaExecutions
+        : isViewingDumb
+          ? dumbExecutions
+          : executions
     // Ensure descending sort (newest first)
     return [...data].sort((a, b) => b.timestamp - a.timestamp)
-  }, [isViewingBurns, isViewingMafia, burnExecutions, mafiaExecutions, executions])
+  }, [isViewingBurns, isViewingMafia, isViewingDumb, burnExecutions, mafiaExecutions, dumbExecutions, executions])
 
-  const currentLoading = isViewingBurns ? isBurnLoading : isViewingMafia ? isMafiaLoading : isLoading
+  const currentLoading = isViewingBurns ? isBurnLoading : isViewingMafia ? isMafiaLoading : isViewingDumb ? isDumbLoading : isLoading
   const currentLoadingMore = isViewingBurns
     ? isBurnLoadingMore
     : isViewingMafia
       ? isMafiaLoadingMore
-      : isLoadingMore
-  const currentError = isViewingBurns ? burnError : isViewingMafia ? mafiaError : error
+      : isViewingDumb
+        ? isDumbLoadingMore
+        : isLoadingMore
+  const currentError = isViewingBurns ? burnError : isViewingMafia ? mafiaError : isViewingDumb ? dumbError : error
   const currentLastUpdated = isViewingBurns
     ? burnLastUpdated
     : isViewingMafia
       ? mafiaLastUpdated
-      : lastUpdated
+      : isViewingDumb
+        ? dumbLastUpdated
+        : lastUpdated
   const handleRefresh = isViewingBurns
     ? () => void refreshBurns()
     : isViewingMafia
       ? () => void refreshMafia()
-      : onRefresh
-  const currentHasMore = isViewingBurns ? hasMoreBurns : isViewingMafia ? hasMoreMafia : hasMore
+      : isViewingDumb
+        ? () => void refreshDumb()
+        : onRefresh
+  const currentHasMore = isViewingBurns ? hasMoreBurns : isViewingMafia ? hasMoreMafia : isViewingDumb ? hasMoreDumb : hasMore
   const handleLoadMore = isViewingBurns
     ? () => void loadMoreBurns()
     : isViewingMafia
       ? () => void loadMoreMafia()
-      : onLoadMore
+      : isViewingDumb
+        ? () => void loadMoreDumb()
+        : onLoadMore
 
   const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
@@ -191,6 +228,7 @@ export const DivineManagerActivity = ({
     })
   const showBurns = () => setViewMode('burns')
   const showMafia = () => setViewMode('mafia')
+  const showDumb = () => setViewMode('dumb')
   const showArbs = () => setViewMode('arbs')
 
   const explorerBase = 'https://otter.pulsechain.com'
@@ -207,12 +245,14 @@ export const DivineManagerActivity = ({
               ? 'Briah Burn Tracker'
               : isViewingMafia
                 ? 'CoinMafia Burn Tracker'
-                : 'Automated Arbs'}
+                : isViewingDumb
+                  ? 'Dumb Burn Tracker'
+                  : 'Automated Arbs'}
           </h3>
           <p className={styles.sectionSubtitle}>
             {currentLastUpdated
               ? `Updated ${formatRelativeTime(currentLastUpdated)}`
-              : isViewingBurns || isViewingMafia
+              : isViewingBurns || isViewingMafia || isViewingDumb
                 ? 'Reading direct from vault'
                 : 'Syncing live data'}
           </p>
@@ -227,6 +267,9 @@ export const DivineManagerActivity = ({
                   </button>
                   <button type="button" className={styles.viewToggleButton} onClick={showMafia}>
                     VIEW MAFIA BURNS <Flame size={14} className={styles.buttonIconFlame} />
+                  </button>
+                  <button type="button" className={styles.viewToggleButton} onClick={showDumb}>
+                    VIEW DUMB BURNS <Flame size={14} className={styles.buttonIconFlame} />
                   </button>
                 </>
               ) : (
@@ -263,7 +306,9 @@ export const DivineManagerActivity = ({
               ? 'Summoning buy-and-burn logs…'
               : isViewingMafia
                 ? 'Summoning CoinMafia burns…'
-                : 'Loading Divine Manager executions…'}
+                : isViewingDumb
+                  ? 'Summoning Dumb burns…'
+                  : 'Loading Divine Manager executions…'}
           </p>
         )}
         {!currentLoading && pageItems.length === 0 && !currentError && (
@@ -272,20 +317,22 @@ export const DivineManagerActivity = ({
               ? 'No burn executions yet.'
               : isViewingMafia
                 ? 'No CoinMafia burn executions yet.'
-                : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
+                : isViewingDumb
+                  ? 'No Dumb burn executions yet.'
+                  : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
           </p>
         )}
 
         {pageItems.map((item) => {
-          if (isViewingBurns || isViewingMafia) {
+          if (isViewingBurns || isViewingMafia || isViewingDumb) {
             const burn = item as (typeof burnExecutions)[0]
             const tokenAmount = Number(formatUnits(burn.tokenBurned, 18))
-            const usdPrice = isViewingBurns ? briahUsdPrice : coinMafiaUsdPrice
+            const usdPrice = isViewingBurns ? briahUsdPrice : isViewingMafia ? coinMafiaUsdPrice : dumbUsdPrice
             const usdValue = usdPrice ? usdFormatter.format(tokenAmount * usdPrice) : '—'
-            const tokenLabel = isViewingBurns ? 'Briah burned' : 'CoinMafia burned'
-            const tokenSymbol = isViewingBurns ? 'BRIAH' : 'COINMAFIA'
-            const tokenLogo = isViewingBurns ? BriahLogo : CoinMafiaLogo
-            const tokenAlt = isViewingBurns ? 'Briah logo' : 'CoinMafia logo'
+            const tokenLabel = isViewingBurns ? 'Briah burned' : isViewingMafia ? 'CoinMafia burned' : 'Dumb burned'
+            const tokenSymbol = isViewingBurns ? 'BRIAH' : isViewingMafia ? 'COINMAFIA' : 'DUMB'
+            const tokenLogo = isViewingBurns ? BriahLogo : isViewingMafia ? CoinMafiaLogo : DumbLogo
+            const tokenAlt = isViewingBurns ? 'Briah logo' : isViewingMafia ? 'CoinMafia logo' : 'Dumb logo'
 
             return (
               <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
