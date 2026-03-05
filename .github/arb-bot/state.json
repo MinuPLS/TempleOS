@@ -1,10 +1,10 @@
 {
   "lastProcessedBlock": "25941902",
   "lastProcessedTxHash": "0xe36212b4eabf7a2a94454245b544238bc0bdb051c37e4986ebc64fe3aeac9bd5",
-  "lastDailySummaryAt": 1772656770332,
+  "lastDailySummaryAt": 1772743199685,
   "lastDailyStats": {
-    "permanentlyLockedHolyC": "22138899072170711648627373",
-    "holycFeesBurned": "10114801262135584272531556"
+    "permanentlyLockedHolyC": "22188252388392960186681405",
+    "holycFeesBurned": "10128134595468917605864888"
   },
   "lastBuyBurn": {
     "blockNumber": "25941906",
