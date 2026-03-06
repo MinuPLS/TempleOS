@@ -152,12 +152,19 @@ async function fetchDexStats(address: string): Promise<{ price: string; liquidit
   const pairs: any[] = (json.pairs || []).filter((p: any) => p.chainId === 'pulsechain')
   if (!pairs.length) return { price: '—', liquidity: '—', marketCap: '—' }
 
-  // Pick the pair with the highest USD liquidity
-  const best = pairs.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0))[0]
+  // Aggregate liquidity across every PulseChain pool for this token.
+  const totalLiquidityUsd = pairs.reduce((sum, pair) => sum + (Number(pair.liquidity?.usd) || 0), 0)
+
+  // Keep price/market-cap from the deepest pool to avoid noisy tiny pools.
+  const best = pairs.reduce((currentBest, pair) => {
+    const currentLiq = Number(currentBest.liquidity?.usd) || 0
+    const pairLiq = Number(pair.liquidity?.usd) || 0
+    return pairLiq > currentLiq ? pair : currentBest
+  }, pairs[0])
 
   return {
     price:      formatPrice(parseFloat(best.priceUsd ?? '0')),
-    liquidity:  formatUSD(best.liquidity?.usd ?? 0),
+    liquidity:  formatUSD(totalLiquidityUsd),
     marketCap:  formatUSD(best.fdv ?? best.marketCap ?? 0),
   }
 }
@@ -252,17 +259,17 @@ const dumbTokenomics: { icon: IconKey; label: string; value: string; note?: stri
   { icon: 'flame', label: 'Initial Burn', value: '14 Billion' },
   { icon: 'tax', label: 'Tax', value: '6%', note: 'Buys, Sells & Transfers' },
   { icon: 'sparkle', label: 'Reflections', value: '1%', note: 'Rewarding holders' },
-  { icon: 'cycle', label: 'Buy & Burn $DUMB', value: '2%' },
-  { icon: 'burn', label: 'Direct Burn $DUMB', value: '1%' },
+  { icon: 'cycle', label: 'Liquidity', value: '2%', note: 'Pool support / LP growth' },
+  { icon: 'burn', label: 'Burn Paths $DUMB', value: '3%', note: '2% buy & burn + 1% direct burn' },
 ]
 
 const dampTokenomics: { icon: IconKey; label: string; value: string; note?: string }[] = [
   { icon: 'coin', label: 'Total Supply', value: '1 Billion' },
   { icon: 'flame', label: 'Initial Burn', value: '300 Million' },
   { icon: 'tax', label: 'Tax', value: '3%', note: 'Buys, Sells & Transfers' },
-  { icon: 'sparkle', label: 'Reflection', value: '1%', note: 'To holders' },
-  { icon: 'cycle', label: 'Buy & Burn $DUMB', value: '1%' },
-  { icon: 'burn', label: 'Burn $DAMP', value: '1%' },
+  { icon: 'sparkle', label: 'Reflection', value: '1%', note: 'Rewarding holders' },
+  { icon: 'cycle', label: 'Buy & Burn $DUMB', value: '1%', note: 'Cross-token deflation support' },
+  { icon: 'burn', label: 'Burn $DAMP', value: '1%', note: 'Direct $DAMP supply reduction' },
 ]
 
 function StatRow({
