@@ -1,33 +1,33 @@
 {
-  "lastProcessedBlock": "25952218",
-  "lastProcessedTxHash": "0x9fc6af4f091ee0988cb4d4cada74a842bd3a687a0d08c283be3b8cf48fae1616",
+  "lastProcessedBlock": "25952318",
+  "lastProcessedTxHash": "0xc5e45d15e7bc54cc985322093350949325270b31e39659b06d4e7febec576a29",
   "lastDailySummaryAt": 1772743199685,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "22188252388392960186681405",
     "holycFeesBurned": "10128134595468917605864888"
   },
   "lastBuyBurn": {
-    "blockNumber": "25942569",
-    "logIndex": 449,
-    "txHash": "0xf561bd54695cdc9e878baf0e7346e99bf6950c590dbe50dad1c584fa37469cb8",
-    "tokenBurned": "12082441903928122242998",
-    "jitSpent": "166666666666666666666666",
-    "timestamp": 1772663175000
+    "blockNumber": "25952220",
+    "logIndex": 2102,
+    "txHash": "0xc197db10b93b3a332a2e31a4dfc68c90ac46b749d4729845af673992a8c31c18",
+    "tokenBurned": "2384992731748768929493",
+    "jitSpent": "31488446563415343163856",
+    "timestamp": 1772763895000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25942572",
-    "logIndex": 550,
-    "txHash": "0xf663f84c712fc1115ffe8929897d4df7e2f075e8e6d07dabac075a02925e25f5",
-    "tokenBurned": "1599950350986602636",
-    "jitSpent": "160000000000000000000000",
-    "timestamp": 1772663205000
+    "blockNumber": "25952221",
+    "logIndex": 64,
+    "txHash": "0x8f63ec0ed1924fc1a1f7d54fdbf1153bc5a095a4476609ea3e1b28387ff83cf5",
+    "tokenBurned": "327596117201918433",
+    "jitSpent": "30605960655322123163856",
+    "timestamp": 1772763905000
   },
   "lastDumbBuyBurn": {
-    "blockNumber": "25942573",
-    "logIndex": 91,
-    "txHash": "0x467b918bbb62b077c762568f1189a253a6763765e7ddf8ab8ec96dddedcac7e3",
-    "tokenBurned": "340940084130589006835165",
-    "jitSpent": "160000000000000000000002",
-    "timestamp": 1772663215000
+    "blockNumber": "25952222",
+    "logIndex": 900,
+    "txHash": "0xc8f28d772e601332f1827b2c198596bb6c598bf8aa0aba39e1690a9b83f0c926",
+    "tokenBurned": "68237610992674241633673",
+    "jitSpent": "30605960655322123163858",
+    "timestamp": 1772763915000
   }
 }
