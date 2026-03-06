@@ -37,11 +37,11 @@ Configured in workflow:
 
 ## Message Formatting Rules
 `buildXPostTextFromTelegramMessage()` attempts to extract:
-- `Gained:`
+- `Gained:` or a raw gains line like `+... HolyC | -... JIT`
 - `Value:`
-- `HolyC Burned:`
+- `Burned:` or `HolyC Burned:`
 - Partner burn lines (Briah/CoinMafia/DumbMoney) and their USD values
-- TX link (`<a ...>TX</a>`)
+- TX link (`<a ...>TX</a>`) or explicit `txUrl` passed by bot
 
 It then produces:
 - Header: `New On-Chain Arb Executed!`
@@ -51,7 +51,7 @@ It then produces:
 - `Partner Buy&Burn: BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
 - Blank line, then:
   - `TX: https://...`
-  - `Website: https://holycpls.vercel.app/`
+  - `Website: https://holycpls.vercel.app`
 
 If parsing fails, it falls back to stripped plain text and truncates to 280 chars.
 

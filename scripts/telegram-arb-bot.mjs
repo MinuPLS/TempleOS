@@ -1184,6 +1184,8 @@ const main = async () => {
           await maybePostArbUpdateToX({
             telegramHtmlMessage: message,
             mediaPath: ARB_MEDIA_PATH,
+            txUrl: `https://otter.pulsechain.com/tx/${execution.transactionHash}`,
+            websiteUrl: 'https://holycpls.vercel.app',
             dryRun: DRY_RUN,
             enabled: shouldPostToX,
           })

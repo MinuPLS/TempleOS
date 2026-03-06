@@ -77,6 +77,14 @@ const truncateForX = (text, limit = MAX_POST_LENGTH) => {
 const extractValueLine = (lines, prefix) =>
   lines.find((line) => line.toLowerCase().startsWith(prefix.toLowerCase())) ?? null
 
+const extractGainsLine = (lines) => {
+  const labeled = extractValueLine(lines, 'Gained:')
+  if (labeled) return labeled.replace(/^Gained:\s*/i, '')
+
+  const raw = lines.find((line) => /[+-].*HolyC\s*\|\s*[+-].*JIT/i.test(line))
+  return raw ?? null
+}
+
 const PARTNER_SYMBOL_BY_LABEL = {
   briah: 'BRIAH',
   coinmafia: 'COINMAFIA',
@@ -94,7 +102,7 @@ const extractPartnerBurnUsdValues = (lines) => {
   const valuesBySymbol = Object.fromEntries(PARTNER_SYMBOLS.map((symbol) => [symbol, null]))
 
   for (const line of lines) {
-    const match = line.match(/^([A-Za-z0-9]+)\s+.+\(([^)]+)\)\s*$/)
+    const match = line.match(/^([A-Za-z0-9]+):?\s+.+\(([^)]+)\)\s*$/)
     if (!match) continue
 
     const rawLabel = match[1]
@@ -120,18 +128,23 @@ const buildFallbackPostText = (telegramHtmlMessage) => {
   return truncateForX(collapsed)
 }
 
-export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
-  const txUrl = extractLinkByLabel(telegramHtmlMessage, 'TX')
-  const dashboardUrl = normalizeWebsiteUrl(extractLinkByLabel(telegramHtmlMessage, 'Dashboard'))
+export const buildXPostTextFromTelegramMessage = (
+  telegramHtmlMessage,
+  { txUrl: providedTxUrl, websiteUrl: providedWebsiteUrl } = {}
+) => {
+  const txUrl = providedTxUrl ?? extractLinkByLabel(telegramHtmlMessage, 'TX')
+  const dashboardUrl = normalizeWebsiteUrl(
+    providedWebsiteUrl ?? extractLinkByLabel(telegramHtmlMessage, 'Dashboard')
+  )
   const plainText = stripHtml(telegramHtmlMessage)
   const lines = plainText
     .split('\n')
     .map(normalizeLine)
     .filter(Boolean)
 
-  const gained = extractValueLine(lines, 'Gained:')
+  const gained = extractGainsLine(lines)
   const value = extractValueLine(lines, 'Value:')
-  const burned = extractValueLine(lines, 'HolyC Burned:')
+  const burned = extractValueLine(lines, 'Burned:') ?? extractValueLine(lines, 'HolyC Burned:')
   const partnerBurnUsdValues = extractPartnerBurnUsdValues(lines)
   const partnerLine = `Partner Buy&Burn: ${PARTNER_SYMBOLS.map(
     (symbol) => `${symbol} ${partnerBurnUsdValues[symbol] ?? '—'}`
@@ -140,7 +153,7 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   const bodyLines = [
     'New On-Chain Arb Executed!',
     '',
-    gained ? gained.replace(/^Gained:\s*/i, '') : null,
+    gained,
     value ?? null,
     burned ? burned.replace(/^HolyC Burned:/i, 'Burned:') : null,
     '',
@@ -507,13 +520,15 @@ const readXCredentials = () => {
 export const maybePostArbUpdateToX = async ({
   telegramHtmlMessage,
   mediaPath,
+  txUrl,
+  websiteUrl,
   dryRun = false,
   logger = console,
   enabled = process.env.POST_X_ARB_UPDATES === 'true',
 }) => {
   if (!enabled) return false
 
-  const postText = buildXPostTextFromTelegramMessage(telegramHtmlMessage)
+  const postText = buildXPostTextFromTelegramMessage(telegramHtmlMessage, { txUrl, websiteUrl })
   if (!postText) {
     throw new Error('Cannot post an empty arb update to X')
   }
