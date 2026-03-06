@@ -157,8 +157,8 @@ export const buildXPostTextFromTelegramMessage = (
 
   const bodyLines = [
     'New On-Chain Arb Executed!',
+    gained ?? null,
     '',
-    gained,
     value ?? null,
     burned ? burned.replace(/^HolyC Burned:/i, 'Burned:') : null,
     '',
