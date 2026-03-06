@@ -899,17 +899,18 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   lines.push(bold('Divine Manager Activity'))
   lines.push('')
   lines.push(
-    `${bold('Gained')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
+    `${bold('Gained:')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
   )
-  lines.push(`${bold('Value')} ${escapeHtml(usdValue)}`)
-  lines.push(`${bold('Burned')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
+  lines.push(`${bold('Value:')} ${escapeHtml(usdValue)}`)
+  lines.push('')
+  lines.push(`${bold('HolyC Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
 
   const partnerEntries =
     partnerBurns?.filter((entry) => entry?.burnInfo?.txHash && parseBigInt(entry.burnInfo.tokenBurned) > 0n) ?? []
 
   if (partnerEntries.length > 0) {
     lines.push('')
-    lines.push(bold('Partner Buy & Burn'))
+    lines.push('Partner Buy &amp; Burn:')
     partnerEntries.forEach((entry) => {
       const burned = parseBigInt(entry.burnInfo.tokenBurned)
       const amount = formatAmount(burned, 4)
@@ -917,7 +918,7 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
         ? usdFormatter.format(Number(formatUnits(burned, 18)) * entry.usdPrice)
         : '—'
 
-      lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
+      lines.push(`${escapeHtml(entry.label)} ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
     })
   }
 
