@@ -48,7 +48,7 @@ It then produces:
 - Original `Gained:` line
 - `Value:` line
 - Original `HolyC Burned:` line
-- `Partner Burned (USD): BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
+- `Partner Buy&Burn: BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
 - Blank line, then:
   - `TX: https://...`
   - `Website: https://holycpls.vercel.app/`

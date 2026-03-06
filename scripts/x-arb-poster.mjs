@@ -133,7 +133,7 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   const value = extractValueLine(lines, 'Value:')
   const burned = extractValueLine(lines, 'HolyC Burned:')
   const partnerBurnUsdValues = extractPartnerBurnUsdValues(lines)
-  const partnerLine = `Partner Burned (USD): ${PARTNER_SYMBOLS.map(
+  const partnerLine = `Partner Buy&Burn: ${PARTNER_SYMBOLS.map(
     (symbol) => `${symbol} ${partnerBurnUsdValues[symbol] ?? '—'}`
   ).join(' | ')}`
 
