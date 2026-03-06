@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { createPublicClient, defineChain, formatUnits, getAddress, http } from 'viem'
+import { maybePostArbUpdateToX } from './x-arb-poster.mjs'
 
 const RPC_URL = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
@@ -1172,6 +1173,15 @@ const main = async () => {
       ]
       const message = buildArbMessage(execution, tokenPrices, partnerBurns)
       await sendTelegramArbUpdate(message)
+      try {
+        await maybePostArbUpdateToX({
+          telegramHtmlMessage: message,
+          mediaPath: ARB_MEDIA_PATH,
+          dryRun: DRY_RUN,
+        })
+      } catch (error) {
+        console.error('Failed to post arb update on X:', error)
+      }
       if (briahBuyBurn) {
         state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
       }
