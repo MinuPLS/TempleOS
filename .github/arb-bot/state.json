@@ -1,33 +1,33 @@
 {
-  "lastProcessedBlock": "25953626",
-  "lastProcessedTxHash": "0x834a117bf34378ef19d9be324c039bcfa7778c6d56658693411cdd0905259ba2",
+  "lastProcessedBlock": "25953920",
+  "lastProcessedTxHash": "0x18904571c496b8b8a81207d92203edd83ef11e7c3508d879549c122491bb1000",
   "lastDailySummaryAt": 1772743199685,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "22188252388392960186681405",
     "holycFeesBurned": "10128134595468917605864888"
   },
   "lastBuyBurn": {
-    "blockNumber": "25953628",
-    "logIndex": 103,
-    "txHash": "0x6279a36da74f5d5bb77392199ebd41041b5d765837723a2f64e37c70abb881ad",
-    "tokenBurned": "1355569029112914672132",
-    "jitSpent": "17584844729408639574123",
-    "timestamp": 1772779405000
+    "blockNumber": "25953935",
+    "logIndex": 2213,
+    "txHash": "0x3e8dfea99b8810b037f0cc0525d95fc607c76a337df9712a2a8efe8e7884f74f",
+    "tokenBurned": "1484513076163771030830",
+    "jitSpent": "18654811330434897247355",
+    "timestamp": 1772782745000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25953629",
+    "blockNumber": "25953936",
     "logIndex": 84,
-    "txHash": "0x8b216df29698c5ca4a142eabca58c3beea45ed31618a4f862aeaace88d41a48f",
-    "tokenBurned": "189033514576904176",
-    "jitSpent": "16889464665435805574123",
-    "timestamp": 1772779415000
+    "txHash": "0x767991be73efb935b3100d447aca4833abe53b4169331738e14e0e6fb61d41c0",
+    "tokenBurned": "208148614763899950",
+    "jitSpent": "17942773033296680247355",
+    "timestamp": 1772782755000
   },
   "lastDumbBuyBurn": {
-    "blockNumber": "25953630",
-    "logIndex": 196,
-    "txHash": "0xdc832dd7902556fdf037c7e1ea1e43774df156d4214bcd8412f849cb46b8bbec",
-    "tokenBurned": "39557643981392528491128",
-    "jitSpent": "16889464665435805574123",
-    "timestamp": 1772779425000
+    "blockNumber": "25953938",
+    "logIndex": 112,
+    "txHash": "0x06e5ac7b4435d23e6ca53a9899b4ae16a6456b5599e9e8a95325b179feaa28d9",
+    "tokenBurned": "43276102263473923785156",
+    "jitSpent": "17942773033296680247357",
+    "timestamp": 1772782775000
   }
 }
