@@ -53,10 +53,10 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           POST_X_ARB_UPDATES: ${{ vars.POST_X_ARB_UPDATES }}
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET }}
+          X_API_KEY: ${{ secrets.X_API_KEY || vars.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET || vars.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN || vars.X_ACCESS_TOKEN }}
+          X_ACCESS_TOKEN_SECRET: ${{ secrets.X_ACCESS_TOKEN_SECRET || vars.X_ACCESS_TOKEN_SECRET }}
           PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
           DAILY_TIMEZONE: ${{ vars.DAILY_TIMEZONE }}
           DAILY_HOUR: ${{ vars.DAILY_HOUR }}
