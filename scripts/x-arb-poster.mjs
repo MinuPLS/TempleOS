@@ -118,6 +118,11 @@ const extractPartnerBurnUsdValues = (lines) => {
   return valuesBySymbol
 }
 
+const formatPartnerBurnUsdValue = (value) => {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  return normalized.startsWith('$') ? normalized : '$0.00'
+}
+
 const buildFallbackPostText = (telegramHtmlMessage) => {
   const text = stripHtml(telegramHtmlMessage)
   const lines = text
@@ -147,7 +152,7 @@ export const buildXPostTextFromTelegramMessage = (
   const burned = extractValueLine(lines, 'Burned:') ?? extractValueLine(lines, 'HolyC Burned:')
   const partnerBurnUsdValues = extractPartnerBurnUsdValues(lines)
   const partnerLine = `Partner Buy&Burn: ${PARTNER_SYMBOLS.map(
-    (symbol) => `${symbol} ${partnerBurnUsdValues[symbol] ?? '—'}`
+    (symbol) => `${symbol} (${formatPartnerBurnUsdValue(partnerBurnUsdValues[symbol])})`
   ).join(' | ')}`
 
   const bodyLines = [
