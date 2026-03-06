@@ -57,7 +57,8 @@ If parsing fails, it falls back to stripped plain text and truncates to 280 char
 
 ## Media Upload Behavior
 - Uses X v1.1 upload endpoint: `https://upload.twitter.com/1.1/media/upload.json`
-- Uses status update endpoint: `https://api.twitter.com/1.1/statuses/update.json`
+- Uses X v2 create tweet endpoint first: `https://api.twitter.com/2/tweets`
+- Falls back to v1.1 status update endpoint if needed: `https://api.twitter.com/1.1/statuses/update.json`
 - MIME detection by file extension (`.mp4`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`)
 - Video category: `tweet_video`
 - Chunk size: 4 MB per APPEND segment

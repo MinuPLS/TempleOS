@@ -4,6 +4,7 @@ import process from 'node:process'
 import { createHmac, randomBytes } from 'node:crypto'
 
 const X_MEDIA_UPLOAD_URL = 'https://upload.twitter.com/1.1/media/upload.json'
+const X_CREATE_TWEET_URL = 'https://api.twitter.com/2/tweets'
 const X_STATUS_UPDATE_URL = 'https://api.twitter.com/1.1/statuses/update.json'
 const MAX_POST_LENGTH = 280
 const MAX_APPEND_CHUNK_SIZE = 4 * 1024 * 1024
@@ -389,7 +390,28 @@ const uploadMedia = async ({ credentials, mediaPath }) => {
   return mediaId
 }
 
-const createStatusUpdate = async ({ credentials, text, mediaId }) => {
+const createTweetV2 = async ({ credentials, text, mediaId }) => {
+  const payload = {
+    text,
+  }
+
+  if (mediaId) {
+    payload.media = {
+      media_ids: [mediaId],
+    }
+  }
+
+  return oauthJsonRequest({
+    method: 'POST',
+    url: X_CREATE_TWEET_URL,
+    credentials,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    fallbackError: 'Could not create post on X via v2',
+  })
+}
+
+const createStatusV1 = async ({ credentials, text, mediaId }) => {
   const payload = {
     status: text,
   }
@@ -407,6 +429,20 @@ const createStatusUpdate = async ({ credentials, text, mediaId }) => {
     extraSignatureParams: Object.entries(payload),
     fallbackError: 'Could not create post on X',
   })
+}
+
+const createStatusUpdate = async ({ credentials, text, mediaId }) => {
+  try {
+    return await createTweetV2({ credentials, text, mediaId })
+  } catch (v2Error) {
+    try {
+      return await createStatusV1({ credentials, text, mediaId })
+    } catch (v1Error) {
+      throw new Error(
+        `X post failed on both endpoints. v2: ${v2Error.message} | v1.1: ${v1Error.message}`
+      )
+    }
+  }
 }
 
 const readXCredentials = () => {
