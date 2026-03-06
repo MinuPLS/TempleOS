@@ -8,14 +8,16 @@ const RPC_URL = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 const DRY_RUN = process.env.DRY_RUN === 'true'
+const POST_X_ARB_UPDATES = process.env.POST_X_ARB_UPDATES === 'true'
 const POST_ON_BOOTSTRAP = process.env.POST_ON_BOOTSTRAP === 'true'
 const FORCE_DAILY_POST = process.env.FORCE_DAILY_POST === 'true'
 const FORCE_ARB_POST = process.env.FORCE_ARB_POST === 'true'
+const FORCE_X_POST = process.env.FORCE_X_POST === 'true'
 const DAILY_TIMEZONE = process.env.DAILY_TIMEZONE || 'Europe/Amsterdam'
 const DAILY_HOUR = Number.parseInt(process.env.DAILY_HOUR || '21', 10)
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
 
-if (!DRY_RUN) {
+if (!DRY_RUN && !FORCE_X_POST) {
   if (!TELEGRAM_BOT_TOKEN) throw new Error('Missing TELEGRAM_BOT_TOKEN')
   if (!TELEGRAM_CHAT_ID) throw new Error('Missing TELEGRAM_CHAT_ID')
 }
@@ -41,7 +43,7 @@ const client = createPublicClient({
 })
 
 const STATE_PATH = path.resolve(process.cwd(), '.github/arb-bot/state.json')
-const ARB_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/TgBotMediaArbitrage.mp4')
+const ARB_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/NewArbitrageAndParter.png')
 const DAILY_MEDIA_PATH = path.resolve(process.cwd(), 'scripts/24hsnapshotmedia.png')
 
 const DEFAULT_BUY_BURN_STATE = {
@@ -1025,10 +1027,17 @@ const sendTelegramArbUpdate = async (message) => {
   form.append('chat_id', TELEGRAM_CHAT_ID)
   form.append('caption', message)
   form.append('parse_mode', 'HTML')
-  form.append('disable_web_page_preview', 'true')
-  form.append('video', new Blob([fileBuffer]), path.basename(ARB_MEDIA_PATH))
+  const extension = path.extname(ARB_MEDIA_PATH).toLowerCase()
+  const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif'])
+  const isImage = imageExtensions.has(extension)
+  const mediaField = isImage ? 'photo' : 'video'
+  const endpoint = isImage ? 'sendPhoto' : 'sendVideo'
+  if (!isImage) {
+    form.append('disable_web_page_preview', 'true')
+  }
+  form.append(mediaField, new Blob([fileBuffer]), path.basename(ARB_MEDIA_PATH))
 
-  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendVideo`, {
+  const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${endpoint}`, {
     method: 'POST',
     body: form,
   })
@@ -1077,8 +1086,11 @@ const main = async () => {
   const tokenPrices = await fetchTokenPrices()
 
   const forceArbPost = FORCE_ARB_POST
+  const forceXPost = FORCE_X_POST
+  const shouldForceLatestExecution = forceArbPost || forceXPost
+  const shouldPostToX = forceXPost || POST_X_ARB_UPDATES
   let fromBlock = null
-  if (forceArbPost) {
+  if (shouldForceLatestExecution) {
     fromBlock = latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
   } else if (state.lastProcessedBlock === null) {
     if (POST_ON_BOOTSTRAP) {
@@ -1107,7 +1119,7 @@ const main = async () => {
 
     const orderedLogs = orderLogsByBlock(logs)
 
-    if (forceArbPost) {
+    if (shouldForceLatestExecution) {
       const latestLog = orderedLogs[orderedLogs.length - 1]
       if (latestLog) {
         const execution = await buildExecutionFromLog(latestLog)
@@ -1172,29 +1184,38 @@ const main = async () => {
         },
       ]
       const message = buildArbMessage(execution, tokenPrices, partnerBurns)
-      await sendTelegramArbUpdate(message)
-      try {
-        await maybePostArbUpdateToX({
-          telegramHtmlMessage: message,
-          mediaPath: ARB_MEDIA_PATH,
-          dryRun: DRY_RUN,
-        })
-      } catch (error) {
-        console.error('Failed to post arb update on X:', error)
+      if (!forceXPost) {
+        await sendTelegramArbUpdate(message)
       }
-      if (briahBuyBurn) {
-        state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
+      if (shouldPostToX) {
+        try {
+          await maybePostArbUpdateToX({
+            telegramHtmlMessage: message,
+            mediaPath: ARB_MEDIA_PATH,
+            dryRun: DRY_RUN,
+            enabled: shouldPostToX,
+          })
+        } catch (error) {
+          console.error('Failed to post arb update on X:', error)
+        }
       }
-      if (mafiaBuyBurn) {
-        state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
-      }
-      if (dumbBuyBurn) {
-        state.lastDumbBuyBurn = await hydrateBuyBurnState(dumbBuyBurn, blockCache)
+      if (!forceXPost) {
+        if (briahBuyBurn) {
+          state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
+        }
+        if (mafiaBuyBurn) {
+          state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
+        }
+        if (dumbBuyBurn) {
+          state.lastDumbBuyBurn = await hydrateBuyBurnState(dumbBuyBurn, blockCache)
+        }
       }
     }
-    const lastExecution = executions[executions.length - 1]
-    state.lastProcessedBlock = lastExecution.blockNumber.toString()
-    state.lastProcessedTxHash = lastExecution.transactionHash
+    if (!forceXPost) {
+      const lastExecution = executions[executions.length - 1]
+      state.lastProcessedBlock = lastExecution.blockNumber.toString()
+      state.lastProcessedTxHash = lastExecution.transactionHash
+    }
   }
 
   const now = Date.now()
@@ -1203,7 +1224,7 @@ const main = async () => {
   const lastDailyKey = lastDaily ? getDateKey(lastDaily, DAILY_TIMEZONE) : null
   const nowParts = getTimeParts(now, DAILY_TIMEZONE)
   const inDailyWindow = nowParts.hour >= DAILY_HOUR
-  const shouldPostDaily = FORCE_DAILY_POST || (inDailyWindow && lastDailyKey !== todayKey)
+  const shouldPostDaily = !forceXPost && (FORCE_DAILY_POST || (inDailyWindow && lastDailyKey !== todayKey))
 
   if (shouldPostDaily) {
     const tokenStats = await fetchTokenStats()

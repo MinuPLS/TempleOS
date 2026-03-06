@@ -17,6 +17,10 @@ on:
         description: 'Treat as first run (post latest execute)'
         required: false
         default: 'false'
+      force_x_post:
+        description: 'Force latest arb post on X only'
+        required: false
+        default: 'false'
 
 concurrency:
   group: telegram-arb-bot
@@ -60,6 +64,7 @@ jobs:
           POST_ON_BOOTSTRAP: ${{ inputs.force_bootstrap || vars.POST_ON_BOOTSTRAP }}
           FORCE_DAILY_POST: ${{ inputs.force_daily }}
           FORCE_ARB_POST: ${{ inputs.force_arb || inputs.force_bootstrap }}
+          FORCE_X_POST: ${{ inputs.force_x_post }}
 
       - name: Commit state if changed
         run: |

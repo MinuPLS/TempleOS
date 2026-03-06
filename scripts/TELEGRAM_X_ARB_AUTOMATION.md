@@ -10,8 +10,8 @@ This documents the automation added on March 6, 2026 that posts to X immediately
 
 ## End-to-End Flow
 1. `telegram-arb-bot.mjs` builds the arb message (`buildArbMessage`).
-2. It posts to Telegram with `sendTelegramArbUpdate(message)`.
-3. On success, it calls:
+2. In normal mode, it posts to Telegram with `sendTelegramArbUpdate(message)`.
+3. It then calls:
    - `maybePostArbUpdateToX({ telegramHtmlMessage: message, mediaPath: ARB_MEDIA_PATH, dryRun: DRY_RUN })`
 4. `x-arb-poster.mjs`:
    - Converts Telegram HTML caption into X-friendly text.
@@ -19,6 +19,7 @@ This documents the automation added on March 6, 2026 that posts to X immediately
    - Posts the tweet/status with uploaded media ID.
 
 Important: X posting errors are caught and logged in `telegram-arb-bot.mjs`, and do not stop Telegram posting/state updates.
+Important: `FORCE_X_POST=true` runs an X-only forced latest-arb post (skips Telegram arb send, skips daily post, and does not mutate state).
 
 ## Toggle + Required Secrets
 X posting is disabled unless:
@@ -32,6 +33,7 @@ Required secrets/env when enabled:
 
 Configured in workflow:
 - `.github/workflows/telegram-arb-bot.yml` in the `Run Telegram bot` step env block.
+- `workflow_dispatch` now includes `force_x_post` for forcing a latest X arb post only.
 
 ## Message Formatting Rules
 `buildXPostTextFromTelegramMessage()` attempts to extract:
@@ -62,7 +64,7 @@ If parsing fails, it falls back to stripped plain text and truncates to 280 char
 - Polls STATUS until `succeeded` (or times out/fails)
 
 Current arb media path passed from Telegram bot:
-- `scripts/TgBotMediaArbitrage.mp4`
+- `scripts/NewArbitrageAndParter.png`
 
 ## DRY_RUN Behavior
 When `DRY_RUN=true`:
