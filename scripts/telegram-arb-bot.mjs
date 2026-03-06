@@ -920,6 +920,11 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
     lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
   })
 
+  if (execution.transactionHash) {
+    lines.push('')
+    lines.push(`${bold('Tx:')} <a href="https://otter.pulsechain.com/tx/${execution.transactionHash}">View on Otterscan</a>`)
+  }
+
   return lines.join('\n')
 }
 
