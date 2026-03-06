@@ -142,7 +142,7 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
     '',
     gained ? gained.replace(/^Gained:\s*/i, '') : null,
     value ?? null,
-    burned ?? null,
+    burned ? burned.replace(/^HolyC Burned:/i, 'Burned:') : null,
     '',
     partnerLine,
   ].filter((line) => line !== null)

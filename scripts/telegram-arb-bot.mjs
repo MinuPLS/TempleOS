@@ -894,39 +894,31 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   const usdValue = formatUsdPlain(usdNumber)
   const burnedHoly = formatAmount(execution.holyBurned)
   const burnedUsd = formatUsdPlain(Number(formatUnits(execution.holyBurned, 18)) * tokenPrices.holycUSD)
-  const dashboardUrl = 'https://holycpls.vercel.app/'
-  const txUrl = `https://otter.pulsechain.com/tx/${execution.transactionHash}`
-  const link = (label, url) => `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`
 
   const lines = []
-  lines.push(bold('Divine Manager Activity'))
+  lines.push(bold('Divine Manager Activity:'))
+  lines.push('New On-Chain Arb Executed!')
   lines.push('')
   lines.push(
-    `${bold('Gained:')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
+    `${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
   )
-  lines.push(`${bold('Value:')} ${escapeHtml(usdValue)}`)
   lines.push('')
-  lines.push(`${bold('HolyC Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
+  lines.push(`${bold('Value:')} ${escapeHtml(usdValue)}`)
+  lines.push(`${bold('Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
 
-  const partnerEntries =
-    partnerBurns?.filter((entry) => entry?.burnInfo?.txHash && parseBigInt(entry.burnInfo.tokenBurned) > 0n) ?? []
+  lines.push('')
+  lines.push(bold('Partner Buy &amp; Burn:'))
 
-  if (partnerEntries.length > 0) {
-    lines.push('')
-    lines.push('Partner Buy &amp; Burn:')
-    partnerEntries.forEach((entry) => {
-      const burned = parseBigInt(entry.burnInfo.tokenBurned)
-      const amount = formatAmount(burned, 4)
-      const usdValue = entry.usdPrice
+  ;(partnerBurns ?? []).forEach((entry) => {
+    const burned = parseBigInt(entry?.burnInfo?.tokenBurned)
+    const amount = burned > 0n ? formatAmount(burned, 4) : '0'
+    const usdValue =
+      entry?.usdPrice && burned > 0n
         ? usdFormatter.format(Number(formatUnits(burned, 18)) * entry.usdPrice)
         : '—'
 
-      lines.push(`${escapeHtml(entry.label)} ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
-    })
-  }
-
-  lines.push('')
-  lines.push(`${link('TX', txUrl)} | ${link('Dashboard', dashboardUrl)}`)
+    lines.push(`${escapeHtml(entry.label)}: ${escapeHtml(amount)} (${escapeHtml(usdValue)})`)
+  })
 
   return lines.join('\n')
 }
