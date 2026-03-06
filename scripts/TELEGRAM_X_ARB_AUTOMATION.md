@@ -47,7 +47,7 @@ It then produces:
 - Header: `New On-Chain Arb Executed!`
 - Original `Gained:` line
 - `Value:` line
-- Original `HolyC Burned:` line
+- `Burned:` line (mapped from Telegram `HolyC Burned:`)
 - `Partner Buy&Burn: BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
 - Blank line, then:
   - `TX: https://...`
