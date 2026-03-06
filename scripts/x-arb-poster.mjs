@@ -8,6 +8,8 @@ const X_CREATE_TWEET_URL = 'https://api.twitter.com/2/tweets'
 const X_STATUS_UPDATE_URL = 'https://api.twitter.com/1.1/statuses/update.json'
 const MAX_POST_LENGTH = 280
 const MAX_APPEND_CHUNK_SIZE = 4 * 1024 * 1024
+const X_WEIGHTED_URL_LENGTH = 23
+const URL_PATTERN = /https?:\/\/\S+/g
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -44,9 +46,32 @@ const extractLinkByLabel = (message, label) => {
   return match?.[1] ?? null
 }
 
+const getXWeightedLength = (text) => {
+  let weightedLength = 0
+  let cursor = 0
+  const value = String(text)
+  let match
+  while ((match = URL_PATTERN.exec(value)) !== null) {
+    const start = match.index
+    const end = start + match[0].length
+    weightedLength += start - cursor
+    weightedLength += X_WEIGHTED_URL_LENGTH
+    cursor = end
+  }
+  weightedLength += value.length - cursor
+  URL_PATTERN.lastIndex = 0
+  return weightedLength
+}
+
 const truncateForX = (text, limit = MAX_POST_LENGTH) => {
-  if (text.length <= limit) return text
-  return `${text.slice(0, Math.max(1, limit - 1)).trimEnd()}…`
+  const value = String(text)
+  if (getXWeightedLength(value) <= limit) return value
+
+  let candidate = value.trimEnd()
+  while (candidate.length > 1 && getXWeightedLength(`${candidate}…`) > limit) {
+    candidate = candidate.slice(0, -1).trimEnd()
+  }
+  return `${candidate}…`
 }
 
 const extractValueLine = (lines, prefix) =>
@@ -58,8 +83,15 @@ const PARTNER_SYMBOL_BY_LABEL = {
   dumbmoney: 'DUMB',
 }
 
+const PARTNER_SYMBOLS = ['BRIAH', 'COINMAFIA', 'DUMB']
+
+const normalizeWebsiteUrl = (url) => {
+  if (!url) return null
+  return String(url).replace(/\/+$/, '')
+}
+
 const extractPartnerBurnUsdValues = (lines) => {
-  const entries = []
+  const valuesBySymbol = Object.fromEntries(PARTNER_SYMBOLS.map((symbol) => [symbol, null]))
 
   for (const line of lines) {
     const match = line.match(/^([A-Za-z0-9]+)\s+.+\(([^)]+)\)\s*$/)
@@ -72,10 +104,10 @@ const extractPartnerBurnUsdValues = (lines) => {
 
     const usdValue = rawUsdValue.trim()
     if (!usdValue.startsWith('$')) continue
-    entries.push(`${symbol} ${usdValue}`)
+    valuesBySymbol[symbol] = usdValue
   }
 
-  return entries
+  return valuesBySymbol
 }
 
 const buildFallbackPostText = (telegramHtmlMessage) => {
@@ -90,7 +122,7 @@ const buildFallbackPostText = (telegramHtmlMessage) => {
 
 export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   const txUrl = extractLinkByLabel(telegramHtmlMessage, 'TX')
-  const dashboardUrl = extractLinkByLabel(telegramHtmlMessage, 'Dashboard')
+  const dashboardUrl = normalizeWebsiteUrl(extractLinkByLabel(telegramHtmlMessage, 'Dashboard'))
   const plainText = stripHtml(telegramHtmlMessage)
   const lines = plainText
     .split('\n')
@@ -101,16 +133,19 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   const value = extractValueLine(lines, 'Value:')
   const burned = extractValueLine(lines, 'HolyC Burned:')
   const partnerBurnUsdValues = extractPartnerBurnUsdValues(lines)
+  const partnerLine = `Partner Burned (USD): ${PARTNER_SYMBOLS.map(
+    (symbol) => `${symbol} ${partnerBurnUsdValues[symbol] ?? '—'}`
+  ).join(' | ')}`
 
   const bodyLines = [
-    'New On-Chain Arb Executed',
-    gained ? gained.replace(/^Gained:/i, 'Net:') : null,
+    'New On-Chain Arb Executed!',
+    '',
+    gained ?? null,
     value ?? null,
-    burned ? burned.replace(/^HolyC Burned:/i, 'HolyC Burned (This Arb):') : null,
-    partnerBurnUsdValues.length > 0
-      ? `Partner Token Burn Value (USD): ${partnerBurnUsdValues.join(' | ')}`
-      : null,
-  ].filter(Boolean)
+    burned ?? null,
+    '',
+    partnerLine,
+  ].filter((line) => line !== null)
 
   if (bodyLines.length <= 1) {
     return buildFallbackPostText(telegramHtmlMessage)
@@ -126,11 +161,11 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   }
 
   const suffix = `\n\n${linkLines.join('\n')}`
-  if (body.length + suffix.length <= MAX_POST_LENGTH) {
+  if (getXWeightedLength(body + suffix) <= MAX_POST_LENGTH) {
     return `${body}${suffix}`
   }
 
-  const allowedBodyLength = Math.max(1, MAX_POST_LENGTH - suffix.length)
+  const allowedBodyLength = Math.max(1, MAX_POST_LENGTH - getXWeightedLength(suffix))
   return `${truncateForX(body, allowedBodyLength)}${suffix}`
 }
 

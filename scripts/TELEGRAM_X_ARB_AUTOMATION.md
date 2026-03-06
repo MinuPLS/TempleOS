@@ -44,11 +44,11 @@ Configured in workflow:
 - TX link (`<a ...>TX</a>`)
 
 It then produces:
-- Header: `New On-Chain Arb Executed`
-- Net line (`Gained:` transformed to `Net:`)
+- Header: `New On-Chain Arb Executed!`
+- Original `Gained:` line
 - `Value:` line
-- `HolyC Burned (This Arb): ...`
-- `Partner Token Burn Value (USD): BRIAH $... | COINMAFIA $... | DUMB $...` (USD only for partner tokens)
+- Original `HolyC Burned:` line
+- `Partner Burned (USD): BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
 - Blank line, then:
   - `TX: https://...`
   - `Website: https://holycpls.vercel.app/`
