@@ -140,9 +140,9 @@ export const buildXPostTextFromTelegramMessage = (telegramHtmlMessage) => {
   const bodyLines = [
     'New On-Chain Arb Executed!',
     '',
-    gained ?? null,
+    gained ? gained.replace(/^Gained:\s*/i, '') : null,
     value ?? null,
-    burned ? burned.replace(/^HolyC Burned:/i, 'Burned:') : null,
+    burned ?? null,
     '',
     partnerLine,
   ].filter((line) => line !== null)

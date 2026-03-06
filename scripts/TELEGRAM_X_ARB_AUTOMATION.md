@@ -45,9 +45,9 @@ Configured in workflow:
 
 It then produces:
 - Header: `New On-Chain Arb Executed!`
-- Original `Gained:` line
+- Gains line without label (from Telegram `Gained:` value only), e.g. `+17.21K HolyC | -281.20 JIT`
 - `Value:` line
-- `Burned:` line (mapped from Telegram `HolyC Burned:`)
+- Original `HolyC Burned:` line
 - `Partner Buy&Burn: BRIAH ... | COINMAFIA ... | DUMB ...` (always present; missing values shown as `—`)
 - Blank line, then:
   - `TX: https://...`
