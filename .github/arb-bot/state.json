@@ -1,6 +1,6 @@
 {
-  "lastProcessedBlock": "25953920",
-  "lastProcessedTxHash": "0x18904571c496b8b8a81207d92203edd83ef11e7c3508d879549c122491bb1000",
+  "lastProcessedBlock": "25956900",
+  "lastProcessedTxHash": "0x298d7867dff8dc798ce1225a5d6809e10f55b10fe4c9b1ffe18787ce6ee831f5",
   "lastDailySummaryAt": 1772743199685,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "22188252388392960186681405",
@@ -15,19 +15,19 @@
     "timestamp": 1772782745000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25953936",
-    "logIndex": 84,
-    "txHash": "0x767991be73efb935b3100d447aca4833abe53b4169331738e14e0e6fb61d41c0",
-    "tokenBurned": "208148614763899950",
-    "jitSpent": "17942773033296680247355",
-    "timestamp": 1772782755000
+    "blockNumber": "25956903",
+    "logIndex": 132,
+    "txHash": "0xaa4d8f3e768fad0dace999ceda30e25e2fd3ef296e04196f22ad8d2da2b39351",
+    "tokenBurned": "1246681447917193387",
+    "jitSpent": "94035650553828846322739",
+    "timestamp": 1772815025000
   },
   "lastDumbBuyBurn": {
-    "blockNumber": "25953938",
-    "logIndex": 112,
-    "txHash": "0x06e5ac7b4435d23e6ca53a9899b4ae16a6456b5599e9e8a95325b179feaa28d9",
-    "tokenBurned": "43276102263473923785156",
-    "jitSpent": "17942773033296680247357",
-    "timestamp": 1772782775000
+    "blockNumber": "25956908",
+    "logIndex": 23,
+    "txHash": "0xe4a4ef7da59ed5b09114ddacc7dfaca1d67a534e29339aafa7bb89b89925e1fe",
+    "tokenBurned": "250547504124155164163917",
+    "jitSpent": "94035650553828846322740",
+    "timestamp": 1772815085000
   }
 }
