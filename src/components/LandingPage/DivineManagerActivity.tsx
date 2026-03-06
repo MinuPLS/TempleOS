@@ -93,6 +93,7 @@ export const DivineManagerActivity = ({
     mafia: 1,
     dumb: 1,
   })
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia' | 'dumb'>('arbs')
   const isViewingBurns = viewMode === 'burns'
   const isViewingMafia = viewMode === 'mafia'
@@ -106,6 +107,7 @@ export const DivineManagerActivity = ({
     hasMore: hasMoreBurns,
     error: burnError,
     refresh: refreshBurns,
+    silentRefresh: silentRefreshBurns,
     loadMore: loadMoreBurns,
     lastUpdated: burnLastUpdated,
     tokenUsdPrice: briahUsdPrice,
@@ -118,6 +120,7 @@ export const DivineManagerActivity = ({
     hasMore: hasMoreMafia,
     error: mafiaError,
     refresh: refreshMafia,
+    silentRefresh: silentRefreshMafia,
     loadMore: loadMoreMafia,
     lastUpdated: mafiaLastUpdated,
     tokenUsdPrice: coinMafiaUsdPrice,
@@ -130,6 +133,7 @@ export const DivineManagerActivity = ({
     hasMore: hasMoreDumb,
     error: dumbError,
     refresh: refreshDumb,
+    silentRefresh: silentRefreshDumb,
     loadMore: loadMoreDumb,
     lastUpdated: dumbLastUpdated,
     tokenUsdPrice: dumbUsdPrice,
@@ -137,30 +141,6 @@ export const DivineManagerActivity = ({
 
   const page = pageByView[viewMode]
 
-  const [hasLoadedBurns, setHasLoadedBurns] = useState(false)
-  const [hasLoadedMafia, setHasLoadedMafia] = useState(false)
-  const [hasLoadedDumb, setHasLoadedDumb] = useState(false)
-
-  useEffect(() => {
-    if (isViewingBurns && !hasLoadedBurns) {
-      setHasLoadedBurns(true)
-      void refreshBurns()
-    }
-  }, [isViewingBurns, hasLoadedBurns, refreshBurns])
-
-  useEffect(() => {
-    if (isViewingMafia && !hasLoadedMafia) {
-      setHasLoadedMafia(true)
-      void refreshMafia()
-    }
-  }, [isViewingMafia, hasLoadedMafia, refreshMafia])
-
-  useEffect(() => {
-    if (isViewingDumb && !hasLoadedDumb) {
-      setHasLoadedDumb(true)
-      void refreshDumb()
-    }
-  }, [isViewingDumb, hasLoadedDumb, refreshDumb])
 
   const currentData = useMemo(() => {
     const data = isViewingBurns
@@ -190,13 +170,28 @@ export const DivineManagerActivity = ({
       : isViewingDumb
         ? dumbLastUpdated
         : lastUpdated
-  const handleRefresh = isViewingBurns
-    ? () => void refreshBurns()
-    : isViewingMafia
-      ? () => void refreshMafia()
-      : isViewingDumb
-        ? () => void refreshDumb()
-        : onRefresh
+  const handleRefresh = () => {
+    if (isRefreshing) return
+    setIsRefreshing(true)
+
+    // Active view refreshes visibly; others refresh silently in background
+    const promises: Promise<void>[] = [
+      silentRefreshBurns(),
+      silentRefreshMafia(),
+      silentRefreshDumb(),
+    ]
+    if (isViewingBurns) {
+      void refreshBurns()
+    } else if (isViewingMafia) {
+      void refreshMafia()
+    } else if (isViewingDumb) {
+      void refreshDumb()
+    }
+    onRefresh()
+
+    // Keep spinning until all background refreshes settle
+    void Promise.allSettled(promises).then(() => setIsRefreshing(false))
+  }
   const currentHasMore = isViewingBurns ? hasMoreBurns : isViewingMafia ? hasMoreMafia : isViewingDumb ? hasMoreDumb : hasMore
   const handleLoadMore = isViewingBurns
     ? () => void loadMoreBurns()
@@ -283,12 +278,12 @@ export const DivineManagerActivity = ({
               )}
             </div>
             <button
-              className={styles.activityRefreshButton}
+              className={`${styles.activityRefreshButton}${isRefreshing || currentLoading ? ` ${styles.refreshSpinning}` : ''}`}
               onClick={() => {
                 if (currentLoadingMore) return
                 handleRefresh()
               }}
-              disabled={currentLoadingMore}
+              disabled={currentLoadingMore || isRefreshing}
               aria-label="Refresh feed"
             >
               <RotateCcw size={16} />

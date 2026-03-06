@@ -360,6 +360,11 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
       fetchData({
         targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
       }),
+    silentRefresh: () =>
+      fetchData({
+        silent: true,
+        targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
+      }),
     loadMore: () =>
       fetchData({
         loadMore: true,

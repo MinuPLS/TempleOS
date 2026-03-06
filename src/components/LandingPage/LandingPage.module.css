@@ -2275,6 +2275,14 @@
   border-color: rgba(255, 255, 255, 0.4);
 }
 
+.activityRefreshButton.refreshSpinning svg {
+  animation: refreshSpin 0.8s linear infinite;
+}
+
+@keyframes refreshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
 
 .activityFooter {
   display: flex;
