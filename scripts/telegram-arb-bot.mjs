@@ -907,7 +907,7 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   lines.push(`${bold('Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
 
   lines.push('')
-  lines.push(bold('Partner Buy &amp; Burn:'))
+  lines.push(bold('Partner Buy&Burn:'))
 
   ;(partnerBurns ?? []).forEach((entry) => {
     const burned = parseBigInt(entry?.burnInfo?.tokenBurned)
