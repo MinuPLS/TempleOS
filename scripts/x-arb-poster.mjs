@@ -145,7 +145,10 @@ export const buildXPostTextFromTelegramMessage = (
   const gained = extractGainsLine(lines)
   const value = extractValueLine(lines, 'Value:')
   const burned = extractValueLine(lines, 'Burned:') ?? extractValueLine(lines, 'HolyC Burned:')
-  const partnerLine = 'Partner Buy&Burn: BRIAH — | COINMAFIA — | DUMB —'
+  const partnerBurnUsdValues = extractPartnerBurnUsdValues(lines)
+  const partnerLine = `Partner Buy&Burn: ${PARTNER_SYMBOLS.map(
+    (symbol) => `${symbol} ${partnerBurnUsdValues[symbol] ?? '—'}`
+  ).join(' | ')}`
 
   const bodyLines = [
     'New On-Chain Arb Executed!',

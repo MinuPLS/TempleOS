@@ -48,7 +48,7 @@ It then produces:
 - Gains line without label (from Telegram `Gained:` value only), e.g. `+17.21K HolyC | -281.20 JIT`
 - `Value:` line
 - `Burned:` line (mapped from Telegram `HolyC Burned:`)
-- `Partner Buy&Burn: BRIAH — | COINMAFIA — | DUMB —` (always fixed in X template)
+- `Partner Buy&Burn: BRIAH $... | COINMAFIA $... | DUMB $...` (falls back to `—` when value missing)
 - Blank line, then:
   - `TX: https://...`
   - `Website: https://holycpls.vercel.app`
