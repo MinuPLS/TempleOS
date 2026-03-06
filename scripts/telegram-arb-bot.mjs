@@ -62,6 +62,7 @@ const DEFAULT_STATE = {
   },
   lastBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
   lastMafiaBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
+  lastDumbBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
 }
 
 const DIVINE_MANAGER_ADDRESS = '0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de'
@@ -78,10 +79,13 @@ const HOLYC_INITIAL_SUPPLY = 1_000_000_000n * 10n ** 18n
 
 const BRIAH_BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4'
 const COINMAFIA_BUY_AND_BURN_CONTRACT = '0xbC289B8a84ACf05d1aA9Ec72cdf5F22dE4bb3A39'
+const DUMB_BUY_AND_BURN_CONTRACT = '0x3AdC613625D5c2668c921821d91b602c36c7F401'
 const BRIAH_TOKEN = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a'
 const COINMAFIA_TOKEN = '0x562866b6483894240739211049E109312E9A9A67'
+const DUMB_TOKEN = '0xe65112d2f120c8cb23ADC80D8E8122c0c8b7fF8D'
 const BRIAH_DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${BRIAH_TOKEN}`
 const COINMAFIA_DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${COINMAFIA_TOKEN}`
+const DUMB_DEXSCREENER_ENDPOINT = `https://api.dexscreener.com/latest/dex/tokens/${DUMB_TOKEN}`
 
 const BUY_AND_BURN_SOURCES = {
   briah: {
@@ -97,6 +101,13 @@ const BUY_AND_BURN_SOURCES = {
     label: 'CoinMafia',
     stateKey: 'lastMafiaBuyBurn',
     symbol: 'COINMAFIA',
+  },
+  dumb: {
+    contractAddress: DUMB_BUY_AND_BURN_CONTRACT,
+    dexEndpoint: DUMB_DEXSCREENER_ENDPOINT,
+    label: 'DumbMoney',
+    stateKey: 'lastDumbBuyBurn',
+    symbol: 'DUMB',
   },
 }
 
@@ -401,6 +412,7 @@ const loadState = async () => {
       },
       lastBuyBurn: normalizeBuyBurnState(parsed?.lastBuyBurn),
       lastMafiaBuyBurn: normalizeBuyBurnState(parsed?.lastMafiaBuyBurn),
+      lastDumbBuyBurn: normalizeBuyBurnState(parsed?.lastDumbBuyBurn),
     }
   } catch (error) {
     if (error && error.code !== 'ENOENT') {
@@ -887,10 +899,10 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   lines.push(bold('Divine Manager Activity'))
   lines.push('')
   lines.push(
-    `${bold('Tokens Gained:')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
+    `${bold('Gained')} ${escapeHtml(formatCompact(netHoly))} HolyC | ${escapeHtml(formatCompact(netJit))} JIT`
   )
-  lines.push(`${bold('Value Gained:')} ${escapeHtml(usdValue)}`)
-  lines.push(`${bold('HolyC Burned:')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
+  lines.push(`${bold('Value')} ${escapeHtml(usdValue)}`)
+  lines.push(`${bold('Burned')} ${escapeHtml(burnedHoly)} HolyC (${escapeHtml(burnedUsd)})`)
 
   const partnerEntries =
     partnerBurns?.filter((entry) => entry?.burnInfo?.txHash && parseBigInt(entry.burnInfo.tokenBurned) > 0n) ?? []
@@ -910,7 +922,6 @@ const buildArbMessage = (execution, tokenPrices, partnerBurns) => {
   }
 
   lines.push('')
-  lines.push(`${bold('Source:')} HolyC Dashboard`)
   lines.push(`${link('TX', txUrl)} | ${link('Dashboard', dashboardUrl)}`)
 
   return lines.join('\n')
@@ -922,34 +933,35 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
   const lines = []
   lines.push(bold('TempleOS - 24h Snapshot'))
   lines.push('')
-  lines.push(`${bold('Prices:')} HolyC ${escapeHtml(formatCurrency(tokenPrices.holycUSD))} |`)
-  lines.push(`JIT ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
+  lines.push(`${bold('HolyC')} ${escapeHtml(formatCurrency(tokenPrices.holycUSD))}`)
+  lines.push(`${bold('JIT')} ${escapeHtml(formatCurrency(tokenPrices.jitUSD))}`)
 
   if (tokenPrices.holycUSD !== 0 && tokenPrices.jitUSD !== 0) {
     const holycPrice = tokenPrices.holycUSD
     const jitPrice = tokenPrices.jitUSD
+    lines.push('')
     if (holycPrice !== jitPrice) {
       if (holycPrice > jitPrice) {
         const percentageDiff = ((holycPrice / jitPrice) - 1) * 100
-        lines.push(`${bold('Spread:')} HolyC ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs JIT`)
+        lines.push(`HolyC ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs JIT`)
       } else {
         const percentageDiff = ((jitPrice / holycPrice) - 1) * 100
-        lines.push(`${bold('Spread:')} JIT ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs HolyC`)
+        lines.push(`JIT ${escapeHtml(`+${percentageDiff.toFixed(2)}%`)} vs HolyC`)
       }
     }
   }
 
   lines.push('')
   lines.push(
-    `${bold('Supply:')} HolyC ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))} | JIT ${escapeHtml(
+    `${bold('Supply')} HolyC ${escapeHtml(formatRoundedCompact(tokenStats.circulatingHolyC))} | JIT ${escapeHtml(
       formatRoundedCompact(tokenStats.jitCirculating),
     )}`,
   )
 
   lines.push(
-    `${bold('Removed:')} Locked ${escapeHtml(
+    `${bold('Locked')} ${escapeHtml(
       formatRoundedCompact(tokenStats.permanentlyLockedHolyC),
-    )} HolyC | Burned ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))} HolyC`,
+    )} HolyC | ${bold('Burned')} ${escapeHtml(formatRoundedCompact(tokenStats.holycFeesBurned))} HolyC`,
   )
 
   const prevLocked = parseBigInt(state.lastDailyStats?.permanentlyLockedHolyC)
@@ -959,10 +971,11 @@ const buildDailyMessage = (tokenPrices, tokenStats, state) => {
 
   lines.push('')
   lines.push(
-    `${bold('24h:')} ${escapeHtml(formatSignedWholeTokens(deltaLocked))} locked | ${escapeHtml(
+    `${bold('24h')} ${escapeHtml(formatSignedWholeTokens(deltaLocked))} locked | ${escapeHtml(
       formatSignedWholeTokens(deltaBurned),
     )} burned`,
   )
+  lines.push('')
   lines.push(`${link('Dashboard', dashboardUrl)}`)
 
   return lines.join('\n')
@@ -1127,10 +1140,15 @@ const main = async () => {
     if (buyBurnQueues.mafia?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
       mafiaUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.mafia.dexEndpoint)
     }
+    let dumbUsdPrice = null
+    if (buyBurnQueues.dumb?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
+      dumbUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.dumb.dexEndpoint)
+    }
     const blockCache = new Map()
     for (const execution of executions) {
       const briahBuyBurn = buyBurnQueues.briah?.shift() ?? null
       const mafiaBuyBurn = buyBurnQueues.mafia?.shift() ?? null
+      const dumbBuyBurn = buyBurnQueues.dumb?.shift() ?? null
       const partnerBurns = [
         {
           label: BUY_AND_BURN_SOURCES.briah.label,
@@ -1144,6 +1162,12 @@ const main = async () => {
           burnInfo: mafiaBuyBurn,
           usdPrice: mafiaUsdPrice,
         },
+        {
+          label: BUY_AND_BURN_SOURCES.dumb.label,
+          symbol: BUY_AND_BURN_SOURCES.dumb.symbol,
+          burnInfo: dumbBuyBurn,
+          usdPrice: dumbUsdPrice,
+        },
       ]
       const message = buildArbMessage(execution, tokenPrices, partnerBurns)
       await sendTelegramArbUpdate(message)
@@ -1152,6 +1176,9 @@ const main = async () => {
       }
       if (mafiaBuyBurn) {
         state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
+      }
+      if (dumbBuyBurn) {
+        state.lastDumbBuyBurn = await hydrateBuyBurnState(dumbBuyBurn, blockCache)
       }
     }
     const lastExecution = executions[executions.length - 1]
