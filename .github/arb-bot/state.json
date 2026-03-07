@@ -1,33 +1,33 @@
 {
-  "lastProcessedBlock": "25957203",
-  "lastProcessedTxHash": "0x30ac77778bb3d98ff1fe74c03afe42f4124d2e71b657587c82614f72c8f9b967",
+  "lastProcessedBlock": "25965104",
+  "lastProcessedTxHash": "0xe44f90ecb5578e1fedb01f7b15b5120458ee7c9c12f2a727aa328ea3d4a7c463",
   "lastDailySummaryAt": 1772829289060,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "22854138051787010920921850",
     "holycFeesBurned": "10618067145118027619864888"
   },
   "lastBuyBurn": {
-    "blockNumber": "25957207",
-    "logIndex": 292,
-    "txHash": "0xb350f935b357cc330f06b863aab1ddd1d4267050174ed20724bd271c3bc53eac",
-    "tokenBurned": "8388416185690053640468",
-    "jitSpent": "95367396727508236322739",
-    "timestamp": 1772818385000
+    "blockNumber": "25957405",
+    "logIndex": 202,
+    "txHash": "0x035937967cfe035f400f4f5f30035d0561cb19910e0a1faa8c9bd4c85b67efbe",
+    "tokenBurned": "2316083901580578417695",
+    "jitSpent": "26422999217909401252028",
+    "timestamp": 1772820515000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25956903",
-    "logIndex": 132,
-    "txHash": "0xaa4d8f3e768fad0dace999ceda30e25e2fd3ef296e04196f22ad8d2da2b39351",
-    "tokenBurned": "1246681447917193387",
-    "jitSpent": "94035650553828846322739",
-    "timestamp": 1772815025000
+    "blockNumber": "25957406",
+    "logIndex": 893,
+    "txHash": "0xc912cedc8873dfd3cfadfeb77c00516e88a03918017294e3664cf26059fb2a8d",
+    "tokenBurned": "318967463651652649",
+    "jitSpent": "25602331067171922252028",
+    "timestamp": 1772820525000
   },
   "lastDumbBuyBurn": {
-    "blockNumber": "25956908",
-    "logIndex": 23,
-    "txHash": "0xe4a4ef7da59ed5b09114ddacc7dfaca1d67a534e29339aafa7bb89b89925e1fe",
-    "tokenBurned": "250547504124155164163917",
-    "jitSpent": "94035650553828846322740",
-    "timestamp": 1772815085000
+    "blockNumber": "25957407",
+    "logIndex": 392,
+    "txHash": "0x27ebf499851efbe637106e805bbcc1f46fbfdef3fdffcfde1826125a1c44512c",
+    "tokenBurned": "69812143404254486441723",
+    "jitSpent": "25602331067171922252028",
+    "timestamp": 1772820535000
   }
 }
