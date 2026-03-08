@@ -1,10 +1,10 @@
 {
-  "lastProcessedBlock": "25972786",
-  "lastProcessedTxHash": "0x42212fd77d74da965576402e2fd23352edf8ef51e6c9117f2cd6173f5d86fb54",
-  "lastDailySummaryAt": 1772915301893,
+  "lastProcessedBlock": "25974095",
+  "lastProcessedTxHash": "0x6ab0217304c84ca7a357db838f43ab6e63a38868b30a193661f5c195ccff3e85",
+  "lastDailySummaryAt": 1773001788693,
   "lastDailyStats": {
-    "permanentlyLockedHolyC": "22980816697093776343523098",
-    "holycFeesBurned": "10712945501720272644664888"
+    "permanentlyLockedHolyC": "23700584062135741559669273",
+    "holycFeesBurned": "11039380838455725752664888"
   },
   "lastBuyBurn": {
     "blockNumber": "25968728",
@@ -30,5 +30,24 @@
     "jitSpent": "34949092804861288351451",
     "timestamp": 1772943395000
   },
-  "pendingArbPosts": []
+  "pendingArbPosts": [
+    {
+      "queuedAt": 1773001789170,
+      "execution": {
+        "transactionHash": "0x6ab0217304c84ca7a357db838f43ab6e63a38868b30a193661f5c195ccff3e85",
+        "blockNumber": "25974095",
+        "timestamp": 1773001365000,
+        "holyBurned": "65168878620360796000000",
+        "jitBurned": "1728990596414020907152574",
+        "holyIn": "1694390844129380596000000",
+        "holyOut": "1676964685986296096000000",
+        "jitIn": "1695387861947375246476169",
+        "jitOut": "1695138607492876583857126"
+      },
+      "tokenPrices": {
+        "holycUSD": 0.000008789384149968,
+        "jitUSD": 0.000007852341926522
+      }
+    }
+  ]
 }
