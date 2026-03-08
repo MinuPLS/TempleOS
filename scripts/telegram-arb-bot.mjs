@@ -16,6 +16,15 @@ const FORCE_X_POST = process.env.FORCE_X_POST === 'true'
 const DAILY_TIMEZONE = process.env.DAILY_TIMEZONE || 'Europe/Amsterdam'
 const DAILY_HOUR = Number.parseInt(process.env.DAILY_HOUR || '21', 10)
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
+const DEFAULT_ARB_POST_DELAY_MS = 20 * 60 * 1000
+const parsedArbPostDelayMs = Number.parseInt(
+  process.env.ARB_POST_DELAY_MS || `${DEFAULT_ARB_POST_DELAY_MS}`,
+  10,
+)
+const ARB_POST_DELAY_MS =
+  Number.isFinite(parsedArbPostDelayMs) && parsedArbPostDelayMs >= 0
+    ? parsedArbPostDelayMs
+    : DEFAULT_ARB_POST_DELAY_MS
 
 if (!DRY_RUN && !FORCE_X_POST) {
   if (!TELEGRAM_BOT_TOKEN) throw new Error('Missing TELEGRAM_BOT_TOKEN')
@@ -66,6 +75,7 @@ const DEFAULT_STATE = {
   lastBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
   lastMafiaBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
   lastDumbBuyBurn: { ...DEFAULT_BUY_BURN_STATE },
+  pendingArbPosts: [],
 }
 
 const DIVINE_MANAGER_ADDRESS = '0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de'
@@ -402,6 +412,119 @@ const normalizeBuyBurnState = (value) => {
   }
 }
 
+const normalizeTokenPriceSnapshot = (value) => {
+  const holycUSD = Number(value?.holycUSD)
+  const jitUSD = Number(value?.jitUSD)
+
+  return {
+    holycUSD: Number.isFinite(holycUSD) ? holycUSD : 0,
+    jitUSD: Number.isFinite(jitUSD) ? jitUSD : 0,
+  }
+}
+
+const buildPendingExecutionState = (execution) => ({
+  transactionHash: execution.transactionHash ?? null,
+  blockNumber: execution.blockNumber?.toString() ?? null,
+  timestamp: typeof execution.timestamp === 'number' ? execution.timestamp : null,
+  holyBurned: execution.holyBurned.toString(),
+  jitBurned: execution.jitBurned.toString(),
+  holyIn: execution.holyIn.toString(),
+  holyOut: execution.holyOut.toString(),
+  jitIn: execution.jitIn.toString(),
+  jitOut: execution.jitOut.toString(),
+})
+
+const normalizePendingExecutionState = (value) => {
+  if (!value || typeof value.transactionHash !== 'string' || value.transactionHash.length === 0) {
+    return null
+  }
+
+  if (value.blockNumber === null || value.blockNumber === undefined) return null
+
+  return {
+    transactionHash: value.transactionHash,
+    blockNumber: parseBigInt(value.blockNumber).toString(),
+    timestamp:
+      typeof value.timestamp === 'number' && Number.isFinite(value.timestamp) ? value.timestamp : null,
+    holyBurned: parseBigInt(value.holyBurned).toString(),
+    jitBurned: parseBigInt(value.jitBurned).toString(),
+    holyIn: parseBigInt(value.holyIn).toString(),
+    holyOut: parseBigInt(value.holyOut).toString(),
+    jitIn: parseBigInt(value.jitIn).toString(),
+    jitOut: parseBigInt(value.jitOut).toString(),
+  }
+}
+
+const hydratePendingExecutionState = (value) => {
+  const normalized = normalizePendingExecutionState(value)
+  if (!normalized) return null
+
+  return {
+    transactionHash: normalized.transactionHash,
+    blockNumber: parseBigInt(normalized.blockNumber),
+    timestamp: normalized.timestamp ?? 0,
+    holyBurned: parseBigInt(normalized.holyBurned),
+    jitBurned: parseBigInt(normalized.jitBurned),
+    holyIn: parseBigInt(normalized.holyIn),
+    holyOut: parseBigInt(normalized.holyOut),
+    jitIn: parseBigInt(normalized.jitIn),
+    jitOut: parseBigInt(normalized.jitOut),
+  }
+}
+
+const createPendingArbPostState = (execution, tokenPrices, queuedAt = Date.now()) => ({
+  queuedAt,
+  execution: buildPendingExecutionState(execution),
+  tokenPrices: normalizeTokenPriceSnapshot(tokenPrices),
+})
+
+const normalizePendingArbPostState = (value) => {
+  const execution = normalizePendingExecutionState(value?.execution)
+  if (!execution) return null
+
+  return {
+    queuedAt:
+      typeof value?.queuedAt === 'number' && Number.isFinite(value.queuedAt)
+        ? value.queuedAt
+        : (execution.timestamp ?? 0),
+    execution,
+    tokenPrices: normalizeTokenPriceSnapshot(value?.tokenPrices),
+  }
+}
+
+const hydratePendingArbPostState = (value) => {
+  const normalized = normalizePendingArbPostState(value)
+  if (!normalized) return null
+
+  return {
+    queuedAt: normalized.queuedAt,
+    execution: hydratePendingExecutionState(normalized.execution),
+    tokenPrices: normalized.tokenPrices,
+  }
+}
+
+const takeReadyPendingArbPosts = (pendingArbPosts, now) => {
+  if (ARB_POST_DELAY_MS <= 0) {
+    return { ready: [...pendingArbPosts], remaining: [] }
+  }
+
+  const ready = []
+  let index = 0
+
+  while (index < pendingArbPosts.length) {
+    const pendingArbPost = pendingArbPosts[index]
+    const queuedAt = typeof pendingArbPost?.queuedAt === 'number' ? pendingArbPost.queuedAt : 0
+    if (now - queuedAt < ARB_POST_DELAY_MS) break
+    ready.push(pendingArbPost)
+    index += 1
+  }
+
+  return {
+    ready,
+    remaining: pendingArbPosts.slice(index),
+  }
+}
+
 const loadState = async () => {
   try {
     const raw = await fs.readFile(STATE_PATH, 'utf8')
@@ -416,6 +539,9 @@ const loadState = async () => {
       lastBuyBurn: normalizeBuyBurnState(parsed?.lastBuyBurn),
       lastMafiaBuyBurn: normalizeBuyBurnState(parsed?.lastMafiaBuyBurn),
       lastDumbBuyBurn: normalizeBuyBurnState(parsed?.lastDumbBuyBurn),
+      pendingArbPosts: Array.isArray(parsed?.pendingArbPosts)
+        ? parsed.pendingArbPosts.map(normalizePendingArbPostState).filter(Boolean)
+        : [],
     }
   } catch (error) {
     if (error && error.code !== 'ENOENT') {
@@ -1077,6 +1203,100 @@ const sendTelegramDailyUpdate = async (message) => {
   }
 }
 
+const postArbUpdates = async ({
+  state,
+  latestBlock,
+  arbPosts,
+  postToTelegram = true,
+  postToX = false,
+  updateBuyBurnState = true,
+}) => {
+  if (!arbPosts.length) return
+
+  const buyBurnQueues = Object.fromEntries(
+    await Promise.all(
+      Object.entries(BUY_AND_BURN_SOURCES).map(async ([key, source]) => [
+        key,
+        await fetchUnpostedBuyBurns(state, latestBlock, source),
+      ]),
+    ),
+  )
+
+  const [briahUsdPrice, mafiaUsdPrice, dumbUsdPrice] = await Promise.all([
+    buyBurnQueues.briah?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)
+      ? fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.briah.dexEndpoint)
+      : Promise.resolve(null),
+    buyBurnQueues.mafia?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)
+      ? fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.mafia.dexEndpoint)
+      : Promise.resolve(null),
+    buyBurnQueues.dumb?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)
+      ? fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.dumb.dexEndpoint)
+      : Promise.resolve(null),
+  ])
+
+  const blockCache = new Map()
+
+  for (const arbPost of arbPosts) {
+    const { execution, tokenPrices } = arbPost
+    const briahBuyBurn = buyBurnQueues.briah?.shift() ?? null
+    const mafiaBuyBurn = buyBurnQueues.mafia?.shift() ?? null
+    const dumbBuyBurn = buyBurnQueues.dumb?.shift() ?? null
+    const partnerBurns = [
+      {
+        label: BUY_AND_BURN_SOURCES.briah.label,
+        symbol: BUY_AND_BURN_SOURCES.briah.symbol,
+        burnInfo: briahBuyBurn,
+        usdPrice: briahUsdPrice,
+      },
+      {
+        label: BUY_AND_BURN_SOURCES.mafia.label,
+        symbol: BUY_AND_BURN_SOURCES.mafia.symbol,
+        burnInfo: mafiaBuyBurn,
+        usdPrice: mafiaUsdPrice,
+      },
+      {
+        label: BUY_AND_BURN_SOURCES.dumb.label,
+        symbol: BUY_AND_BURN_SOURCES.dumb.symbol,
+        burnInfo: dumbBuyBurn,
+        usdPrice: dumbUsdPrice,
+      },
+    ]
+
+    const message = buildArbMessage(execution, tokenPrices, partnerBurns)
+
+    if (postToTelegram) {
+      await sendTelegramArbUpdate(message)
+    }
+
+    if (postToX) {
+      try {
+        await maybePostArbUpdateToX({
+          telegramHtmlMessage: message,
+          mediaPath: ARB_MEDIA_PATH,
+          txUrl: `https://otter.pulsechain.com/tx/${execution.transactionHash}`,
+          websiteUrl: 'https://holycpls.vercel.app',
+          dryRun: DRY_RUN,
+          enabled: postToX,
+        })
+      } catch (error) {
+        console.error('Failed to post arb update on X:', error)
+      }
+    }
+
+    if (updateBuyBurnState) {
+      if (briahBuyBurn) {
+        state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
+      }
+      if (mafiaBuyBurn) {
+        state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
+      }
+      if (dumbBuyBurn) {
+        state.lastDumbBuyBurn = await hydrateBuyBurnState(dumbBuyBurn, blockCache)
+      }
+    }
+  }
+}
+
 const main = async () => {
   const state = await loadState()
   const latestBlock = await withRetry(() => client.getBlockNumber())
@@ -1086,6 +1306,28 @@ const main = async () => {
   const forceXPost = FORCE_X_POST
   const shouldForceLatestExecution = forceArbPost || forceXPost
   const shouldPostToX = forceXPost || POST_X_ARB_UPDATES
+  const shouldMutateBuyBurnState = !forceXPost && state.pendingArbPosts.length === 0
+  const now = Date.now()
+
+  if (!shouldForceLatestExecution && state.pendingArbPosts.length > 0) {
+    const { ready, remaining } = takeReadyPendingArbPosts(state.pendingArbPosts, now)
+
+    if (ready.length > 0) {
+      console.log(
+        `Posting ${ready.length} pending arb update(s) after ${Math.round(ARB_POST_DELAY_MS / 60000)} minute partner burn delay.`,
+      )
+      await postArbUpdates({
+        state,
+        latestBlock,
+        arbPosts: ready.map(hydratePendingArbPostState).filter(Boolean),
+        postToTelegram: true,
+        postToX: shouldPostToX,
+        updateBuyBurnState: true,
+      })
+      state.pendingArbPosts = remaining
+    }
+  }
+
   let fromBlock = null
   if (shouldForceLatestExecution) {
     fromBlock = latestBlock > MAX_LOOKBACK_BLOCKS ? latestBlock - MAX_LOOKBACK_BLOCKS : 0n
@@ -1135,89 +1377,32 @@ const main = async () => {
   }
 
   if (executions.length > 0) {
-    const buyBurnQueues = Object.fromEntries(
-      await Promise.all(
-        Object.entries(BUY_AND_BURN_SOURCES).map(async ([key, source]) => [
-          key,
-          await fetchUnpostedBuyBurns(state, latestBlock, source),
-        ])
+    if (shouldForceLatestExecution) {
+      await postArbUpdates({
+        state,
+        latestBlock,
+        arbPosts: executions.map((execution) => ({ execution, tokenPrices })),
+        postToTelegram: !forceXPost,
+        postToX: shouldPostToX,
+        updateBuyBurnState: shouldMutateBuyBurnState,
+      })
+    } else {
+      const queuedAt = Date.now()
+      state.pendingArbPosts.push(
+        ...executions.map((execution) => createPendingArbPostState(execution, tokenPrices, queuedAt)),
       )
-    )
-    let briahUsdPrice = null
-    if (buyBurnQueues.briah?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
-      briahUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.briah.dexEndpoint)
+      console.log(
+        `Queued ${executions.length} arb update(s) for partner burn refresh. They will post on a later run after at least ${Math.round(ARB_POST_DELAY_MS / 60000)} minutes.`,
+      )
     }
-    let mafiaUsdPrice = null
-    if (buyBurnQueues.mafia?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
-      mafiaUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.mafia.dexEndpoint)
-    }
-    let dumbUsdPrice = null
-    if (buyBurnQueues.dumb?.some((entry) => parseBigInt(entry.tokenBurned) > 0n)) {
-      dumbUsdPrice = await fetchTokenUsdPrice(BUY_AND_BURN_SOURCES.dumb.dexEndpoint)
-    }
-    const blockCache = new Map()
-    for (const execution of executions) {
-      const briahBuyBurn = buyBurnQueues.briah?.shift() ?? null
-      const mafiaBuyBurn = buyBurnQueues.mafia?.shift() ?? null
-      const dumbBuyBurn = buyBurnQueues.dumb?.shift() ?? null
-      const partnerBurns = [
-        {
-          label: BUY_AND_BURN_SOURCES.briah.label,
-          symbol: BUY_AND_BURN_SOURCES.briah.symbol,
-          burnInfo: briahBuyBurn,
-          usdPrice: briahUsdPrice,
-        },
-        {
-          label: BUY_AND_BURN_SOURCES.mafia.label,
-          symbol: BUY_AND_BURN_SOURCES.mafia.symbol,
-          burnInfo: mafiaBuyBurn,
-          usdPrice: mafiaUsdPrice,
-        },
-        {
-          label: BUY_AND_BURN_SOURCES.dumb.label,
-          symbol: BUY_AND_BURN_SOURCES.dumb.symbol,
-          burnInfo: dumbBuyBurn,
-          usdPrice: dumbUsdPrice,
-        },
-      ]
-      const message = buildArbMessage(execution, tokenPrices, partnerBurns)
-      if (!forceXPost) {
-        await sendTelegramArbUpdate(message)
-      }
-      if (shouldPostToX) {
-        try {
-          await maybePostArbUpdateToX({
-            telegramHtmlMessage: message,
-            mediaPath: ARB_MEDIA_PATH,
-            txUrl: `https://otter.pulsechain.com/tx/${execution.transactionHash}`,
-            websiteUrl: 'https://holycpls.vercel.app',
-            dryRun: DRY_RUN,
-            enabled: shouldPostToX,
-          })
-        } catch (error) {
-          console.error('Failed to post arb update on X:', error)
-        }
-      }
-      if (!forceXPost) {
-        if (briahBuyBurn) {
-          state.lastBuyBurn = await hydrateBuyBurnState(briahBuyBurn, blockCache)
-        }
-        if (mafiaBuyBurn) {
-          state.lastMafiaBuyBurn = await hydrateBuyBurnState(mafiaBuyBurn, blockCache)
-        }
-        if (dumbBuyBurn) {
-          state.lastDumbBuyBurn = await hydrateBuyBurnState(dumbBuyBurn, blockCache)
-        }
-      }
-    }
-    if (!forceXPost) {
+
+    if (!forceXPost || !shouldForceLatestExecution) {
       const lastExecution = executions[executions.length - 1]
       state.lastProcessedBlock = lastExecution.blockNumber.toString()
       state.lastProcessedTxHash = lastExecution.transactionHash
     }
   }
 
-  const now = Date.now()
   const lastDaily = typeof state.lastDailySummaryAt === 'number' ? state.lastDailySummaryAt : null
   const todayKey = getDateKey(now, DAILY_TIMEZONE)
   const lastDailyKey = lastDaily ? getDateKey(lastDaily, DAILY_TIMEZONE) : null

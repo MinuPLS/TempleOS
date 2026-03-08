@@ -2,6 +2,7 @@
 
 ## Purpose
 This documents the automation added on March 6, 2026 that posts to X immediately after a Telegram arb update is successfully posted.
+As of March 8, 2026, normal arb posts are first queued for a 20-minute partner buy-and-burn refresh window so Telegram/X can publish the arb together with the latest partner burns without keeping a GitHub Actions job running for 20 minutes.
 
 ## Files Added/Changed
 - `scripts/x-arb-poster.mjs` (new): Handles X post text building, OAuth 1.0a signing, media upload, and status creation.
@@ -9,17 +10,20 @@ This documents the automation added on March 6, 2026 that posts to X immediately
 - `.github/workflows/telegram-arb-bot.yml` (updated): Passes X-related env vars and secrets into the bot run step.
 
 ## End-to-End Flow
-1. `telegram-arb-bot.mjs` builds the arb message (`buildArbMessage`).
-2. In normal mode, it posts to Telegram with `sendTelegramArbUpdate(message)`.
-3. It then calls:
+1. `telegram-arb-bot.mjs` detects new `TicketExecuted` events.
+2. In normal scheduled mode, it snapshots the execution + token prices into `state.pendingArbPosts` instead of posting immediately.
+3. On a later run, once the oldest pending arb has aged past the 20-minute delay, it refetches the latest partner `BuyAndBurn` events, builds the final Telegram message, and posts it with `sendTelegramArbUpdate(message)`.
+4. It then calls:
    - `maybePostArbUpdateToX({ telegramHtmlMessage: message, mediaPath: ARB_MEDIA_PATH, dryRun: DRY_RUN })`
-4. `x-arb-poster.mjs`:
+5. `x-arb-poster.mjs`:
    - Converts Telegram HTML caption into X-friendly text.
    - Uploads media to X (INIT -> APPEND chunk(s) -> FINALIZE -> STATUS polling).
    - Posts the tweet/status with uploaded media ID.
 
 Important: X posting errors are caught and logged in `telegram-arb-bot.mjs`, and do not stop Telegram posting/state updates.
 Important: `FORCE_X_POST=true` runs an X-only forced latest-arb post (skips Telegram arb send, skips daily post, and does not mutate state).
+Important: normal scheduled runs use persisted queue state instead of `sleep(20m)`, so Actions usage stays low. With the current `*/30` cron, queued arbs post on the next eligible run after the 20-minute threshold is met.
+Important: forced/manual latest-arb modes still bypass the queue and post immediately.
 
 ## Toggle + Required Secrets
 X posting is disabled unless:
@@ -90,6 +94,7 @@ When `DRY_RUN=true`:
 - This uses OAuth 1.0a signed requests (HMAC-SHA1), not OAuth2 bearer tokens.
 - APPEND responses may be empty; parser allows empty success responses for APPEND.
 - Hook point is intentionally after Telegram success to satisfy "fires after telegram arb update is posted."
+- Pending arb queue entries now live in `.github/arb-bot/state.json` under `pendingArbPosts`.
 
 ## Suggested Next Improvements
 - Add optional dedupe state for X post IDs in case future retry logic is added.
