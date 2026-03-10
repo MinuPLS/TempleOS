@@ -7,47 +7,28 @@
     "holycFeesBurned": "11065096186024947704664888"
   },
   "lastBuyBurn": {
-    "blockNumber": "25972934",
-    "logIndex": 68,
-    "txHash": "0x4361814d3a9526726381643abc89fea900a75ad608af558b564f4cafd50e3c66",
-    "tokenBurned": "7583479150631536830938",
-    "jitSpent": "70367950039511319704193",
-    "timestamp": 1772988675000
+    "blockNumber": "25974099",
+    "logIndex": 52,
+    "txHash": "0xecf91a726d412e94e9862a3daf50d510f2c51c56450d315de5d2ea8c31cceb1d",
+    "tokenBurned": "1899040261362090161739",
+    "jitSpent": "17670427508493189366662",
+    "timestamp": 1773001405000
   },
   "lastMafiaBuyBurn": {
-    "blockNumber": "25972934",
-    "logIndex": 80,
-    "txHash": "0x483478adb150af0e2721afe424cd8e5c6e041eda20a348a6eab053d03e27942b",
-    "tokenBurned": "1046208235962151550",
-    "jitSpent": "68579133400618743704193",
-    "timestamp": 1772988675000
+    "blockNumber": "25974100",
+    "logIndex": 90,
+    "txHash": "0xddf4d8c4e51d15dd7e7daab879119faf0327f46ba22d5c08fd46ae8b326ce3fa",
+    "tokenBurned": "264968020157187209",
+    "jitSpent": "16973381182769809366662",
+    "timestamp": 1773001415000
   },
   "lastDumbBuyBurn": {
-    "blockNumber": "25972934",
-    "logIndex": 98,
-    "txHash": "0xce189560d7f9578396836dcbdac850c8a1e028333894fdd8cf1a4f8961c4f331",
-    "tokenBurned": "214710505643121787391614",
-    "jitSpent": "68579133400618743704194",
-    "timestamp": 1772988675000
+    "blockNumber": "25974101",
+    "logIndex": 64,
+    "txHash": "0x94d2e0ecbb4315874ef9055ad3f2831d3bd60ac0d831fc534de0ebb1fe832d8c",
+    "tokenBurned": "53931744437658890994808",
+    "jitSpent": "16973381182769809366662",
+    "timestamp": 1773001425000
   },
-  "pendingArbPosts": [
-    {
-      "queuedAt": 1773152004439,
-      "execution": {
-        "transactionHash": "0x34f4c8faf072b4fe4d9dff9d1be3f8bf5cb791471ebfadfe736e09ec43ade676",
-        "blockNumber": "25988643",
-        "timestamp": 1773151175000,
-        "holyBurned": "76830568858412530000000",
-        "jitBurned": "2038856425767671401678629",
-        "holyIn": "1997594790318725830000000",
-        "holyOut": "1977050296205986305000000",
-        "jitIn": "2021820136998333012252853",
-        "jitOut": "2015763800328431216689639"
-      },
-      "tokenPrices": {
-        "holycUSD": 0.000011826525558263,
-        "jitUSD": 0.000010897696420421
-      }
-    }
-  ]
+  "pendingArbPosts": []
 }
