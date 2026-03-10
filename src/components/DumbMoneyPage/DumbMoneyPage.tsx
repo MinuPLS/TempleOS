@@ -136,13 +136,21 @@ function formatPrice(p: number): string {
   return '$' + trimmed
 }
 
+function getBurnBalanceHolders(tokenAddress: string): string[] {
+  const holders = [DEAD_STANDARD, DEAD_PULSE]
+  if (tokenAddress.toLowerCase() === DUMB_CA.toLowerCase()) {
+    // $DUMB parked inside the token contract is treated as permanently removed.
+    holders.push(DUMB_CA)
+  }
+  return holders
+}
+
 async function getBurnedForToken(tokenAddress: string): Promise<string> {
   const ticker = tokenAddress.toLowerCase() === DUMB_CA.toLowerCase() ? '$DUMB' : '$DAMP'
-  const [r1, r2] = await Promise.all([
-    rpcCall(tokenAddress, balanceOfCalldata(DEAD_STANDARD)),
-    rpcCall(tokenAddress, balanceOfCalldata(DEAD_PULSE)),
-  ])
-  const total = BigInt(r1) + BigInt(r2)
+  const burnBalances = await Promise.all(
+    getBurnBalanceHolders(tokenAddress).map((holder) => rpcCall(tokenAddress, balanceOfCalldata(holder))),
+  )
+  const total = burnBalances.reduce((sum, balance) => sum + BigInt(balance), 0n)
   return formatTokenAmount(total) + ' ' + ticker
 }
 
@@ -546,7 +554,7 @@ function DumbMoneyPage() {
             <LiveStatsColumn title="$DAMP Statistics" accent="pink"  stats={dampStats} loading={loading} />
           </div>
           <p className={styles.liveStatsFootnote}>
-            Live data fetched on page load · Burned = dead address + PulseChain dead address (0x…0369)
+            Live data fetched on page load · Burned = dead address + PulseChain dead address (0x…0369) + $DUMB held in the $DUMB contract
           </p>
         </section>
 
