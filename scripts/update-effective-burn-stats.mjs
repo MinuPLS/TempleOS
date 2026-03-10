@@ -14,6 +14,7 @@ const LOG_CHUNK_SIZE = 8000n
 const BLOCK_BATCH_SIZE = 50
 const HOUR_MS = 60 * 60 * 1000
 const HISTORY_DAYS = 30
+const HISTORY_WINDOW_MS = HISTORY_DAYS * 24 * HOUR_MS
 const DEFAULT_OUTPUT = '../public/effective-burn-stats.json'
 
 async function main() {
@@ -32,7 +33,8 @@ async function main() {
     snapshots = await buildSeedSnapshots(options.rpcUrl, currentHourMs)
   } else {
     snapshots = loadSnapshots(existingStats)
-    if (snapshots.size === 0) {
+    if (snapshots.size === 0 || !hasSnapshotAtOrBefore(snapshots, currentHourMs - HISTORY_WINDOW_MS)) {
+      console.log('Existing snapshot file is missing 30-day boundary coverage, rebuilding seed snapshots...')
       snapshots = await buildSeedSnapshots(options.rpcUrl, currentHourMs)
     } else {
       const current = await fetchEffectiveRemoved(options.rpcUrl, JIT_ADDRESS)
@@ -148,7 +150,7 @@ function statsPayload(stats) {
 }
 
 async function buildSeedSnapshots(rpcUrl, currentHourMs) {
-  const startHourMs = currentHourMs - HISTORY_DAYS * 24 * HOUR_MS
+  const startHourMs = currentHourMs - HISTORY_WINDOW_MS
   const latestBlock = await getLatestBlock(rpcUrl)
   const startBlock = await findFirstBlockAtOrAfter(rpcUrl, Math.floor(startHourMs / 1000), latestBlock)
   const timedEvents = []
@@ -272,8 +274,15 @@ async function buildSeedSnapshots(rpcUrl, currentHourMs) {
 }
 
 function pruneSnapshots(snapshots, currentHourMs) {
-  const cutoffMs = currentHourMs - HISTORY_DAYS * 24 * HOUR_MS
-  for (const hour of snapshots.keys()) {
+  const cutoffMs = currentHourMs - HISTORY_WINDOW_MS
+  const cutoffHourIso = isoHourFromMs(cutoffMs)
+  const cutoffValue = findLatestSnapshotValueAtOrBefore(snapshots, cutoffMs)
+
+  if (cutoffValue !== null) {
+    snapshots.set(cutoffHourIso, cutoffValue)
+  }
+
+  for (const hour of Array.from(snapshots.keys())) {
     const timestamp = Date.parse(hour)
     if (Number.isNaN(timestamp) || timestamp < cutoffMs) {
       snapshots.delete(hour)
@@ -318,6 +327,26 @@ function findSnapshotAtOrBefore(orderedEntries, targetMs) {
       break
     }
     result = value
+  }
+
+  return result
+}
+
+function hasSnapshotAtOrBefore(snapshots, targetMs) {
+  return findLatestSnapshotValueAtOrBefore(snapshots, targetMs) !== null
+}
+
+function findLatestSnapshotValueAtOrBefore(snapshots, targetMs) {
+  let result = null
+  let latestHourMs = -Infinity
+
+  for (const [hour, value] of snapshots.entries()) {
+    const hourMs = Date.parse(hour)
+    if (Number.isNaN(hourMs) || hourMs > targetMs || hourMs < latestHourMs) {
+      continue
+    }
+    result = value
+    latestHourMs = hourMs
   }
 
   return result
