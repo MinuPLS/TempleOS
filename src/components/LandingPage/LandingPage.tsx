@@ -554,8 +554,8 @@ export function LandingPage() {
                           permanently trapped in the Compiler via JIT burns or sent to the burn address.
                         </li>
                         <li>
-                          <strong>JIT Volume:</strong> Accounts for the rerouting and balancing of liquidity across
-                          active JIT pools.
+                          <strong>JIT Volume:</strong> Accounts for the burn generated from rerouting and balancing of
+                          liquidity across active JIT pools.
                         </li>
                         <li>
                           <strong>Annualized Pace:</strong> Projects the long-term burn rate based on a rolling 7-day
