@@ -9,21 +9,16 @@ import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
-const BURN_API_URL = 'https://jit-burn-tracker.info-megainu.workers.dev/jit-burn/stats?hours=720'
-const JIT_DECIMALS = 18n
-const DECIMAL_DIVISOR = 10n ** JIT_DECIMALS
+const EFFECTIVE_BURN_API_URL = 'https://jit-burn-tracker.info-megainu.workers.dev/jit-burn/effective-stats'
+const TOKEN_DECIMALS = 18n
+const DECIMAL_DIVISOR = 10n ** TOKEN_DECIMALS
 
-type BurnHour = {
-  hour: string
-  burned: string
-}
-
-type BurnStats = {
+type EffectiveBurnStats = {
+  current?: string
+  delta24h?: string
+  delta7d?: string
+  delta30d?: string
   updatedAt?: string
-  burnedJit24h?: string
-  burnedJit7d?: string
-  burnedJit30d?: string
-  hours?: BurnHour[]
 }
 
 function toTokens(raw?: string) {
@@ -44,7 +39,7 @@ function formatTokenAmount(value: number) {
 
 export function LandingPage() {
   const [showPartnerDetails, setShowPartnerDetails] = useState(false)
-  const [burnStats, setBurnStats] = useState<BurnStats | null>(null)
+  const [burnStats, setBurnStats] = useState<EffectiveBurnStats | null>(null)
   const [isBurnLoading, setIsBurnLoading] = useState(false)
   const [burnError, setBurnError] = useState<string | null>(null)
   const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false)
@@ -82,11 +77,11 @@ export function LandingPage() {
       setBurnError(null)
     }
     try {
-      const response = await fetch(BURN_API_URL)
+      const response = await fetch(EFFECTIVE_BURN_API_URL)
       if (!response.ok) {
         throw new Error(`Burn API error ${response.status}`)
       }
-      const data: BurnStats = await response.json()
+      const data: EffectiveBurnStats = await response.json()
       setBurnStats((prev) => data || prev)
     } catch (error) {
       console.error('Failed to fetch JIT burn stats', error)
@@ -118,9 +113,9 @@ export function LandingPage() {
 
   const burnMetrics = useMemo(
     () => [
-      { label: 'Past 24h', value: toTokens(burnStats?.burnedJit24h), intensity: 'low' },
-      { label: 'Past 7 days', value: toTokens(burnStats?.burnedJit7d), intensity: 'medium' },
-      { label: 'Past 30 days', value: toTokens(burnStats?.burnedJit30d), intensity: 'high' },
+      { label: 'Past 24h', value: toTokens(burnStats?.delta24h), intensity: 'low' },
+      { label: 'Past 7 days', value: toTokens(burnStats?.delta7d), intensity: 'medium' },
+      { label: 'Past 30 days', value: toTokens(burnStats?.delta30d), intensity: 'high' },
     ],
     [burnStats]
   )
@@ -478,7 +473,7 @@ export function LandingPage() {
                           </div>
                           <div className={styles.burnMetricValueGroup}>
                             <span className={styles.burnMetricValue}>{formatTokenAmount(metric.value)}</span>
-                            <span className={styles.burnMetricUnit}>JIT</span>
+                            <span className={styles.burnMetricUnit}>HolyC</span>
                           </div>
                         </div>
                       ))}
@@ -492,9 +487,10 @@ export function LandingPage() {
                     <div className={styles.burnInfoBox}>
                       <p className={styles.burnInfoLead}>How this meter works</p>
                       <ul className={styles.burnInfoList}>
-                        <li>Block-scans the JIT contract for burn-triggering transfers (fee on transfer + compile/restore); it is a volume counter, not a supply calculator.</li>
-                        <li>Each Restore burns 100% of the JIT and unlocks ~96% HolyC. If that HolyC is later Compiled back to JIT and Restored again, every cycle stacks here as burn volume.</li>
-                        <li>The Tokenstats "Permanently Removed" view nets out recoverable HolyC (checks the 0x369 burn address) to show true locked supply; this meter simply tracks protocol burn activity.</li>
+                        <li>Shows the net new HolyC effectively removed from circulation in each window. Each reading is a snapshot delta — current value minus the value 24h/7d/30d ago.</li>
+                        <li>Effective Removed = Permanently Locked HolyC + HolyC at Burn Address. Locked HolyC = HolyC held by the Compiler minus JIT total supply.</li>
+                        <li>Unlike a raw volume counter, compile/restore cycles do not inflate this number. Only a genuine reduction in recoverable HolyC moves the needle.</li>
+                        <li>Deltas show 0 until enough snapshot history has accumulated (24h, 7d, 30d respectively).</li>
                       </ul>
                     </div>
                   </div>
