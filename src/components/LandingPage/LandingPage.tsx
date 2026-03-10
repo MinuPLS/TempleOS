@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { formatUnits } from 'viem'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
 import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft, RotateCcw, Info } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
 import StatsDashboard from '../StatsDashboard/StatsDashboard'
+import { useTokenStats } from '../StatsDashboard/hooks/useTokenStats'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
@@ -43,6 +45,12 @@ function formatTokenAmount(value: number) {
   })
 }
 
+function formatAnnualizedRate(value: number | null) {
+  if (value === null || !Number.isFinite(value) || value <= 0) return '—'
+  if (value < 0.01) return '<0.01%'
+  return `${value.toFixed(2)}%`
+}
+
 export function LandingPage() {
   const [showPartnerDetails, setShowPartnerDetails] = useState(false)
   const [burnStats, setBurnStats] = useState<EffectiveBurnStats | null>(null)
@@ -50,6 +58,12 @@ export function LandingPage() {
   const [burnError, setBurnError] = useState<string | null>(null)
   const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false)
   const { tokenPrices } = usePoolData()
+  const {
+    tokenStats,
+    isLoading: isTokenStatsLoading,
+    error: tokenStatsError,
+    refresh: refreshTokenStats,
+  } = useTokenStats()
   const {
     executions: divineExecutions,
     isLoading: isDivineLoading,
@@ -134,6 +148,21 @@ export function LandingPage() {
     },
     [burnStats, tokenPrices.holycUSD]
   )
+
+  const annualizedRemovalRate = useMemo(() => {
+    if (!burnStats?.delta7d || tokenStats.circulatingHolyC <= 0n) return null
+
+    const removedOver7d = Number(formatUnits(BigInt(burnStats.delta7d), 18))
+    const circulatingHolyC = Number(formatUnits(tokenStats.circulatingHolyC, 18))
+
+    if (!Number.isFinite(removedOver7d) || !Number.isFinite(circulatingHolyC) || circulatingHolyC <= 0) {
+      return null
+    }
+
+    return (removedOver7d * (365 / 7) / circulatingHolyC) * 100
+  }, [burnStats?.delta7d, tokenStats.circulatingHolyC])
+
+  const annualizedRemovalRateLabel = formatAnnualizedRate(annualizedRemovalRate)
 
 
   const handleOpenDivineGuide = () => {
@@ -435,14 +464,22 @@ export function LandingPage() {
               </div>
 
               <div className={styles.tokenStatsWrapper}>
-                <StatsDashboard />
+                <StatsDashboard
+                  tokenPrices={tokenPrices}
+                  tokenStats={tokenStats}
+                  isLoading={isTokenStatsLoading}
+                  error={tokenStatsError}
+                  onRefresh={refreshTokenStats}
+                />
               </div>
 
               <div className={`${styles.sideCard} ${styles.burnMeterCard}`}>
                 <div className={styles.burnMeterHeader}>
-                  <div>
+                  <div className={styles.burnMeterHeading}>
                     <p className={styles.sectionEyebrow}>LIVE INDEX</p>
-                    <h3 className={styles.burnMeterTitle}>Burn Tracker</h3>
+                    <div className={styles.burnMeterTitleRow}>
+                      <h3 className={styles.burnMeterTitle}>Burn Tracker</h3>
+                    </div>
                   </div>
                   <div className={styles.burnMeterActions}>
                     <button
@@ -497,6 +534,13 @@ export function LandingPage() {
                         </div>
                       ))}
                     </div>
+                    <p className={styles.burnAnnualizedNote}>
+                      <span className={styles.burnAnnualizedLead}>Current Pace:</span>{' '}
+                      <strong className={styles.burnAnnualizedRate}>{annualizedRemovalRateLabel}</strong>{' '}
+                      <span className={styles.burnAnnualizedConnector}>of</span>{' '}
+                      <span className={styles.tooltipBlue}>Circulating Supply</span>{' '}
+                      <span className={styles.burnAnnualizedRemoved}>Removed Annually.</span>
+                    </p>
                   </div>
 
                   <div
@@ -505,9 +549,18 @@ export function LandingPage() {
                   >
                     <div className={styles.burnInfoBox}>
                       <ul className={styles.burnInfoList}>
-                        <li>Tracks the net HolyC effectively removed from circulation.</li>
-                        <li>This includes HolyC sent to the burn address and HolyC permanently stranded in the Compiler.</li>
-                        <li>When JIT gets burned, leftover HolyC in the contract can no longer be redeemed, so it stays locked there for good.</li>
+                        <li>
+                          <strong>Supply Tracking:</strong> Monitors HolyC effectively removed from circulation, whether
+                          permanently trapped in the Compiler via JIT burns or sent to the burn address.
+                        </li>
+                        <li>
+                          <strong>JIT Volume:</strong> Accounts for the rerouting and balancing of liquidity across
+                          active JIT pools.
+                        </li>
+                        <li>
+                          <strong>Annualized Pace:</strong> Projects the long-term burn rate based on a rolling 7-day
+                          average relative to the current circulating supply.
+                        </li>
                       </ul>
                     </div>
                   </div>

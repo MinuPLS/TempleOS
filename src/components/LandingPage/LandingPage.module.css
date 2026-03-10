@@ -1424,6 +1424,16 @@
   margin-bottom: 4px;
 }
 
+.burnMeterHeading {
+  min-width: 0;
+  flex: 1;
+}
+
+.burnMeterTitleRow {
+  display: flex;
+  align-items: center;
+}
+
 @keyframes burnTextGlow {
   0%, 100% { text-shadow: 0 0 12px rgba(249, 115, 22, 0.3), 0 0 22px rgba(239, 68, 68, 0.1); }
   50% { text-shadow: 0 0 18px rgba(249, 115, 22, 0.5), 0 0 28px rgba(239, 68, 68, 0.3); }
@@ -1625,6 +1635,29 @@
   overflow: hidden;
 }
 
+.burnAnnualizedNote {
+  position: relative;
+  margin: 18px auto 0;
+  padding-top: 12px;
+  max-width: 100%;
+  text-align: center;
+  font-size: clamp(11px, 1.12vw, 13px);
+  line-height: 1.2;
+  white-space: nowrap;
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.burnAnnualizedNote::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(220px, 64%);
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.32), transparent);
+}
+
 .burnPanel {
   transition: opacity 0.25s ease;
   width: 100%;
@@ -1666,7 +1699,31 @@
 }
 
 .burnInfoList li + li {
-  margin-top: 6px;
+  margin-top: 10px;
+}
+
+.burnInfoList strong {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.burnAnnualizedLead {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.burnAnnualizedRate {
+  color: #fdba74;
+  font-weight: 800;
+}
+
+.burnAnnualizedConnector {
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.burnAnnualizedRemoved {
+  color: rgba(248, 250, 252, 0.86);
+  font-weight: 600;
 }
 
 .infoButtonActive {
@@ -2266,6 +2323,17 @@
   .activityRefreshButton {
     width: 28px;
     height: 28px;
+  }
+
+  .burnMeterHeader {
+    gap: 10px;
+  }
+
+  .burnAnnualizedNote {
+    max-width: none;
+    font-size: 10.5px;
+    margin-top: 16px;
+    padding-top: 11px;
   }
 }
 

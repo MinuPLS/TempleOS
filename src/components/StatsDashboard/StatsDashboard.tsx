@@ -1,6 +1,7 @@
 import styles from './StatsDashboard.module.css';
 import { usePoolData } from '../UniswapPools/hooks/usePoolData';
-import { useTokenStats } from './hooks/useTokenStats';
+import { useTokenStats, type TokenStats } from './hooks/useTokenStats';
+import type { TokenPrices } from '../UniswapPools/hooks/usePoolData';
 import { formatCurrency, formatBigIntTokenAmount } from '@/lib/utils';
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png';
 import JITLogo from '../../assets/TokenLogos/JIT.png';
@@ -13,11 +14,30 @@ interface StatsDashboardProps {
   currentPanel?: number;
   onPanelChange?: (panel: number) => void;
   showHeader?: boolean;
+  tokenPrices?: TokenPrices;
+  tokenStats?: TokenStats;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: (options?: { manual?: boolean }) => void | Promise<void>;
 }
 
-const StatsDashboard = ({ showHeader = true }: StatsDashboardProps = {}) => {
-  const { tokenPrices } = usePoolData();
-  const { tokenStats, isLoading, error, refresh: refreshTokenStats } = useTokenStats();
+type StatsDashboardContentProps = {
+  showHeader: boolean;
+  tokenPrices: TokenPrices;
+  tokenStats: TokenStats;
+  isLoading: boolean;
+  error: string | null;
+  onRefresh: (options?: { manual?: boolean }) => void | Promise<void>;
+}
+
+const StatsDashboardContent = ({
+  showHeader,
+  tokenPrices,
+  tokenStats,
+  isLoading,
+  error,
+  onRefresh,
+}: StatsDashboardContentProps) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const toggleRow = (rowId: string) => {
@@ -45,7 +65,7 @@ const StatsDashboard = ({ showHeader = true }: StatsDashboardProps = {}) => {
               variant="info"
               position="bottom"
             >
-              <button onClick={() => refreshTokenStats({ manual: true })} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
+              <button onClick={() => void onRefresh({ manual: true })} className={styles.refreshButton} disabled={isLoading} aria-label="Refresh stats">
                 <RotateCcw size={16} className={isLoading ? styles.loadingIcon : ''} />
               </button>
             </Tooltip>
@@ -264,6 +284,46 @@ const StatsDashboard = ({ showHeader = true }: StatsDashboardProps = {}) => {
         )}
       </div>
     </div>
+  );
+};
+
+const StatsDashboardWithData = ({ showHeader = true }: StatsDashboardProps = {}) => {
+  const { tokenPrices } = usePoolData();
+  const { tokenStats, isLoading, error, refresh } = useTokenStats();
+
+  return (
+    <StatsDashboardContent
+      showHeader={showHeader}
+      tokenPrices={tokenPrices}
+      tokenStats={tokenStats}
+      isLoading={isLoading}
+      error={error}
+      onRefresh={refresh}
+    />
+  );
+};
+
+const StatsDashboard = ({
+  showHeader = true,
+  tokenPrices,
+  tokenStats,
+  isLoading,
+  error,
+  onRefresh,
+}: StatsDashboardProps = {}) => {
+  if (!tokenPrices || !tokenStats || typeof isLoading !== 'boolean' || error === undefined || !onRefresh) {
+    return <StatsDashboardWithData showHeader={showHeader} />;
+  }
+
+  return (
+    <StatsDashboardContent
+      showHeader={showHeader}
+      tokenPrices={tokenPrices}
+      tokenStats={tokenStats}
+      isLoading={isLoading}
+      error={error}
+      onRefresh={onRefresh}
+    />
   );
 };
 
