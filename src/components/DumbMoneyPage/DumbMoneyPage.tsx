@@ -138,9 +138,11 @@ function formatPrice(p: number): string {
 
 function getBurnBalanceHolders(tokenAddress: string): string[] {
   const holders = [DEAD_STANDARD, DEAD_PULSE]
-  if (tokenAddress.toLowerCase() === DUMB_CA.toLowerCase()) {
-    // $DUMB parked inside the token contract is treated as permanently removed.
-    holders.push(DUMB_CA)
+  const normalizedTokenAddress = tokenAddress.toLowerCase()
+
+  if (normalizedTokenAddress === DUMB_CA.toLowerCase() || normalizedTokenAddress === DAMP_CA.toLowerCase()) {
+    // Tokens parked inside their own contracts are treated as permanently removed.
+    holders.push(tokenAddress)
   }
   return holders
 }
@@ -554,7 +556,7 @@ function DumbMoneyPage() {
             <LiveStatsColumn title="$DAMP Statistics" accent="pink"  stats={dampStats} loading={loading} />
           </div>
           <p className={styles.liveStatsFootnote}>
-            Live data fetched on page load · Burned = dead address + PulseChain dead address (0x…0369) + $DUMB held in the $DUMB contract
+            Live data fetched on page load · Burned = dead address + PulseChain dead address (0x…0369) + tokens held in their own contracts
           </p>
         </section>
 
