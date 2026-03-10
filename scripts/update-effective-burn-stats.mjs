@@ -14,7 +14,6 @@ const LOG_CHUNK_SIZE = 8000n
 const BLOCK_BATCH_SIZE = 50
 const HOUR_MS = 60 * 60 * 1000
 const HISTORY_DAYS = 30
-const LOOKBACK_HOURS = 2
 const DEFAULT_OUTPUT = '../public/effective-burn-stats.json'
 
 async function main() {
@@ -25,13 +24,14 @@ async function main() {
   }
 
   const outputPath = resolveOutputPath(options.output)
+  const existingStats = await readStatsFile(outputPath)
   const currentHourMs = truncateToHourMs(now.getTime())
   let snapshots
 
-  if (options.seed || !(await fileExists(outputPath))) {
+  if (options.seed || !existingStats) {
     snapshots = await buildSeedSnapshots(options.rpcUrl, currentHourMs)
   } else {
-    snapshots = await loadSnapshots(outputPath)
+    snapshots = loadSnapshots(existingStats)
     if (snapshots.size === 0) {
       snapshots = await buildSeedSnapshots(options.rpcUrl, currentHourMs)
     } else {
@@ -42,6 +42,13 @@ async function main() {
 
   pruneSnapshots(snapshots, currentHourMs)
   const stats = buildStatsFromSnapshots(snapshots, currentHourMs, now)
+
+  if (existingStats && statsPayload(existingStats) === statsPayload(stats)) {
+    console.log(`No material change for ${outputPath}`)
+    console.log(`Current remains ${stats.current}`)
+    return
+  }
+
   await writeStatsFile(outputPath, stats)
 
   console.log(`Updated ${outputPath}`)
@@ -104,22 +111,20 @@ function resolveOutputPath(relativePath) {
   return path.resolve(scriptDir, relativePath)
 }
 
-async function fileExists(filePath) {
+async function readStatsFile(filePath) {
   try {
-    await readFile(filePath, 'utf8')
-    return true
+    const raw = await readFile(filePath, 'utf8')
+    return JSON.parse(raw)
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
-      return false
+      return null
     }
     throw error
   }
 }
 
-async function loadSnapshots(filePath) {
-  const raw = await readFile(filePath, 'utf8')
-  const parsed = JSON.parse(raw)
-  const entries = Object.entries(parsed.snapshots || {})
+function loadSnapshots(existingStats) {
+  const entries = Object.entries(existingStats?.snapshots || {})
   const snapshots = new Map()
 
   for (const [hour, value] of entries) {
@@ -130,6 +135,16 @@ async function loadSnapshots(filePath) {
   }
 
   return snapshots
+}
+
+function statsPayload(stats) {
+  return JSON.stringify({
+    current: stats.current || '0',
+    delta24h: stats.delta24h || '0',
+    delta7d: stats.delta7d || '0',
+    delta30d: stats.delta30d || '0',
+    snapshots: stats.snapshots || {},
+  })
 }
 
 async function buildSeedSnapshots(rpcUrl, currentHourMs) {
@@ -257,7 +272,7 @@ async function buildSeedSnapshots(rpcUrl, currentHourMs) {
 }
 
 function pruneSnapshots(snapshots, currentHourMs) {
-  const cutoffMs = currentHourMs - (HISTORY_DAYS * 24 + LOOKBACK_HOURS) * HOUR_MS
+  const cutoffMs = currentHourMs - HISTORY_DAYS * 24 * HOUR_MS
   for (const hour of snapshots.keys()) {
     const timestamp = Date.parse(hour)
     if (Number.isNaN(timestamp) || timestamp < cutoffMs) {
@@ -267,42 +282,60 @@ function pruneSnapshots(snapshots, currentHourMs) {
 }
 
 function buildStatsFromSnapshots(snapshots, currentHourMs, now) {
-  const currentHourIso = isoHourFromMs(currentHourMs)
-  const current = snapshots.get(currentHourIso) || 0n
-
-  const findSnapshot = (targetMs) => {
-    for (let offset = 0; offset <= LOOKBACK_HOURS; offset++) {
-      const hourIso = isoHourFromMs(targetMs - offset * HOUR_MS)
-      const value = snapshots.get(hourIso)
-      if (value !== undefined) {
-        return value
-      }
-    }
-    return null
-  }
+  const orderedEntries = Array.from(snapshots.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+  const current = findSnapshotAtOrBefore(orderedEntries, currentHourMs)
 
   const delta = (snapshot) => {
-    if (snapshot === null || current === 0n) {
+    if (snapshot === null || current === null || current === 0n) {
       return '0'
     }
     const difference = current - snapshot
     return difference > 0n ? difference.toString() : '0'
   }
 
+  const compactedEntries = compactSnapshotEntries(orderedEntries)
   const orderedSnapshots = Object.fromEntries(
-    Array.from(snapshots.entries())
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([hour, value]) => [hour, value.toString()]),
+    compactedEntries.map(([hour, value]) => [hour, value.toString()]),
   )
 
   return {
-    current: current.toString(),
-    delta24h: delta(findSnapshot(currentHourMs - 24 * HOUR_MS)),
-    delta7d: delta(findSnapshot(currentHourMs - 7 * 24 * HOUR_MS)),
-    delta30d: delta(findSnapshot(currentHourMs - 30 * 24 * HOUR_MS)),
+    current: (current || 0n).toString(),
+    delta24h: delta(findSnapshotAtOrBefore(orderedEntries, currentHourMs - 24 * HOUR_MS)),
+    delta7d: delta(findSnapshotAtOrBefore(orderedEntries, currentHourMs - 7 * 24 * HOUR_MS)),
+    delta30d: delta(findSnapshotAtOrBefore(orderedEntries, currentHourMs - 30 * 24 * HOUR_MS)),
     snapshots: orderedSnapshots,
     updatedAt: now.toISOString(),
   }
+}
+
+function findSnapshotAtOrBefore(orderedEntries, targetMs) {
+  let result = null
+
+  for (const [hour, value] of orderedEntries) {
+    const hourMs = Date.parse(hour)
+    if (Number.isNaN(hourMs) || hourMs > targetMs) {
+      break
+    }
+    result = value
+  }
+
+  return result
+}
+
+function compactSnapshotEntries(orderedEntries) {
+  const compacted = []
+  let previousValue = null
+
+  for (const [hour, value] of orderedEntries) {
+    if (previousValue !== null && value === previousValue) {
+      continue
+    }
+    compacted.push([hour, value])
+    previousValue = value
+  }
+
+  return compacted
 }
 
 async function writeStatsFile(filePath, stats) {

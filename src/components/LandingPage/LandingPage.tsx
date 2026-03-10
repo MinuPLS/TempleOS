@@ -485,12 +485,11 @@ export function LandingPage() {
                     aria-hidden={!isBurnInfoOpen}
                   >
                     <div className={styles.burnInfoBox}>
-                      <p className={styles.burnInfoLead}>How this meter works</p>
+                      <p className={styles.burnInfoLead}>What this tracks</p>
                       <ul className={styles.burnInfoList}>
-                        <li>Shows the net new HolyC effectively removed from circulation in each window. Each reading is a snapshot delta — current value minus the value 24h/7d/30d ago.</li>
-                        <li>Effective Removed = Permanently Locked HolyC + HolyC at Burn Address. Locked HolyC = HolyC held by the Compiler minus JIT total supply.</li>
-                        <li>Unlike a raw volume counter, compile/restore cycles do not inflate this number. Only a genuine reduction in recoverable HolyC moves the needle.</li>
-                        <li>Deltas show 0 until enough snapshot history has accumulated (24h, 7d, 30d respectively).</li>
+                        <li>Tracks the net HolyC effectively removed from circulation.</li>
+                        <li>This includes HolyC sent to the burn address and HolyC permanently stranded in the Compiler.</li>
+                        <li>When JIT gets burned, leftover HolyC in the contract can no longer be redeemed, so it stays locked there for good.</li>
                       </ul>
                     </div>
                   </div>
