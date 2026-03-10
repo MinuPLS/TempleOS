@@ -1,6 +1,6 @@
 {
-  "lastProcessedBlock": "25974095",
-  "lastProcessedTxHash": "0x6ab0217304c84ca7a357db838f43ab6e63a38868b30a193661f5c195ccff3e85",
+  "lastProcessedBlock": "25988643",
+  "lastProcessedTxHash": "0x34f4c8faf072b4fe4d9dff9d1be3f8bf5cb791471ebfadfe736e09ec43ade676",
   "lastDailySummaryAt": 1773088666257,
   "lastDailyStats": {
     "permanentlyLockedHolyC": "23988125581853115236593616",
@@ -30,5 +30,24 @@
     "jitSpent": "68579133400618743704194",
     "timestamp": 1772988675000
   },
-  "pendingArbPosts": []
+  "pendingArbPosts": [
+    {
+      "queuedAt": 1773152004439,
+      "execution": {
+        "transactionHash": "0x34f4c8faf072b4fe4d9dff9d1be3f8bf5cb791471ebfadfe736e09ec43ade676",
+        "blockNumber": "25988643",
+        "timestamp": 1773151175000,
+        "holyBurned": "76830568858412530000000",
+        "jitBurned": "2038856425767671401678629",
+        "holyIn": "1997594790318725830000000",
+        "holyOut": "1977050296205986305000000",
+        "jitIn": "2021820136998333012252853",
+        "jitOut": "2015763800328431216689639"
+      },
+      "tokenPrices": {
+        "holycUSD": 0.000011826525558263,
+        "jitUSD": 0.000010897696420421
+      }
+    }
+  ]
 }
