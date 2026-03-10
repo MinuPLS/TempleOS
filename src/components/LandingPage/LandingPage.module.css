@@ -1539,6 +1539,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .burnIconWrapper {
@@ -1575,31 +1576,47 @@
 
 .burnMetricValueGroup {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-self: stretch;
+  align-items: flex-end;
+  justify-content: flex-end;
+  min-width: 0;
   text-align: right;
 }
 
-.burnMetricValue {
-  font-size: 17px;
-  font-weight: 700;
+.burnMetricValueStack {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  margin-left: auto;
+}
+
+.burnMetricBurnCopy {
+  justify-content: flex-end;
+  gap: 6px;
+  height: 100%;
+  min-width: 0;
+}
+
+.burnMetricBurnCopy .burnText,
+.burnMetricBurnCopy .burnUsd {
+  white-space: nowrap;
+}
+
+.burnMetricBurnCopy .burnText {
+  font-size: 16px;
+  line-height: 1.1;
   color: #ffffff;
+  font-weight: 700;
   font-feature-settings: "tnum";
   letter-spacing: -0.01em;
   text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.burnPillLow .burnMetricValue,
-.burnPillMedium .burnMetricValue,
-.burnPillHigh .burnMetricValue {
-  color: #ffffff;
-}
-
-.burnMetricUnit {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(226, 232, 240, 0.5);
-  text-transform: uppercase;
+.burnMetricBurnCopy .burnUsd {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+  margin-top: 1px;
 }
 
 .burnMeterPanels {

@@ -12,6 +12,12 @@ import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 const EFFECTIVE_BURN_STATS_URL = `${import.meta.env.BASE_URL}effective-burn-stats.json`
 const TOKEN_DECIMALS = 18n
 const DECIMAL_DIVISOR = 10n ** TOKEN_DECIMALS
+const burnUsdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 
 type EffectiveBurnStats = {
   current?: string
@@ -112,12 +118,21 @@ export function LandingPage() {
   }, [fetchBurnStats])
 
   const burnMetrics = useMemo(
-    () => [
-      { label: 'Past 24h', value: toTokens(burnStats?.delta24h), intensity: 'low' },
-      { label: 'Past 7 days', value: toTokens(burnStats?.delta7d), intensity: 'medium' },
-      { label: 'Past 30 days', value: toTokens(burnStats?.delta30d), intensity: 'high' },
-    ],
-    [burnStats]
+    () => {
+      const hasHolycUsdPrice = Number.isFinite(tokenPrices.holycUSD) && tokenPrices.holycUSD > 0
+
+      return [
+        { label: 'Past 24h', tokenValue: toTokens(burnStats?.delta24h), intensity: 'low' },
+        { label: 'Past 7 days', tokenValue: toTokens(burnStats?.delta7d), intensity: 'medium' },
+        { label: 'Past 30 days', tokenValue: toTokens(burnStats?.delta30d), intensity: 'high' },
+      ].map((metric) => {
+        return {
+          ...metric,
+          usdDisplay: hasHolycUsdPrice ? burnUsdFormatter.format(metric.tokenValue * tokenPrices.holycUSD) : '—',
+        }
+      })
+    },
+    [burnStats, tokenPrices.holycUSD]
   )
 
 
@@ -427,7 +442,7 @@ export function LandingPage() {
                 <div className={styles.burnMeterHeader}>
                   <div>
                     <p className={styles.sectionEyebrow}>LIVE INDEX</p>
-                    <h3 className={styles.burnMeterTitle}>JIT Burn Volume</h3>
+                    <h3 className={styles.burnMeterTitle}>Burn Tracker</h3>
                   </div>
                   <div className={styles.burnMeterActions}>
                     <button
@@ -472,8 +487,12 @@ export function LandingPage() {
                             <span className={styles.burnMetricLabel}>{metric.label}</span>
                           </div>
                           <div className={styles.burnMetricValueGroup}>
-                            <span className={styles.burnMetricValue}>{formatTokenAmount(metric.value)}</span>
-                            <span className={styles.burnMetricUnit}>HolyC</span>
+                            <div className={styles.burnMetricValueStack}>
+                              <div className={`${styles.valueBurnCopy} ${styles.burnMetricBurnCopy}`}>
+                                <span className={styles.burnText}>{formatTokenAmount(metric.tokenValue)} HolyC</span>
+                                <span className={styles.burnUsd}>{metric.usdDisplay}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -485,7 +504,6 @@ export function LandingPage() {
                     aria-hidden={!isBurnInfoOpen}
                   >
                     <div className={styles.burnInfoBox}>
-                      <p className={styles.burnInfoLead}>What this tracks</p>
                       <ul className={styles.burnInfoList}>
                         <li>Tracks the net HolyC effectively removed from circulation.</li>
                         <li>This includes HolyC sent to the burn address and HolyC permanently stranded in the Compiler.</li>
