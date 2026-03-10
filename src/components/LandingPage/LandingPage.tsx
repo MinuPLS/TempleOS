@@ -9,7 +9,7 @@ import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
-const EFFECTIVE_BURN_API_URL = 'https://jit-burn-tracker.info-megainu.workers.dev/jit-burn/effective-stats'
+const EFFECTIVE_BURN_STATS_URL = `${import.meta.env.BASE_URL}effective-burn-stats.json`
 const TOKEN_DECIMALS = 18n
 const DECIMAL_DIVISOR = 10n ** TOKEN_DECIMALS
 
@@ -77,7 +77,7 @@ export function LandingPage() {
       setBurnError(null)
     }
     try {
-      const response = await fetch(EFFECTIVE_BURN_API_URL)
+      const response = await fetch(EFFECTIVE_BURN_STATS_URL, { cache: 'no-store' })
       if (!response.ok) {
         throw new Error(`Burn API error ${response.status}`)
       }

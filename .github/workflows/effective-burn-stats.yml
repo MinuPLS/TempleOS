@@ -1,0 +1,43 @@
+name: Effective Burn Stats
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: effective-burn-stats
+  cancel-in-progress: false
+
+jobs:
+  update-effective-burn-stats:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update static effective burn stats
+        run: node scripts/update-effective-burn-stats.mjs
+        env:
+          PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
+
+      - name: Commit stats file if changed
+        run: |
+          if git status --porcelain | grep -q "public/effective-burn-stats.json"; then
+            git config user.name "effective-burn-bot"
+            git config user.email "effective-burn-bot@users.noreply.github.com"
+            git add public/effective-burn-stats.json
+            git commit -m "chore(stats): update effective burn snapshot"
+            git push
+          else
+            echo "No stats changes"
+          fi
