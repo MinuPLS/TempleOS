@@ -2,7 +2,7 @@ name: Telegram Arb Bot
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     inputs:
       force_arb:
@@ -61,6 +61,7 @@ jobs:
           DAILY_TIMEZONE: ${{ vars.DAILY_TIMEZONE }}
           DAILY_HOUR: ${{ vars.DAILY_HOUR }}
           MAX_LOOKBACK_BLOCKS: ${{ vars.MAX_LOOKBACK_BLOCKS }}
+          ARB_POST_DELAY_MS: ${{ vars.ARB_POST_DELAY_MS }}
           POST_ON_BOOTSTRAP: ${{ inputs.force_bootstrap || vars.POST_ON_BOOTSTRAP }}
           FORCE_DAILY_POST: ${{ inputs.force_daily }}
           FORCE_ARB_POST: ${{ inputs.force_arb || inputs.force_bootstrap }}

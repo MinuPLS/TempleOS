@@ -16,7 +16,7 @@ const FORCE_X_POST = process.env.FORCE_X_POST === 'true'
 const DAILY_TIMEZONE = process.env.DAILY_TIMEZONE || 'Europe/Amsterdam'
 const DAILY_HOUR = Number.parseInt(process.env.DAILY_HOUR || '21', 10)
 const MAX_LOOKBACK_BLOCKS = BigInt(process.env.MAX_LOOKBACK_BLOCKS || '200000')
-const DEFAULT_ARB_POST_DELAY_MS = 20 * 60 * 1000
+const DEFAULT_ARB_POST_DELAY_MS = 5 * 60 * 1000
 const parsedArbPostDelayMs = Number.parseInt(
   process.env.ARB_POST_DELAY_MS || `${DEFAULT_ARB_POST_DELAY_MS}`,
   10,
@@ -896,6 +896,22 @@ const fetchUnpostedBuyBurns = async (state, latestBlock, source) => {
   return filtered.map((log) => buildBuyBurnEntry(log, latestBlock))
 }
 
+const alignLatestBuyBurnsToArbPosts = (buyBurnQueue, arbPostCount) => {
+  const assignments = Array.from({ length: arbPostCount }, () => null)
+  if (!Array.isArray(buyBurnQueue) || arbPostCount <= 0) return assignments
+
+  let queueIndex = buyBurnQueue.length - 1
+  let arbIndex = arbPostCount - 1
+
+  while (queueIndex >= 0 && arbIndex >= 0) {
+    assignments[arbIndex] = buyBurnQueue[queueIndex]
+    queueIndex -= 1
+    arbIndex -= 1
+  }
+
+  return assignments
+}
+
 const hydrateBuyBurnState = async (entry, blockCache) => {
   if (!entry) return null
   if (typeof entry.timestamp === 'number') return entry
@@ -1235,12 +1251,17 @@ const postArbUpdates = async ({
   ])
 
   const blockCache = new Map()
+  const buyBurnAssignments = {
+    briah: alignLatestBuyBurnsToArbPosts(buyBurnQueues.briah, arbPosts.length),
+    mafia: alignLatestBuyBurnsToArbPosts(buyBurnQueues.mafia, arbPosts.length),
+    dumb: alignLatestBuyBurnsToArbPosts(buyBurnQueues.dumb, arbPosts.length),
+  }
 
-  for (const arbPost of arbPosts) {
+  for (const [index, arbPost] of arbPosts.entries()) {
     const { execution, tokenPrices } = arbPost
-    const briahBuyBurn = buyBurnQueues.briah?.shift() ?? null
-    const mafiaBuyBurn = buyBurnQueues.mafia?.shift() ?? null
-    const dumbBuyBurn = buyBurnQueues.dumb?.shift() ?? null
+    const briahBuyBurn = buyBurnAssignments.briah[index] ?? null
+    const mafiaBuyBurn = buyBurnAssignments.mafia[index] ?? null
+    const dumbBuyBurn = buyBurnAssignments.dumb[index] ?? null
     const partnerBurns = [
       {
         label: BUY_AND_BURN_SOURCES.briah.label,

@@ -2,7 +2,7 @@
 
 ## Purpose
 This documents the automation added on March 6, 2026 that posts to X immediately after a Telegram arb update is successfully posted.
-As of March 8, 2026, normal arb posts are first queued for a 20-minute partner buy-and-burn refresh window so Telegram/X can publish the arb together with the latest partner burns without keeping a GitHub Actions job running for 20 minutes.
+As of March 10, 2026, normal arb posts are first queued for a 5-minute partner buy-and-burn refresh window so Telegram/X can publish the arb together with the latest partner burns without keeping a GitHub Actions job running while it waits.
 
 ## Files Added/Changed
 - `scripts/x-arb-poster.mjs` (new): Handles X post text building, OAuth 1.0a signing, media upload, and status creation.
@@ -12,7 +12,7 @@ As of March 8, 2026, normal arb posts are first queued for a 20-minute partner b
 ## End-to-End Flow
 1. `telegram-arb-bot.mjs` detects new `TicketExecuted` events.
 2. In normal scheduled mode, it snapshots the execution + token prices into `state.pendingArbPosts` instead of posting immediately.
-3. On a later run, once the oldest pending arb has aged past the 20-minute delay, it refetches the latest partner `BuyAndBurn` events, builds the final Telegram message, and posts it with `sendTelegramArbUpdate(message)`.
+3. On a later run, once the oldest pending arb has aged past the 5-minute delay, it refetches the latest partner `BuyAndBurn` events, aligns the newest partner burns to the newest ready arbs, builds the final Telegram message, and posts it with `sendTelegramArbUpdate(message)`.
 4. It then calls:
    - `maybePostArbUpdateToX({ telegramHtmlMessage: message, mediaPath: ARB_MEDIA_PATH, dryRun: DRY_RUN })`
 5. `x-arb-poster.mjs`:
@@ -22,7 +22,7 @@ As of March 8, 2026, normal arb posts are first queued for a 20-minute partner b
 
 Important: X posting errors are caught and logged in `telegram-arb-bot.mjs`, and do not stop Telegram posting/state updates.
 Important: `FORCE_X_POST=true` runs an X-only forced latest-arb post (skips Telegram arb send, skips daily post, and does not mutate state).
-Important: normal scheduled runs use persisted queue state instead of `sleep(20m)`, so Actions usage stays low. With the current `*/30` cron, queued arbs post on the next eligible run after the 20-minute threshold is met.
+Important: normal scheduled runs use persisted queue state instead of `sleep(5m)`, so the job does not sit there waiting. With the current `*/5` cron, queued arbs post on the next eligible run after the 5-minute threshold is met.
 Important: forced/manual latest-arb modes still bypass the queue and post immediately.
 
 ## Toggle + Required Secrets
