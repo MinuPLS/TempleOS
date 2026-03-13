@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
-import type { DivineManagerExecution } from '@/hooks/useDivineManagerActivity'
+import type { ActivityExecution } from '@/hooks/useDivineManagerActivity'
 import { useBuyAndBurnActivity, useCoinMafiaBuyAndBurnActivity, useDumbBuyAndBurnActivity } from '@/hooks/useBuyAndBurnActivity'
 import { formatRelativeTime } from '@/lib/time'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
@@ -14,6 +14,40 @@ import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 
 const PAGE_SIZE = 5
 const PAGE_BLOCK = 20
+const FEEDER_BURST_GAP_MS = 3_600_000
+
+type BurnActivityItem = {
+  transactionHash: string
+  timestamp: number
+  tokenBurned: bigint
+}
+
+type FeederExecution = Extract<ActivityExecution, { source: 'feeder-bot' }>
+type TokenSymbol = 'HOLYC' | 'JIT'
+
+type DisplayGainRow = {
+  symbol: TokenSymbol
+  amount: bigint
+}
+
+type FeederBurstDisplayItem = {
+  displayType: 'feeder-burst'
+  id: string
+  source: 'feeder-bot'
+  newestTimestamp: number
+  oldestTimestamp: number
+  newestBlockNumber: bigint
+  oldestBlockNumber: bigint
+  loopCount: number
+  transactionCount: number
+  settlementBurned: bigint
+  estimatedUsdGain: number
+  netHolycGain: bigint
+  netJitGain: bigint
+  executions: FeederExecution[]
+}
+
+type DisplayFeedItem = ActivityExecution | FeederBurstDisplayItem
 
 const usdFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -49,6 +83,7 @@ const formatAmount = (amount: bigint, digits = 2) => {
     maximumFractionDigits: digits,
   })
 }
+
 const bnAbs = (value: bigint) => (value >= 0n ? value : value * -1n)
 
 const formatCompact = (amount: bigint) => {
@@ -63,8 +98,178 @@ const formatUsdSigned = (value: number) => {
   return normalized > 0 ? `+ ${formatted}` : formatted
 }
 
+const formatDuration = (durationMs: number) => {
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000))
+  if (totalSeconds < 60) {
+    return `${Math.max(totalSeconds, 1)}s`
+  }
+
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+  }
+
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`
+}
+
+const formatBlockWindow = (newestBlockNumber: bigint, oldestBlockNumber: bigint) => {
+  const inclusiveBlocks = bnAbs(newestBlockNumber - oldestBlockNumber) + 1n
+  return `${inclusiveBlocks.toString()} ${inclusiveBlocks === 1n ? 'block' : 'blocks'}`
+}
+
+const isFeederExecution = (execution: ActivityExecution): execution is FeederExecution => execution.source === 'feeder-bot'
+
+const isFeederBurstDisplayItem = (item: DisplayFeedItem): item is FeederBurstDisplayItem => 'displayType' in item
+
+const sortExecutionsByRecency = (left: ActivityExecution, right: ActivityExecution) => {
+  const blockDiff = Number(right.blockNumber - left.blockNumber)
+  if (blockDiff !== 0) return blockDiff
+  return right.timestamp - left.timestamp
+}
+
+const sortByTimestamp = (left: { timestamp: number }, right: { timestamp: number }) => right.timestamp - left.timestamp
+
+const getSourceBadgeLabel = (source: ActivityExecution['source']) =>
+  source === 'feeder-bot' ? 'Feeder Bot' : 'Divine Manager'
+
+const getTokenLogo = (symbol: 'HOLYC' | 'JIT') => (symbol === 'HOLYC' ? HolyCLogo : JITLogo)
+
+const getExecutionGainRows = (execution: ActivityExecution): DisplayGainRow[] =>
+  isFeederExecution(execution)
+    ? [{ symbol: execution.netTokenSymbol, amount: execution.netTokenAmount }]
+    : [
+        { symbol: 'HOLYC', amount: execution.holyIn - execution.holyOut },
+        { symbol: 'JIT', amount: execution.jitIn - execution.jitOut },
+      ]
+
+const getFeederExecutionUsdGain = (execution: FeederExecution, holycUSD: number, jitUSD: number) =>
+  Number(formatUnits(execution.netTokenAmount, 18)) * (execution.netTokenSymbol === 'HOLYC' ? holycUSD : jitUSD)
+
+const getExecutionUsdGain = (execution: ActivityExecution, holycUSD: number, jitUSD: number) =>
+  isFeederExecution(execution)
+    ? getFeederExecutionUsdGain(execution, holycUSD, jitUSD)
+    : Number(formatUnits(execution.holyIn - execution.holyOut, 18)) * holycUSD +
+      Number(formatUnits(execution.jitIn - execution.jitOut, 18)) * jitUSD
+
+const getFeederRouteLabel = (route: FeederExecution['route']) =>
+  route === 'hc-start-jit-gain' ? 'HC -> JIT loop' : 'JIT -> HC loop'
+
+const getFeederExecutionTransactionCount = (execution: FeederExecution) =>
+  execution.loopTransactionHashes.length + execution.settlement.transactions.length
+
+const getFeederLatestVisibleTransaction = (execution: FeederExecution) => {
+  const latestSettlementTx = execution.settlement.transactions[execution.settlement.transactions.length - 1]
+
+  if (latestSettlementTx) {
+    return {
+      hash: latestSettlementTx.hash,
+      label: latestSettlementTx.label,
+      isSettlement: true,
+    }
+  }
+
+  return {
+    hash: execution.transactionHash,
+    label: 'Arb swap',
+    isSettlement: false,
+  }
+}
+
+const buildFeederBurstDisplayItem = (
+  executions: FeederExecution[],
+  holycUSD: number,
+  jitUSD: number
+): FeederBurstDisplayItem => {
+  const newestExecution = executions[0]
+  const oldestExecution = executions[executions.length - 1]
+
+  return {
+    displayType: 'feeder-burst',
+    id: `feeder-burst-${newestExecution.transactionHash}-${oldestExecution.transactionHash}-${executions.length}`,
+    source: 'feeder-bot',
+    newestTimestamp: newestExecution.timestamp,
+    oldestTimestamp: oldestExecution.timestamp,
+    newestBlockNumber: newestExecution.blockNumber,
+    oldestBlockNumber: oldestExecution.blockNumber,
+    loopCount: executions.length,
+    transactionCount: executions.reduce((total, execution) => total + getFeederExecutionTransactionCount(execution), 0),
+    settlementBurned: executions.reduce((total, execution) => total + execution.settlement.burnedAmount, 0n),
+    estimatedUsdGain: executions.reduce(
+      (total, execution) => total + getFeederExecutionUsdGain(execution, holycUSD, jitUSD),
+      0
+    ),
+    netHolycGain: executions.reduce(
+      (total, execution) => total + (execution.netTokenSymbol === 'HOLYC' ? execution.netTokenAmount : 0n),
+      0n
+    ),
+    netJitGain: executions.reduce(
+      (total, execution) => total + (execution.netTokenSymbol === 'JIT' ? execution.netTokenAmount : 0n),
+      0n
+    ),
+    executions,
+  }
+}
+
+const buildDisplayFeedItems = (
+  executions: ActivityExecution[],
+  holycUSD: number,
+  jitUSD: number
+): DisplayFeedItem[] => {
+  const displayItems: DisplayFeedItem[] = []
+  let feederBurst: FeederExecution[] = []
+
+  const flushFeederBurst = () => {
+    if (feederBurst.length === 0) return
+    if (feederBurst.length === 1) {
+      displayItems.push(feederBurst[0])
+    } else {
+      displayItems.push(buildFeederBurstDisplayItem(feederBurst, holycUSD, jitUSD))
+    }
+    feederBurst = []
+  }
+
+  executions.forEach((execution) => {
+    if (!isFeederExecution(execution)) {
+      flushFeederBurst()
+      displayItems.push(execution)
+      return
+    }
+
+    const previousFeederExecution = feederBurst[feederBurst.length - 1]
+    const isBurstGap =
+      previousFeederExecution !== undefined &&
+      previousFeederExecution.timestamp - execution.timestamp > FEEDER_BURST_GAP_MS
+
+    if (isBurstGap) {
+      flushFeederBurst()
+    }
+
+    feederBurst.push(execution)
+  })
+
+  flushFeederBurst()
+  return displayItems
+}
+
+const buildBurstGainRows = (burst: FeederBurstDisplayItem): DisplayGainRow[] => {
+  const gainRows: DisplayGainRow[] = []
+
+  if (burst.netHolycGain !== 0n) {
+    gainRows.push({ symbol: 'HOLYC', amount: burst.netHolycGain })
+  }
+
+  if (burst.netJitGain !== 0n) {
+    gainRows.push({ symbol: 'JIT', amount: burst.netJitGain })
+  }
+
+  return gainRows.length > 0 ? gainRows : [{ symbol: 'HOLYC', amount: 0n }]
+}
+
 interface DivineManagerActivityProps {
-  executions: DivineManagerExecution[]
+  executions: ActivityExecution[]
   isLoading: boolean
   isLoadingMore: boolean
   error: string | null
@@ -95,6 +300,7 @@ export const DivineManagerActivity = ({
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia' | 'dumb'>('arbs')
+  const [expandedBurstIds, setExpandedBurstIds] = useState<Set<string>>(new Set())
   const isViewingBurns = viewMode === 'burns'
   const isViewingMafia = viewMode === 'mafia'
   const isViewingDumb = viewMode === 'dumb'
@@ -141,18 +347,22 @@ export const DivineManagerActivity = ({
 
   const page = pageByView[viewMode]
 
+  const sortedArbExecutions = useMemo(
+    () => [...executions].sort(sortExecutionsByRecency),
+    [executions]
+  )
 
-  const currentData = useMemo(() => {
-    const data = isViewingBurns
-      ? burnExecutions
-      : isViewingMafia
-        ? mafiaExecutions
-        : isViewingDumb
-          ? dumbExecutions
-          : executions
-    // Ensure descending sort (newest first)
-    return [...data].sort((a, b) => b.timestamp - a.timestamp)
-  }, [isViewingBurns, isViewingMafia, isViewingDumb, burnExecutions, mafiaExecutions, dumbExecutions, executions])
+  const arbDisplayItems = useMemo(
+    () => buildDisplayFeedItems(sortedArbExecutions, holycUSD, jitUSD),
+    [sortedArbExecutions, holycUSD, jitUSD]
+  )
+
+  const currentData = useMemo<Array<BurnActivityItem | DisplayFeedItem>>(() => {
+    if (isViewingBurns) return [...burnExecutions].sort(sortByTimestamp)
+    if (isViewingMafia) return [...mafiaExecutions].sort(sortByTimestamp)
+    if (isViewingDumb) return [...dumbExecutions].sort(sortByTimestamp)
+    return arbDisplayItems
+  }, [isViewingBurns, isViewingMafia, isViewingDumb, burnExecutions, mafiaExecutions, dumbExecutions, arbDisplayItems])
 
   const currentLoading = isViewingBurns ? isBurnLoading : isViewingMafia ? isMafiaLoading : isViewingDumb ? isDumbLoading : isLoading
   const currentLoadingMore = isViewingBurns
@@ -170,16 +380,12 @@ export const DivineManagerActivity = ({
       : isViewingDumb
         ? dumbLastUpdated
         : lastUpdated
+
   const handleRefresh = () => {
     if (isRefreshing) return
     setIsRefreshing(true)
 
-    // Active view refreshes visibly; others refresh silently in background
-    const promises: Promise<void>[] = [
-      silentRefreshBurns(),
-      silentRefreshMafia(),
-      silentRefreshDumb(),
-    ]
+    const promises: Promise<void>[] = [silentRefreshBurns(), silentRefreshMafia(), silentRefreshDumb()]
     if (isViewingBurns) {
       void refreshBurns()
     } else if (isViewingMafia) {
@@ -189,9 +395,9 @@ export const DivineManagerActivity = ({
     }
     onRefresh()
 
-    // Keep spinning until all background refreshes settle
     void Promise.allSettled(promises).then(() => setIsRefreshing(false))
   }
+
   const currentHasMore = isViewingBurns ? hasMoreBurns : isViewingMafia ? hasMoreMafia : isViewingDumb ? hasMoreDumb : hasMore
   const handleLoadMore = isViewingBurns
     ? () => void loadMoreBurns()
@@ -216,17 +422,290 @@ export const DivineManagerActivity = ({
       const current = prev[viewMode]
       return { ...prev, [viewMode]: Math.max(1, current - 1) }
     })
+
   const handleNext = () =>
     setPageByView((prev) => {
       const current = prev[viewMode]
       return { ...prev, [viewMode]: Math.min(totalPages, current + 1) }
     })
+
+  const toggleBurstExpansion = (burstId: string) =>
+    setExpandedBurstIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(burstId)) {
+        next.delete(burstId)
+      } else {
+        next.add(burstId)
+      }
+      return next
+    })
+
   const showBurns = () => setViewMode('burns')
   const showMafia = () => setViewMode('mafia')
   const showDumb = () => setViewMode('dumb')
   const showArbs = () => setViewMode('arbs')
 
   const explorerBase = 'https://otter.pulsechain.com'
+
+  const getGainClassName = (symbol: DisplayGainRow['symbol']) => (symbol === 'HOLYC' ? styles.holyText : styles.jitText)
+  const renderTokenRows = (gainRows: DisplayGainRow[], itemKey: string, options?: { signed?: boolean }) => (
+    <div className={styles.tokenStack}>
+      {gainRows.map((gain) => (
+        <div key={`${itemKey}-${gain.symbol}`} className={styles.tokenLine}>
+          <img src={getTokenLogo(gain.symbol)} alt={`${gain.symbol} gained`} />
+          <span className={getGainClassName(gain.symbol)}>{options?.signed ? formatCompact(gain.amount) : formatAmount(gain.amount)}</span>
+        </div>
+      ))}
+    </div>
+  )
+
+  const getFeederTransactionLinks = (execution: FeederExecution) => {
+    const coreKindLabel = execution.route === 'hc-start-jit-gain' ? 'compile' : 'restore'
+    const rebalanceKindLabel = execution.route === 'hc-start-jit-gain' ? 'restore' : 'compile'
+    const coreLabels =
+      execution.loopTransactionHashes.length > 3
+        ? [`Rebalance ${rebalanceKindLabel}`, `Open ${coreKindLabel}`, 'Arb swap', `Close ${coreKindLabel}`]
+        : [`Open ${coreKindLabel}`, 'Arb swap', `Close ${coreKindLabel}`]
+
+    return [
+      ...execution.loopTransactionHashes.map((hash, index) => ({
+        hash,
+        label: coreLabels[index] ?? `Loop tx ${index + 1}`,
+      })),
+      ...execution.settlement.transactions.map((transaction) => ({
+        hash: transaction.hash,
+        label: transaction.label,
+      })),
+    ]
+  }
+
+  const renderBurstCard = (burst: FeederBurstDisplayItem) => {
+    const isExpanded = expandedBurstIds.has(burst.id)
+    const gainRows = buildBurstGainRows(burst)
+    const burstWindowLabel = formatDuration(burst.newestTimestamp - burst.oldestTimestamp)
+    const blockWindowLabel = formatBlockWindow(burst.newestBlockNumber, burst.oldestBlockNumber)
+    const burnUsdValue = usdFormatter.format(
+      Math.abs(Number(formatUnits(burst.settlementBurned, 18)) * holycUSD)
+    )
+    const usdValue = formatUsdSigned(burst.estimatedUsdGain)
+
+    return (
+      <div key={burst.id} className={styles.txRow}>
+        <div className={styles.txRowHeader}>
+          <div className={styles.txRowMain}>
+            <div className={styles.txRowTitleLine}>
+              <span className={`${styles.sourceBadge} ${styles.sourceBadgeFeeder}`}>{getSourceBadgeLabel(burst.source)}</span>
+              <strong className={styles.burstHeadline}>{burst.loopCount} loops</strong>
+            </div>
+            <span className={styles.txRowSubtext}>
+              {burst.transactionCount} txs · {blockWindowLabel} · {burstWindowLabel}
+            </span>
+          </div>
+          <div className={styles.txRowHeaderMeta}>
+            <div className={styles.txRowMetaGroup}>
+              <span className={styles.txRowTime}>{formatRelativeTime(burst.newestTimestamp)}</span>
+              <button
+                type="button"
+                className={`${styles.burstToggle}${isExpanded ? ` ${styles.burstToggleExpanded}` : ''}`}
+                onClick={() => toggleBurstExpansion(burst.id)}
+                aria-expanded={isExpanded}
+              >
+                {isExpanded ? 'Hide loops' : `View ${burst.loopCount} loops`}
+                <ChevronRight size={14} className={styles.burstToggleIcon} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.valueRow}>
+          <div className={styles.valueCard}>
+            <div className={styles.valueHeader}>
+              <span className={styles.valueLabel}>Burst totals</span>
+              <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>
+                {burst.loopCount} loops · {burst.transactionCount} txs
+              </span>
+            </div>
+            <div className={styles.valueContent}>
+              {renderTokenRows(gainRows, burst.id, { signed: true })}
+              <div className={styles.valueStack}>
+                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
+                <div className={styles.valueBurn}>
+                  <Flame size={14} />
+                  <div className={styles.valueBurnCopy}>
+                    <span className={styles.burnText}>{formatAmount(burst.settlementBurned)} HC</span>
+                    <span className={styles.burnUsd}>{burnUsdValue}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className={styles.burstDetails}>
+            <div className={styles.burstDetailsHeader}>
+              <span className={styles.valueLabel}>Underlying loops</span>
+              <span className={styles.burstDetailsMeta}>
+                {blockWindowLabel} · {burstWindowLabel}
+              </span>
+            </div>
+            {burst.executions.map((execution) => (
+              <div key={execution.transactionHash} className={styles.burstLoopRow}>
+                <div className={styles.burstLoopHeader}>
+                  <div className={styles.burstLoopInfo}>
+                    <strong className={styles.burstLoopTitle}>{getFeederRouteLabel(execution.route)}</strong>
+                    <span className={styles.burstLoopMeta}>
+                      {formatRelativeTime(execution.timestamp)} · {getFeederExecutionTransactionCount(execution)} txs
+                    </span>
+                  </div>
+                  <div className={styles.burstLoopStats}>
+                    <span className={getGainClassName(execution.netTokenSymbol)}>
+                      {formatCompact(execution.netTokenAmount)} {execution.netTokenSymbol}
+                    </span>
+                    <span className={styles.burstLoopBurn}>{formatAmount(execution.settlement.burnedAmount)} HC</span>
+                  </div>
+                </div>
+                <div className={styles.burstHashList}>
+                  {getFeederTransactionLinks(execution).map((transaction) => (
+                    <a
+                      key={`${execution.transactionHash}-${transaction.hash}-${transaction.label}`}
+                      href={`${explorerBase}/tx/${transaction.hash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={styles.burstHashLink}
+                    >
+                      <span className={styles.burstHashLabel}>{transaction.label}</span>
+                      <span>{shortenHex(transaction.hash)}</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const renderDivineManagerExecutionCard = (execution: Extract<ActivityExecution, { source: 'divine-manager' }>) => {
+    const burnAmount = execution.holyBurned
+    const burnUsdValue = usdFormatter.format(
+      Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD)
+    )
+    const gainRows = getExecutionGainRows(execution)
+    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
+
+    return (
+      <div key={execution.transactionHash} className={styles.txRow}>
+        <div className={styles.txRowHeader}>
+          <div className={styles.txRowMain}>
+            <div className={styles.txRowTitleLine}>
+              <span className={`${styles.sourceBadge} ${styles.sourceBadgeManager}`}>{getSourceBadgeLabel(execution.source)}</span>
+            </div>
+            <span className={styles.txRowSubtext}>{shortenHex(execution.transactionHash, 6)}</span>
+          </div>
+          <div className={styles.txRowHeaderMeta}>
+            <div className={styles.txRowMetaGroup}>
+              <span className={styles.txRowTime}>{formatRelativeTime(execution.timestamp)}</span>
+              <a
+                href={`${explorerBase}/tx/${execution.transactionHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.txRowLink}
+              >
+                Otterscan <ExternalLink size={13} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.valueRow}>
+          <div className={styles.valueCard}>
+            <div className={styles.valueHeader}>
+              <span className={styles.valueLabel}>Tokens gained</span>
+              <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
+            </div>
+            <div className={styles.valueContent}>
+              {renderTokenRows(gainRows, execution.transactionHash, { signed: true })}
+              <div className={styles.valueStack}>
+                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
+                <div className={styles.valueBurn}>
+                  <Flame size={14} />
+                  <div className={styles.valueBurnCopy}>
+                    <span className={styles.burnText}>{formatAmount(burnAmount)} HC</span>
+                    <span className={styles.burnUsd}>{burnUsdValue}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderFeederExecutionCard = (execution: FeederExecution) => {
+    const burnAmount = execution.settlement.burnedAmount
+    const burnUsdValue = usdFormatter.format(
+      Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD)
+    )
+    const gainRows = getExecutionGainRows(execution)
+    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
+    const latestVisibleTransaction = getFeederLatestVisibleTransaction(execution)
+
+    return (
+      <div key={execution.transactionHash} className={styles.txRow}>
+        <div className={styles.txRowHeader}>
+          <div className={styles.txRowMain}>
+            <div className={styles.txRowTitleLine}>
+              <span className={`${styles.sourceBadge} ${styles.sourceBadgeFeeder}`}>{getSourceBadgeLabel(execution.source)}</span>
+            </div>
+            <span className={styles.txRowSubtext}>
+              {getFeederRouteLabel(execution.route)} · {getFeederExecutionTransactionCount(execution)} txs ·{' '}
+              {latestVisibleTransaction.isSettlement ? `${latestVisibleTransaction.label} · ` : ''}
+              {shortenHex(latestVisibleTransaction.hash, 6)}
+            </span>
+          </div>
+          <div className={styles.txRowHeaderMeta}>
+            <div className={styles.txRowMetaGroup}>
+              <span className={styles.txRowTime}>{formatRelativeTime(execution.timestamp)}</span>
+              <a
+                href={`${explorerBase}/tx/${latestVisibleTransaction.hash}`}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.txRowLink}
+              >
+                Otterscan <ExternalLink size={13} />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.valueRow}>
+          <div className={styles.valueCard}>
+            <div className={styles.valueHeader}>
+              <span className={styles.valueLabel}>Net token gained</span>
+              <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
+            </div>
+            <div className={styles.valueContent}>
+              {renderTokenRows(gainRows, execution.transactionHash, { signed: true })}
+              <div className={styles.valueStack}>
+                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
+                <div className={styles.valueBurn}>
+                  <Flame size={14} />
+                  <div className={styles.valueBurnCopy}>
+                    <span className={styles.burnText}>{formatAmount(burnAmount)} HC</span>
+                    <span className={styles.burnUsd}>{burnUsdValue}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.divineActivity}>
@@ -324,7 +803,7 @@ export const DivineManagerActivity = ({
 
         {pageItems.map((item) => {
           if (isViewingBurns || isViewingMafia || isViewingDumb) {
-            const burn = item as (typeof burnExecutions)[0]
+            const burn = item as BurnActivityItem
             const tokenAmount = Number(formatUnits(burn.tokenBurned, 18))
             const usdPrice = isViewingBurns ? briahUsdPrice : isViewingMafia ? coinMafiaUsdPrice : dumbUsdPrice
             const usdValue = usdPrice ? usdFormatter.format(tokenAmount * usdPrice) : '—'
@@ -338,7 +817,7 @@ export const DivineManagerActivity = ({
                 <div className={styles.txRowHeader}>
                   <div className={styles.txRowMain}>
                     <p>Burn</p>
-                    <span>{shortenHex(burn.transactionHash, 6)}</span>
+                    <span className={styles.txRowSubtext}>{shortenHex(burn.transactionHash, 6)}</span>
                   </div>
                   <div className={styles.txRowHeaderMeta}>
                     <div className={styles.txRowMetaGroup}>
@@ -373,72 +852,12 @@ export const DivineManagerActivity = ({
             )
           }
 
-          // Arb Row
-          const tx = item as DivineManagerExecution
-          const netHoly = tx.holyIn - tx.holyOut
-          const netJit = tx.jitIn - tx.jitOut
-          const usdNumber =
-            Number(formatUnits(netHoly, 18)) * holycUSD + Number(formatUnits(netJit, 18)) * jitUSD
-          const usdValue = formatUsdSigned(usdNumber)
-          const holyBurnValue = Number(formatUnits(tx.holyBurned, 18)) * holycUSD
-          const burnUsdValue = usdFormatter.format(Math.abs(holyBurnValue))
-
-          return (
-            <div key={tx.transactionHash} className={styles.txRow}>
-              <div className={styles.txRowHeader}>
-                <div className={styles.txRowMain}>
-                  <p>Execute</p>
-                  <span>{shortenHex(tx.transactionHash, 6)}</span>
-                </div>
-                <div className={styles.txRowHeaderMeta}>
-                  <div className={styles.txRowMetaGroup}>
-                    <span className={styles.txRowTime}>{formatRelativeTime(tx.timestamp)}</span>
-                    <a
-                      href={`${explorerBase}/tx/${tx.transactionHash}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.txRowLink}
-                    >
-                      Otterscan <ExternalLink size={13} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.valueRow}>
-                <div className={styles.valueCard}>
-                  <div className={styles.valueHeader}>
-                    <span className={styles.valueLabel}>Tokens gained</span>
-                    <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>
-                      Value gained
-                    </span>
-                  </div>
-                  <div className={styles.valueContent}>
-                    <div className={styles.tokenStack}>
-                      <div className={styles.tokenLine}>
-                        <img src={HolyCLogo} alt="HolyC gained" />
-                        <span className={styles.holyText}>{formatCompact(netHoly)}</span>
-                      </div>
-                      <div className={styles.tokenLine}>
-                        <img src={JITLogo} alt="JIT gained" />
-                        <span className={styles.jitText}>{formatCompact(netJit)}</span>
-                      </div>
-                    </div>
-                    <div className={styles.valueStack}>
-                      <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
-                      <div className={styles.valueBurn}>
-                        <Flame size={14} />
-                        <div className={styles.valueBurnCopy}>
-                          <span className={styles.burnText}>{formatAmount(tx.holyBurned)} HC</span>
-                          <span className={styles.burnUsd}>{burnUsdValue}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
+          const arbItem = item as DisplayFeedItem
+          return isFeederBurstDisplayItem(arbItem)
+            ? renderBurstCard(arbItem)
+            : isFeederExecution(arbItem)
+              ? renderFeederExecutionCard(arbItem)
+              : renderDivineManagerExecutionCard(arbItem)
         })}
       </div>
       {shouldShowLoadMore && (

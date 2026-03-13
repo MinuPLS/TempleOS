@@ -2536,9 +2536,78 @@
   font-weight: 600;
 }
 
-.txRowMain span {
+.txRowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.txRowTitleLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.txRowSubtext {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sourceBadgeManager {
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.16);
+}
+
+.sourceBadgeFeeder {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.settlementBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.settlementBadgeComplete {
+  color: #bbf7d0;
+  border-color: rgba(74, 222, 128, 0.28);
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.settlementBadgePartial {
+  color: #fde68a;
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.16);
+}
+
+.settlementBadgeNone {
+  color: rgba(226, 232, 240, 0.88);
+  border-color: rgba(148, 163, 184, 0.22);
+  background: rgba(51, 65, 85, 0.32);
+}
+
+.burstHeadline {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .txRowHeaderMeta {
@@ -2588,6 +2657,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.valueHeaderStack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .valueLabel {
@@ -2599,6 +2676,75 @@
 
 .valueLabelRight {
   text-align: right;
+}
+
+.summaryMetricSubtext {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.35;
+}
+
+.summaryValueBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.summaryUsdValue {
+  font-size: 24px;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryMetricCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.summaryMetricCardBurn {
+  border-color: rgba(248, 113, 113, 0.2);
+  background: rgba(127, 29, 29, 0.12);
+}
+
+.summaryMetricLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.summaryTokenStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.summaryTokenLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.summaryTokenLine img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
 }
 
 .valueContent {
@@ -2664,6 +2810,155 @@
   font-weight: 500;
 }
 
+.burstToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fde68a;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.burstToggle:hover {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(245, 158, 11, 0.18);
+  color: #fef3c7;
+}
+
+.burstToggleIcon {
+  transition: transform 0.2s ease;
+}
+
+.burstToggleExpanded .burstToggleIcon {
+  transform: rotate(90deg);
+}
+
+.burstDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.burstDetailsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.burstDetailsMeta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.burstLoopRow {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.burstLoopHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.burstLoopInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.burstLoopTitleLine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.burstLoopTitle {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.burstLoopMeta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.burstLoopSummary {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  line-height: 1.35;
+}
+
+.burstLoopStats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  text-align: right;
+}
+
+.burstLoopBurn {
+  color: #fb7185;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.burstHashList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.burstHashLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.5);
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.burstHashLink:hover {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(30, 41, 59, 0.78);
+  color: #f8fafc;
+}
+
+.burstHashLabel {
+  color: rgba(191, 219, 254, 0.92);
+  font-weight: 600;
+}
+
 .valueBurn svg {
   color: rgba(248, 113, 113, 0.95);
   flex-shrink: 0;
@@ -2671,6 +2966,15 @@
 }
 
 @media (max-width: 480px) {
+  .summaryGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summaryValueBlock {
+    align-items: flex-start;
+    text-align: left;
+  }
+
   .valueContent {
     grid-template-columns: minmax(0, 1fr) minmax(120px, auto);
     gap: 14px;
@@ -2678,6 +2982,16 @@
 
   .valueStack {
     min-width: 120px;
+  }
+
+  .burstLoopStats {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .burstToggle {
+    width: 100%;
+    justify-content: center;
   }
 }
 
