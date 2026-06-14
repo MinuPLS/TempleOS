@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getPublicClient } from '@wagmi/core'
+import { formatUnits } from 'viem'
 import { config, pulseChain } from '@/config/wagmi'
+import {
+  DAI_ADDRESS,
+  ERC20_ABI,
+  HOLY_C_ADDRESS,
+  JIT_ADDRESS,
+  UNISWAP_V2_FACTORY_ABI,
+  UNISWAP_V2_FACTORY_ADDRESS,
+  UNISWAP_V2_PAIR_ABI,
+  WPLS_ADDRESS,
+  WPLS_DAI_PAIR_ADDRESS,
+} from '@/config/contracts'
 
 export interface BuyAndBurnExecution {
   transactionHash: string
@@ -46,6 +58,7 @@ const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
 const MAX_RETRIES = 3
 const REFRESH_INTERVAL = 300_000
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 
 type BurnCache = {
   executions: BuyAndBurnExecution[]
@@ -81,6 +94,191 @@ const DUMB_CONFIG: BuyAndBurnConfig = {
   contractAddress: DUMB_BUY_AND_BURN_CONTRACT,
   tokenAddress: DUMB_TOKEN,
   logLabel: 'Dumb',
+}
+
+type PulsePublicClient = NonNullable<ReturnType<typeof getPublicClient>>
+
+type DexscreenerPair = {
+  chainId?: string
+  priceUsd?: string
+  liquidity?: {
+    usd?: number | string
+  }
+}
+
+type PairState = {
+  token0: `0x${string}`
+  token1: `0x${string}`
+  reserves: readonly [bigint, bigint, number]
+}
+
+const isUsablePrice = (price: number | null | undefined): price is number =>
+  typeof price === 'number' && Number.isFinite(price) && price > 0
+
+const getTokenDecimals = async (publicClient: PulsePublicClient, tokenAddress: `0x${string}`) => {
+  try {
+    const decimals = await publicClient.readContract({
+      address: tokenAddress,
+      abi: ERC20_ABI,
+      functionName: 'decimals',
+    })
+    return Number(decimals)
+  } catch (error) {
+    console.warn(`Falling back to 18 decimals for ${tokenAddress}`, error)
+    return 18
+  }
+}
+
+const toDecimalUnits = (amount: bigint, decimals: number) => Number(formatUnits(amount, decimals))
+
+const getPairState = async (publicClient: PulsePublicClient, pairAddress: `0x${string}`): Promise<PairState> => {
+  const [token0, token1, reserves] = await Promise.all([
+    publicClient.readContract({
+      address: pairAddress,
+      abi: UNISWAP_V2_PAIR_ABI,
+      functionName: 'token0',
+    }),
+    publicClient.readContract({
+      address: pairAddress,
+      abi: UNISWAP_V2_PAIR_ABI,
+      functionName: 'token1',
+    }),
+    publicClient.readContract({
+      address: pairAddress,
+      abi: UNISWAP_V2_PAIR_ABI,
+      functionName: 'getReserves',
+    }),
+  ])
+
+  return {
+    token0: token0 as `0x${string}`,
+    token1: token1 as `0x${string}`,
+    reserves: reserves as readonly [bigint, bigint, number],
+  }
+}
+
+const getOrderedReserves = (pairState: PairState, baseToken: `0x${string}`, quoteToken: `0x${string}`) => {
+  const token0 = pairState.token0.toLowerCase()
+  const token1 = pairState.token1.toLowerCase()
+  const base = baseToken.toLowerCase()
+  const quote = quoteToken.toLowerCase()
+
+  if (token0 === base && token1 === quote) {
+    return {
+      baseReserve: pairState.reserves[0],
+      quoteReserve: pairState.reserves[1],
+    }
+  }
+
+  if (token0 === quote && token1 === base) {
+    return {
+      baseReserve: pairState.reserves[1],
+      quoteReserve: pairState.reserves[0],
+    }
+  }
+
+  return null
+}
+
+const fetchDexscreenerTokenUsdPrice = async (tokenAddress: `0x${string}`) => {
+  const priceResponse = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`)
+  if (!priceResponse.ok) return null
+
+  const priceJson = await priceResponse.json()
+  const pairs = Array.isArray(priceJson?.pairs) ? (priceJson.pairs as DexscreenerPair[]) : []
+  const pulsePairs = pairs.filter((pair) => pair?.chainId === 'pulsechain')
+  const candidates = (pulsePairs.length > 0 ? pulsePairs : pairs)
+    .map((pair) => ({
+      price: Number(pair?.priceUsd),
+      liquidityUsd: Number(pair?.liquidity?.usd ?? 0),
+    }))
+    .filter((pair) => isUsablePrice(pair.price))
+    .sort((left, right) => right.liquidityUsd - left.liquidityUsd)
+
+  return candidates[0]?.price ?? null
+}
+
+const fetchWplsUsdPriceFromPulseX = async (publicClient: PulsePublicClient) => {
+  const [pairState, wplsDecimals, daiDecimals] = await Promise.all([
+    getPairState(publicClient, WPLS_DAI_PAIR_ADDRESS),
+    getTokenDecimals(publicClient, WPLS_ADDRESS),
+    getTokenDecimals(publicClient, DAI_ADDRESS),
+  ])
+  const reserves = getOrderedReserves(pairState, WPLS_ADDRESS, DAI_ADDRESS)
+  if (!reserves) return null
+
+  const wplsReserve = toDecimalUnits(reserves.baseReserve, wplsDecimals)
+  const daiReserve = toDecimalUnits(reserves.quoteReserve, daiDecimals)
+  if (!isUsablePrice(wplsReserve) || !isUsablePrice(daiReserve)) return null
+
+  const wplsUsdPrice = daiReserve / wplsReserve
+  return isUsablePrice(wplsUsdPrice) ? wplsUsdPrice : null
+}
+
+const fetchPulseXPairAddress = async (
+  publicClient: PulsePublicClient,
+  tokenAddress: `0x${string}`,
+  quoteTokenAddress: `0x${string}`
+) =>
+  publicClient.readContract({
+    address: UNISWAP_V2_FACTORY_ADDRESS,
+    abi: UNISWAP_V2_FACTORY_ABI,
+    functionName: 'getPair',
+    args: [tokenAddress, quoteTokenAddress],
+  })
+
+const fetchPulseXTokenUsdPriceFromQuote = async (
+  publicClient: PulsePublicClient,
+  tokenAddress: `0x${string}`,
+  quoteTokenAddress: `0x${string}`,
+  quoteUsdPrice: number | null
+) => {
+  if (!isUsablePrice(quoteUsdPrice)) return null
+  if (tokenAddress.toLowerCase() === quoteTokenAddress.toLowerCase()) return quoteUsdPrice
+
+  const pairAddress = await fetchPulseXPairAddress(publicClient, tokenAddress, quoteTokenAddress)
+  if (pairAddress.toLowerCase() === ZERO_ADDRESS) return null
+
+  const [pairState, tokenDecimals, quoteDecimals] = await Promise.all([
+    getPairState(publicClient, pairAddress as `0x${string}`),
+    getTokenDecimals(publicClient, tokenAddress),
+    getTokenDecimals(publicClient, quoteTokenAddress),
+  ])
+  const reserves = getOrderedReserves(pairState, tokenAddress, quoteTokenAddress)
+  if (!reserves) return null
+
+  const tokenReserve = toDecimalUnits(reserves.baseReserve, tokenDecimals)
+  const quoteReserve = toDecimalUnits(reserves.quoteReserve, quoteDecimals)
+  if (!isUsablePrice(tokenReserve) || !isUsablePrice(quoteReserve)) return null
+
+  const tokenUsdPrice = (quoteReserve / tokenReserve) * quoteUsdPrice
+  return isUsablePrice(tokenUsdPrice) ? tokenUsdPrice : null
+}
+
+const fetchPulseXTokenUsdPrice = async (tokenAddress: `0x${string}`) => {
+  const publicClient = getPublicClient(config, { chainId: pulseChain.id })
+  if (!publicClient) return null
+
+  const wplsUsdPrice = await fetchWplsUsdPriceFromPulseX(publicClient)
+  const directWplsPrice = await fetchPulseXTokenUsdPriceFromQuote(
+    publicClient,
+    tokenAddress,
+    WPLS_ADDRESS,
+    wplsUsdPrice
+  )
+  if (isUsablePrice(directWplsPrice)) return directWplsPrice
+
+  const [jitUsdPrice, holycUsdPrice] = await Promise.all([
+    fetchPulseXTokenUsdPriceFromQuote(publicClient, JIT_ADDRESS, WPLS_ADDRESS, wplsUsdPrice),
+    fetchPulseXTokenUsdPriceFromQuote(publicClient, HOLY_C_ADDRESS, WPLS_ADDRESS, wplsUsdPrice),
+  ])
+
+  const partnerQuotePrices = [
+    await fetchPulseXTokenUsdPriceFromQuote(publicClient, tokenAddress, JIT_ADDRESS, jitUsdPrice),
+    await fetchPulseXTokenUsdPriceFromQuote(publicClient, tokenAddress, HOLY_C_ADDRESS, holycUsdPrice),
+  ]
+
+  return partnerQuotePrices.find(isUsablePrice) ?? null
 }
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -141,27 +339,31 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
   const fetchPrice = useCallback(async () => {
     if (!buyAndBurnConfig.tokenAddress) return
 
+    let resolvedPrice: number | null = null
+
     try {
-      const priceResponse = await fetch(
-        `https://api.dexscreener.com/latest/dex/tokens/${buyAndBurnConfig.tokenAddress}`
-      )
-      if (priceResponse.ok) {
-        const priceJson = await priceResponse.json()
-        const price = priceJson?.pairs?.find((pair: { priceUsd?: string }) => pair?.priceUsd)?.priceUsd
-        const parsedPrice = price ? Number(price) : null
-        if (parsedPrice && Number.isFinite(parsedPrice)) {
-          setTokenUsdPrice(parsedPrice)
-          setCachedState(buyAndBurnConfig.cacheKey, {
-            executions: executionsRef.current,
-            nextFromBlock: nextFromBlockRef.current,
-            lastUpdated: lastUpdatedRef.current,
-            hasMore: hasMoreRef.current,
-            tokenUsdPrice: parsedPrice,
-          })
-        }
+      resolvedPrice = await fetchDexscreenerTokenUsdPrice(buyAndBurnConfig.tokenAddress)
+    } catch (dexscreenerError) {
+      console.warn(`Dexscreener price unavailable for ${buyAndBurnConfig.logLabel}:`, dexscreenerError)
+    }
+
+    if (!isUsablePrice(resolvedPrice)) {
+      try {
+        resolvedPrice = await fetchPulseXTokenUsdPrice(buyAndBurnConfig.tokenAddress)
+      } catch (pulseXError) {
+        console.error(`PulseX on-chain price unavailable for ${buyAndBurnConfig.logLabel}:`, pulseXError)
       }
-    } catch (priceError) {
-      console.error(`Error fetching ${buyAndBurnConfig.logLabel} price:`, priceError)
+    }
+
+    if (isUsablePrice(resolvedPrice)) {
+      setTokenUsdPrice(resolvedPrice)
+      setCachedState(buyAndBurnConfig.cacheKey, {
+        executions: executionsRef.current,
+        nextFromBlock: nextFromBlockRef.current,
+        lastUpdated: lastUpdatedRef.current,
+        hasMore: hasMoreRef.current,
+        tokenUsdPrice: resolvedPrice,
+      })
     }
   }, [buyAndBurnConfig.cacheKey, buyAndBurnConfig.logLabel, buyAndBurnConfig.tokenAddress])
 

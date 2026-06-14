@@ -20,6 +20,7 @@ type BurnActivityItem = {
   transactionHash: string
   timestamp: number
   tokenBurned: bigint
+  jitSpent: bigint
 }
 
 type FeederExecution = Extract<ActivityExecution, { source: 'feeder-bot' }>
@@ -97,6 +98,9 @@ const formatUsdSigned = (value: number) => {
   const formatted = usdFormatter.format(normalized)
   return normalized > 0 ? `+ ${formatted}` : formatted
 }
+
+const isUsableUsdValue = (value: number | null | undefined): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0
 
 const formatDuration = (durationMs: number) => {
   const totalSeconds = Math.max(0, Math.round(durationMs / 1000))
@@ -787,7 +791,13 @@ export const DivineManagerActivity = ({
             const burn = item as BurnActivityItem
             const tokenAmount = Number(formatUnits(burn.tokenBurned, 18))
             const usdPrice = isViewingBurns ? briahUsdPrice : isViewingMafia ? coinMafiaUsdPrice : dumbUsdPrice
-            const usdValue = usdPrice ? usdFormatter.format(tokenAmount * usdPrice) : '—'
+            const tokenPriceUsdValue = isUsableUsdValue(usdPrice) ? tokenAmount * usdPrice : null
+            const onChainUsdValue = Number(formatUnits(burn.jitSpent, 18)) * jitUSD
+            const usdValue = isUsableUsdValue(tokenPriceUsdValue)
+              ? usdFormatter.format(tokenPriceUsdValue)
+              : isUsableUsdValue(onChainUsdValue)
+                ? usdFormatter.format(onChainUsdValue)
+                : '—'
             const tokenLabel = isViewingBurns ? 'Briah burned' : isViewingMafia ? 'CoinMafia burned' : 'Dumb burned'
             const tokenSymbol = isViewingBurns ? 'BRIAH' : isViewingMafia ? 'COINMAFIA' : 'DUMB'
             const tokenLogo = isViewingBurns ? BriahLogo : isViewingMafia ? CoinMafiaLogo : DumbLogo
