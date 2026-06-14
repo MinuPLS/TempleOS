@@ -137,13 +137,19 @@ const getSourceBadgeLabel = (source: ActivityExecution['source']) =>
 
 const getTokenLogo = (symbol: 'HOLYC' | 'JIT') => (symbol === 'HOLYC' ? HolyCLogo : JITLogo)
 
-const getExecutionGainRows = (execution: ActivityExecution): DisplayGainRow[] =>
-  isFeederExecution(execution)
-    ? [{ symbol: execution.netTokenSymbol, amount: execution.netTokenAmount }]
-    : [
-        { symbol: 'HOLYC', amount: execution.holyIn - execution.holyOut },
-        { symbol: 'JIT', amount: execution.jitIn - execution.jitOut },
-      ]
+const getExecutionGainRows = (execution: ActivityExecution): DisplayGainRow[] => {
+  if (isFeederExecution(execution)) {
+    return [{ symbol: execution.netTokenSymbol, amount: execution.netTokenAmount }]
+  }
+
+  const gainRows: DisplayGainRow[] = [
+    { symbol: 'HOLYC', amount: execution.holyIn - execution.holyOut },
+    { symbol: 'JIT', amount: execution.jitIn - execution.jitOut },
+  ]
+  const nonZeroGainRows = gainRows.filter((row) => row.amount !== 0n)
+
+  return nonZeroGainRows.length > 0 ? nonZeroGainRows : [{ symbol: 'HOLYC', amount: 0n }]
+}
 
 const getFeederExecutionUsdGain = (execution: FeederExecution, holycUSD: number, jitUSD: number) =>
   Number(formatUnits(execution.netTokenAmount, 18)) * (execution.netTokenSymbol === 'HOLYC' ? holycUSD : jitUSD)
@@ -459,6 +465,26 @@ export const DivineManagerActivity = ({
     </div>
   )
 
+  const renderValueContent = (gainRows: DisplayGainRow[], itemKey: string, usdValue: string, burnAmount: bigint) => {
+    const burnUsdValue = usdFormatter.format(Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD))
+
+    return (
+      <div className={styles.valueContent}>
+        {renderTokenRows(gainRows, itemKey, { signed: true })}
+        <div className={styles.valueStack}>
+          <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
+          <div className={styles.valueBurn}>
+            <Flame size={14} />
+            <div className={styles.valueBurnCopy}>
+              <span className={styles.burnText}>{formatAmount(burnAmount)} HC</span>
+              <span className={styles.burnUsd}>{burnUsdValue}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const getFeederTransactionLinks = (execution: FeederExecution) => {
     const coreKindLabel = execution.route === 'hc-start-jit-gain' ? 'compile' : 'restore'
     const rebalanceKindLabel = execution.route === 'hc-start-jit-gain' ? 'restore' : 'compile'
@@ -484,9 +510,6 @@ export const DivineManagerActivity = ({
     const gainRows = buildBurstGainRows(burst)
     const burstWindowLabel = formatDuration(burst.newestTimestamp - burst.oldestTimestamp)
     const blockWindowLabel = formatBlockWindow(burst.newestBlockNumber, burst.oldestBlockNumber)
-    const burnUsdValue = usdFormatter.format(
-      Math.abs(Number(formatUnits(burst.settlementBurned, 18)) * holycUSD)
-    )
     const usdValue = formatUsdSigned(burst.estimatedUsdGain)
 
     return (
@@ -525,19 +548,7 @@ export const DivineManagerActivity = ({
                 {burst.loopCount} loops · {burst.transactionCount} txs
               </span>
             </div>
-            <div className={styles.valueContent}>
-              {renderTokenRows(gainRows, burst.id, { signed: true })}
-              <div className={styles.valueStack}>
-                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
-                <div className={styles.valueBurn}>
-                  <Flame size={14} />
-                  <div className={styles.valueBurnCopy}>
-                    <span className={styles.burnText}>{formatAmount(burst.settlementBurned)} HC</span>
-                    <span className={styles.burnUsd}>{burnUsdValue}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {renderValueContent(gainRows, burst.id, usdValue, burst.settlementBurned)}
           </div>
         </div>
 
@@ -590,9 +601,6 @@ export const DivineManagerActivity = ({
 
   const renderDivineManagerExecutionCard = (execution: Extract<ActivityExecution, { source: 'divine-manager' }>) => {
     const burnAmount = execution.holyBurned
-    const burnUsdValue = usdFormatter.format(
-      Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD)
-    )
     const gainRows = getExecutionGainRows(execution)
     const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
 
@@ -626,19 +634,7 @@ export const DivineManagerActivity = ({
               <span className={styles.valueLabel}>Tokens gained</span>
               <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
             </div>
-            <div className={styles.valueContent}>
-              {renderTokenRows(gainRows, execution.transactionHash, { signed: true })}
-              <div className={styles.valueStack}>
-                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
-                <div className={styles.valueBurn}>
-                  <Flame size={14} />
-                  <div className={styles.valueBurnCopy}>
-                    <span className={styles.burnText}>{formatAmount(burnAmount)} HC</span>
-                    <span className={styles.burnUsd}>{burnUsdValue}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)}
           </div>
         </div>
       </div>
@@ -647,9 +643,6 @@ export const DivineManagerActivity = ({
 
   const renderFeederExecutionCard = (execution: FeederExecution) => {
     const burnAmount = execution.settlement.burnedAmount
-    const burnUsdValue = usdFormatter.format(
-      Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD)
-    )
     const gainRows = getExecutionGainRows(execution)
     const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
     const latestVisibleTransaction = getFeederLatestVisibleTransaction(execution)
@@ -688,19 +681,7 @@ export const DivineManagerActivity = ({
               <span className={styles.valueLabel}>Net token gained</span>
               <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
             </div>
-            <div className={styles.valueContent}>
-              {renderTokenRows(gainRows, execution.transactionHash, { signed: true })}
-              <div className={styles.valueStack}>
-                <strong className={`${styles.profitText} ${styles.valueUsd}`}>{usdValue}</strong>
-                <div className={styles.valueBurn}>
-                  <Flame size={14} />
-                  <div className={styles.valueBurnCopy}>
-                    <span className={styles.burnText}>{formatAmount(burnAmount)} HC</span>
-                    <span className={styles.burnUsd}>{burnUsdValue}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)}
           </div>
         </div>
       </div>
