@@ -393,6 +393,41 @@ export const HOLYC_ABI = [
 
 export const DIVINE_MANAGER_ABI = [
   {
+    type: 'function',
+    name: 'splitDestination',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address', name: '' }],
+  },
+  {
+    type: 'function',
+    name: 'splitBps',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'uint16', name: '' }],
+  },
+  {
+    type: 'function',
+    name: 'HOLYC',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address', name: '' }],
+  },
+  {
+    type: 'function',
+    name: 'JIT',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address', name: '' }],
+  },
+  {
+    type: 'function',
+    name: 'WPLS',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ type: 'address', name: '' }],
+  },
+  {
     anonymous: false,
     inputs: [
       { indexed: true, internalType: 'bytes32', name: 'strategyId', type: 'bytes32' },

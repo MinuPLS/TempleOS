@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { formatUnits } from 'viem'
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame, Workflow } from 'lucide-react'
 import type { ActivityExecution } from '@/hooks/useDivineManagerActivity'
 import { useBuyAndBurnActivity, useCoinMafiaBuyAndBurnActivity, useDumbBuyAndBurnActivity } from '@/hooks/useBuyAndBurnActivity'
 import { formatRelativeTime } from '@/lib/time'
+import { ArbFlowInline } from '../ArbFlow/ArbFlowInline'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import BriahLogo from '../../assets/TokenLogos/Briah.png'
@@ -311,6 +313,7 @@ export const DivineManagerActivity = ({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [viewMode, setViewMode] = useState<'arbs' | 'burns' | 'mafia' | 'dumb'>('arbs')
   const [expandedBurstIds, setExpandedBurstIds] = useState<Set<string>>(new Set())
+  const [flowTxHash, setFlowTxHash] = useState<string | null>(null)
   const isViewingBurns = viewMode === 'burns'
   const isViewingMafia = viewMode === 'mafia'
   const isViewingDumb = viewMode === 'dumb'
@@ -607,6 +610,9 @@ export const DivineManagerActivity = ({
     const burnAmount = execution.holyBurned
     const gainRows = getExecutionGainRows(execution)
     const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
+    const isFlowOpen = flowTxHash === execution.transactionHash
+    const toggleFlow = () =>
+      setFlowTxHash((prev) => (prev === execution.transactionHash ? null : execution.transactionHash))
 
     return (
       <div key={execution.transactionHash} className={styles.txRow}>
@@ -614,6 +620,15 @@ export const DivineManagerActivity = ({
           <div className={styles.txRowMain}>
             <div className={styles.txRowTitleLine}>
               <span className={`${styles.sourceBadge} ${styles.sourceBadgeManager}`}>{getSourceBadgeLabel(execution.source)}</span>
+              <button
+                type="button"
+                className={`${styles.viewFlowButton}${isFlowOpen ? ` ${styles.viewFlowButtonActive}` : ''}`}
+                onClick={toggleFlow}
+                aria-expanded={isFlowOpen}
+                aria-label={isFlowOpen ? 'Hide arb flow' : 'View arb flow'}
+              >
+                <Workflow size={12} /> {isFlowOpen ? 'Hide flow' : 'View flow'}
+              </button>
             </div>
             <span className={styles.txRowSubtext}>{shortenHex(execution.transactionHash, 6)}</span>
           </div>
@@ -632,15 +647,39 @@ export const DivineManagerActivity = ({
           </div>
         </div>
 
-        <div className={styles.valueRow}>
-          <div className={styles.valueCard}>
-            <div className={styles.valueHeader}>
-              <span className={styles.valueLabel}>Tokens gained</span>
-              <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
-            </div>
-            {renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)}
-          </div>
-        </div>
+        <motion.div layout className={styles.valueRow} style={{ overflow: 'hidden' }}>
+          <AnimatePresence mode="wait" initial={false}>
+            {isFlowOpen ? (
+              <motion.div
+                key="flow"
+                style={{ width: '100%' }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}
+              >
+                <div className={styles.valueCard}>
+                  <ArbFlowInline txHash={execution.transactionHash} />
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="summary"
+                className={styles.valueCard}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}
+              >
+                <div className={styles.valueHeader}>
+                  <span className={styles.valueLabel}>Tokens gained</span>
+                  <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
+                </div>
+                {renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     )
   }

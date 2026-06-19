@@ -1,0 +1,739 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 8, 16, 0.82);
+  backdrop-filter: blur(10px);
+  animation: overlayFadeIn 0.25s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  width: min(940px, 94vw);
+  max-height: 90vh;
+  background: rgba(15, 15, 25, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  animation: modalSlideIn 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+@keyframes modalSlideIn {
+  from { transform: translateY(24px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.routeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: rgba(59, 130, 246, 0.14);
+  color: #bfdbfe;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.txHash {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: ui-monospace, monospace;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.closeButton:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+}
+
+.paneContainer {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.paneTrack {
+  display: flex;
+  height: 100%;
+  width: 200%;
+  will-change: transform;
+}
+
+.pane {
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pane::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+
+.paneNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.navButton:hover {
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(30, 41, 59, 0.6);
+  color: #f8fafc;
+}
+
+.navButtonActive {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(59, 130, 246, 0.16);
+  color: #bfdbfe;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.2s;
+  cursor: pointer;
+}
+
+.dotActive {
+  background: #60a5fa;
+}
+
+/* ===== Summary pane ===== */
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summaryLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.tokenRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tokenRow img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.holyText { color: rgba(147, 197, 253, 0.95); font-weight: 600; }
+.jitText { color: rgba(253, 186, 116, 0.95); font-weight: 600; }
+.profitText { color: #4ade80; font-weight: 600; }
+.burnText { color: #fb7185; font-weight: 600; }
+.wplsText { color: rgba(167, 139, 250, 0.95); font-weight: 600; }
+
+.valueUsd {
+  font-size: 22px;
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.burnRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.burnRow svg {
+  color: rgba(248, 113, 113, 0.95);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.burnCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.burnUsd {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.deltaList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deltaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.deltaRow img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.deltaPositive { color: #4ade80; }
+.deltaNegative { color: #fb7185; }
+
+.routeDescription {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+}
+
+.routeDescription strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== Flow graph ===== */
+
+.graphContainer {
+  position: relative;
+  width: 100%;
+  min-height: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.graphSvg {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  overflow: visible;
+}
+
+.graphLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.graphError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 300px;
+  color: rgba(248, 113, 113, 0.9);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.nodeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  fill: rgba(255, 255, 255, 0.85);
+  text-anchor: middle;
+}
+
+.nodeSubLabel {
+  font-size: 9px;
+  fill: rgba(255, 255, 255, 0.5);
+  text-anchor: middle;
+}
+
+.edgeLabel {
+  font-size: 10px;
+  fill: rgba(255, 255, 255, 0.6);
+  text-anchor: middle;
+}
+
+.edgeLine {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+.edgeLineActive {
+  opacity: 0.6;
+}
+
+.viewFlowButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  background: rgba(59, 130, 246, 0.12);
+  color: #bfdbfe;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.15s;
+}
+
+.viewFlowButton:hover {
+  border-color: rgba(96, 165, 250, 0.55);
+  background: rgba(59, 130, 246, 0.2);
+  color: #dbeafe;
+  transform: translateY(-1px);
+}
+
+.tokenLogoImg {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tokenLogoFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 10px;
+  color: white;
+  user-select: none;
+}
+
+.legStep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 12px;
+}
+
+.legStepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.2);
+  color: #bfdbfe;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.legStepLabel {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.legStepAmount {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.legsList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.warningsBox {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.08);
+  font-size: 12px;
+  color: rgba(253, 230, 138, 0.9);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .modal {
+    max-height: 94vh;
+    border-radius: 16px;
+  }
+
+  .header {
+    padding: 12px 14px;
+  }
+
+  .pane {
+    padding: 14px;
+  }
+}
+
+/* ===== Inline (in-card) sequenced flow ===== */
+
+.inlineFlow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.inlineHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.inlineHeaderNote {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.inlineHeaderNote strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 700;
+}
+
+.inlineGraphWrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.flowSvg {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  overflow: visible;
+  display: block;
+}
+
+.stepCaption {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.stepCaptionTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.stepCaptionHeading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stepNav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.stepIndex {
+  font-variant-numeric: tabular-nums;
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.stepDetail {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.58);
+  line-height: 1.4;
+}
+
+.stepAmount {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepFee {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fda4af;
+  font-variant-numeric: tabular-nums;
+}
+
+.flowControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flowCtrlBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.flowCtrlBtn:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(59, 130, 246, 0.16);
+  color: #dbeafe;
+}
+
+.flowCtrlBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.flowDots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  flex-wrap: wrap;
+}
+
+.flowDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.flowDot:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.flowDotActive {
+  background: #60a5fa;
+  transform: scale(1.3);
+}
+
+.flowDotDone {
+  background: rgba(96, 165, 250, 0.5);
+}
+
+.inlineLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+}
+
+.inlineError {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 4px;
+  color: rgba(248, 113, 113, 0.9);
+  font-size: 13px;
+}
+
+/* ===== Settlement summary (where the proceeds went) ===== */
+
+.settlementPanel {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  transition: opacity 0.25s ease;
+}
+
+.settlementCard {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.settlementCardSplit {
+  border-color: rgba(34, 211, 238, 0.25);
+  background: rgba(8, 51, 68, 0.18);
+}
+
+.settlementCardBurn {
+  border-color: rgba(251, 113, 133, 0.28);
+  background: rgba(127, 29, 29, 0.14);
+}
+
+.settlementPanelActive .settlementCardSplit {
+  border-color: rgba(34, 211, 238, 0.55);
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.15);
+}
+
+.settlementPanelActive .settlementCardBurn {
+  border-color: rgba(251, 113, 133, 0.55);
+  box-shadow: 0 0 0 1px rgba(251, 113, 133, 0.15);
+}
+
+.settlementLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.settlementCardSplit .settlementLabel svg {
+  color: #22d3ee;
+}
+
+.settlementCardBurn .settlementLabel svg {
+  color: #fb7185;
+}
+
+.settlementTokens {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settlementToken {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+}
