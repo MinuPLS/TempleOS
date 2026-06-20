@@ -3,7 +3,17 @@ import {
   metaMaskWallet,
   rabbyWallet,
 } from '@rainbow-me/rainbowkit/wallets';
-import { defineChain } from 'viem';
+import { defineChain, fallback, http } from 'viem';
+
+// The official RPC stays first so happy-path behaviour is unchanged. The
+// remaining endpoints are only consulted when an earlier one fails (rank:false),
+// adding redundancy for the heavy on-chain activity scans without altering the
+// primary read path.
+const PULSECHAIN_RPC_URLS = [
+  'https://rpc.pulsechain.com',
+  'https://rpc-pulsechain.g4mm4.io',
+  'https://pulsechain-rpc.publicnode.com',
+];
 
 export const pulseChain = defineChain({
   id: 369,
@@ -15,7 +25,7 @@ export const pulseChain = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ['https://rpc.pulsechain.com'],
+      http: PULSECHAIN_RPC_URLS,
     },
   },
   blockExplorers: {
@@ -36,6 +46,12 @@ export const config = getDefaultConfig({
   appName: 'TempleOS Frontend',
   projectId: import.meta.env.VITE_PROJECT_ID,
   chains: [pulseChain],
+  transports: {
+    [pulseChain.id]: fallback(
+      PULSECHAIN_RPC_URLS.map((url) => http(url)),
+      { rank: false }
+    ),
+  },
   wallets: [
     {
       groupName: 'Suggested',

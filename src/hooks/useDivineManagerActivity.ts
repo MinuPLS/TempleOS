@@ -117,6 +117,7 @@ type ActivityCache = {
   nextFromBlock: FeedCursor
   lastUpdated: number | null
   hasMore: boolean
+  latestScannedBlock: bigint | null
 }
 
 type RawLog = {
@@ -159,12 +160,20 @@ type FeederTxSummary = {
 const BLOCK_CHUNK = 2_500n
 const MIN_BLOCK_CHUNK = 250n
 const REFRESH_INTERVAL = 300_000
-const TARGET_EXECUTION_COUNT = 100
 const MAX_BATCHES_PER_FETCH = 40
 const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
 const MAX_RETRIES = 3
 const FEEDER_CURSOR_OVERLAP = 128n
+// Small overlap re-scanned on an incremental refresh to absorb reorgs / off-by-one.
+const DIVINE_TIP_OVERLAP = 8n
+// A cold start loads the first 7 pages (PAGE_SIZE 5 in the feed) of arbs; deeper
+// history is fetched on demand via loadMore, keeping the initial paint fast.
+const COLD_START_TARGET = 35
+const LOAD_MORE_INCREMENT = 35
+// If the tip gap exceeds one incremental window (or is negative, e.g. a reorg) we
+// cold-start straight to the latest arbs instead of bridging a huge stretch.
+const INCREMENTAL_MAX_GAP = BLOCK_CHUNK * BigInt(MAX_BATCHES_PER_FETCH)
 const MAX_FEEDER_CORE_NONCE_GAP = 4
 const MAX_FEEDER_LOOP_NONCE_SPAN = 6
 const MAX_FEEDER_LOOP_BLOCK_SPAN = 128n
@@ -203,6 +212,29 @@ const PAIR_METADATA: Record<string, { key: PoolKey; label: string; short: string
   },
 }
 
+const getScanBatchLimit = ({
+  existingCount,
+  ignoreTargetCount,
+  latestBlock,
+  minBlock,
+}: {
+  existingCount: number
+  ignoreTargetCount: boolean
+  latestBlock: bigint
+  minBlock: bigint
+}) => {
+  if (ignoreTargetCount) {
+    const rangeSize = latestBlock >= minBlock ? latestBlock - minBlock + 1n : 0n
+    const batchesAtSmallestChunk = Number((rangeSize + MIN_BLOCK_CHUNK - 1n) / MIN_BLOCK_CHUNK)
+    return Math.max(MAX_BATCHES_PER_FETCH, batchesAtSmallestChunk)
+  }
+
+  return existingCount === 0 ? MAX_BATCHES_PER_FETCH * EMPTY_BATCH_MULTIPLIER : MAX_BATCHES_PER_FETCH
+}
+
+// In-memory only: survives client-side navigation within a session (warm refresh),
+// but a full page reload re-initialises the module to null, which triggers a cold
+// start — exactly the behaviour we want for a hard refresh.
 let cachedActivityState: ActivityCache | null = null
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
@@ -493,6 +525,8 @@ const fetchDivineExecutions = async ({
   loadMore,
   cursor,
   targetCount,
+  minBlock = 0n,
+  ignoreTargetCount = false,
 }: {
   publicClient: PulsePublicClient
   existingExecutions: Map<string, DivineManagerExecution>
@@ -500,6 +534,8 @@ const fetchDivineExecutions = async ({
   loadMore: boolean
   cursor: bigint | null
   targetCount: number
+  minBlock?: bigint
+  ignoreTargetCount?: boolean
 }) => {
   if (loadMore && cursor === null) {
     return {
@@ -509,14 +545,19 @@ const fetchDivineExecutions = async ({
   }
 
   const executionMap = new Map(existingExecutions)
-  const batchLimit = executionMap.size === 0 ? MAX_BATCHES_PER_FETCH * EMPTY_BATCH_MULTIPLIER : MAX_BATCHES_PER_FETCH
+  const batchLimit = getScanBatchLimit({
+    existingCount: executionMap.size,
+    ignoreTargetCount,
+    latestBlock,
+    minBlock,
+  })
   let toBlock = loadMore && cursor !== null ? cursor : latestBlock
   let batches = 0
   let localNextFrom: bigint | null = cursor
   let currentChunk = BLOCK_CHUNK
 
-  while (toBlock >= 0n && batches < batchLimit && executionMap.size < targetCount) {
-    const fromBlock = toBlock >= currentChunk ? toBlock - currentChunk + 1n : 0n
+  while (toBlock >= minBlock && batches < batchLimit && (ignoreTargetCount || executionMap.size < targetCount)) {
+    const fromBlock = toBlock - currentChunk + 1n > minBlock ? toBlock - currentChunk + 1n : minBlock
     let logs: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>
 
     try {
@@ -543,11 +584,17 @@ const fetchDivineExecutions = async ({
       throw error
     }
 
-    if (logs.length) {
+    // Skip logs whose execution we already hold so a refresh never re-fetches
+    // block + receipt for transactions already in the cache.
+    const freshLogs = logs.filter(
+      (log: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]) =>
+        log.transactionHash && !executionMap.has(log.transactionHash)
+    )
+    if (freshLogs.length) {
       const CHUNK_SIZE = 2
-      for (let index = 0; index < logs.length; index += CHUNK_SIZE) {
+      for (let index = 0; index < freshLogs.length; index += CHUNK_SIZE) {
         const result = await Promise.all(
-          logs
+          freshLogs
             .slice(index, index + CHUNK_SIZE)
             .map((log: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]) => buildDivineExecution(publicClient, log))
         )
@@ -1114,6 +1161,8 @@ const fetchFeederExecutions = async ({
   loadMore,
   cursor,
   targetCount,
+  minBlock = 0n,
+  ignoreTargetCount = false,
 }: {
   publicClient: PulsePublicClient
   existingExecutions: Map<string, FeederArbExecution>
@@ -1121,6 +1170,8 @@ const fetchFeederExecutions = async ({
   loadMore: boolean
   cursor: bigint | null
   targetCount: number
+  minBlock?: bigint
+  ignoreTargetCount?: boolean
 }) => {
   if (loadMore && cursor === null) {
     return {
@@ -1136,15 +1187,20 @@ const fetchFeederExecutions = async ({
       ...execution.settlement.transactions.map((transaction) => transaction.hash),
     ])
   )
-  const batchLimit = executionMap.size === 0 ? MAX_BATCHES_PER_FETCH * EMPTY_BATCH_MULTIPLIER : MAX_BATCHES_PER_FETCH
+  const batchLimit = getScanBatchLimit({
+    existingCount: executionMap.size,
+    ignoreTargetCount,
+    latestBlock,
+    minBlock,
+  })
   const collectedTransactions = new Map<string, FeederTxSummary>()
   let toBlock = loadMore && cursor !== null ? cursor : latestBlock
   let batches = 0
   let localNextFrom: bigint | null = cursor
   let currentChunk = BLOCK_CHUNK
 
-  while (toBlock >= 0n && batches < batchLimit && executionMap.size < targetCount) {
-    const fromBlock = toBlock >= currentChunk ? toBlock - currentChunk + 1n : 0n
+  while (toBlock >= minBlock && batches < batchLimit && (ignoreTargetCount || executionMap.size < targetCount)) {
+    const fromBlock = toBlock - currentChunk + 1n > minBlock ? toBlock - currentChunk + 1n : minBlock
     let hashes: `0x${string}`[] = []
 
     try {
@@ -1165,11 +1221,15 @@ const fetchFeederExecutions = async ({
       throw error
     }
 
-    if (hashes.length) {
+    // Skip hashes already grouped into a known execution or already summarized
+    // earlier in this pass; the grouping step below still sees them via
+    // collectedTransactions / claimedHashes, so loop detection is unaffected.
+    const freshHashes = hashes.filter((hash) => !claimedHashes.has(hash) && !collectedTransactions.has(hash))
+    if (freshHashes.length) {
       const CHUNK_SIZE = 2
-      for (let index = 0; index < hashes.length; index += CHUNK_SIZE) {
+      for (let index = 0; index < freshHashes.length; index += CHUNK_SIZE) {
         const summaries = await Promise.all(
-          hashes.slice(index, index + CHUNK_SIZE).map((hash) => summarizeFeederTransaction(publicClient, hash))
+          freshHashes.slice(index, index + CHUNK_SIZE).map((hash) => summarizeFeederTransaction(publicClient, hash))
         )
         summaries.forEach((summary) => {
           if (summary) {
@@ -1226,6 +1286,7 @@ export const useDivineManagerActivity = () => {
   const [nextFromBlock, setNextFromBlock] = useState<FeedCursor>(cachedActivityState?.nextFromBlock ?? emptyCursor)
   const executionsRef = useRef<ActivityExecution[]>([])
   const nextFromBlockRef = useRef<FeedCursor>(emptyCursor)
+  const latestScannedBlockRef = useRef<bigint | null>(cachedActivityState?.latestScannedBlock ?? null)
   const isFetchingRef = useRef(false)
   const hasCachedDataRef = useRef(Boolean(cachedActivityState?.executions?.length))
 
@@ -1257,7 +1318,23 @@ export const useDivineManagerActivity = () => {
       }
 
       const latestBlock = await withRetry(() => publicClient.getBlockNumber())
-      const existingExecutions = reset ? [] : executionsRef.current
+
+      // Pick the mode for this fetch:
+      //  - cold start: explicit reset, no warm tip (e.g. a hard page reload), or the
+      //    gap since our last scan is bigger than one incremental window / negative
+      //    (a reorg). We just scan the latest COLD_START_TARGET arbs from the tip.
+      //  - incremental refresh: a warm in-tab refresh — only sweep the new blocks at
+      //    the tip and merge, so the component is not rebuilt from scratch.
+      //  - loadMore: walk older history on demand.
+      const previousTip = latestScannedBlockRef.current
+      const tipGap = previousTip !== null ? latestBlock - previousTip : null
+      const isColdStart =
+        reset ||
+        (!loadMore &&
+          (previousTip === null || tipGap === null || tipGap < 0n || tipGap > INCREMENTAL_MAX_GAP))
+      const isIncrementalRefresh = !loadMore && !isColdStart && previousTip !== null
+
+      const existingExecutions = isColdStart ? [] : executionsRef.current
       const divineExisting = new Map(
         existingExecutions
           .filter((execution): execution is DivineManagerExecution => execution.source === 'divine-manager')
@@ -1269,9 +1346,22 @@ export const useDivineManagerActivity = () => {
           .map((execution) => [execution.transactionHash, execution])
       )
 
+      const divineMinBlock = isIncrementalRefresh
+        ? previousTip! > DIVINE_TIP_OVERLAP
+          ? previousTip! - DIVINE_TIP_OVERLAP
+          : 0n
+        : 0n
+      const feederMinBlock = isIncrementalRefresh
+        ? previousTip! > FEEDER_CURSOR_OVERLAP
+          ? previousTip! - FEEDER_CURSOR_OVERLAP
+          : 0n
+        : 0n
+
+      // Cold start loads the first 7 pages; loadMore extends the loaded set; an
+      // incremental refresh ignores the target and sweeps the whole tip range.
       const sourceTargetCount = loadMore
-        ? Math.max(TARGET_EXECUTION_COUNT, Math.max(divineExisting.size, feederExisting.size) + TARGET_EXECUTION_COUNT)
-        : Math.max(TARGET_EXECUTION_COUNT, Math.max(divineExisting.size, feederExisting.size) + 5)
+        ? Math.max(divineExisting.size, feederExisting.size) + LOAD_MORE_INCREMENT
+        : COLD_START_TARGET
 
       const [divineResult, feederResult] = await Promise.all([
         fetchDivineExecutions({
@@ -1281,6 +1371,8 @@ export const useDivineManagerActivity = () => {
           loadMore,
           cursor: loadMore ? nextFromBlockRef.current.divine : null,
           targetCount: sourceTargetCount,
+          minBlock: divineMinBlock,
+          ignoreTargetCount: isIncrementalRefresh,
         }),
         fetchFeederExecutions({
           publicClient,
@@ -1289,26 +1381,38 @@ export const useDivineManagerActivity = () => {
           loadMore,
           cursor: loadMore ? nextFromBlockRef.current.feeder : null,
           targetCount: sourceTargetCount,
+          minBlock: feederMinBlock,
+          ignoreTargetCount: isIncrementalRefresh,
         }),
       ])
 
       const ordered = sortExecutions([...divineResult.executions, ...feederResult.executions])
       const updatedAt = Date.now()
-      const nextCursor: FeedCursor = {
-        divine: loadMore ? divineResult.nextFromBlock : nextFromBlockRef.current.divine ?? divineResult.nextFromBlock,
-        feeder: loadMore ? feederResult.nextFromBlock : nextFromBlockRef.current.feeder ?? feederResult.nextFromBlock,
-      }
+      // An incremental refresh only swept the tip, so its downward cursor is not a
+      // real pagination position — keep the existing one. Cold start and loadMore
+      // adopt the freshly returned cursors.
+      const nextCursor: FeedCursor = isIncrementalRefresh
+        ? nextFromBlockRef.current
+        : {
+            divine: divineResult.nextFromBlock,
+            feeder: feederResult.nextFromBlock,
+          }
       const nextHasMore = nextCursor.divine !== null || nextCursor.feeder !== null
+      // loadMore extends older history and leaves the tip where it is; every other
+      // path has now scanned up to latestBlock.
+      const nextLatestScanned = loadMore ? latestScannedBlockRef.current : latestBlock
 
       setExecutions(ordered)
       setLastUpdated(updatedAt)
       setNextFromBlock(nextCursor)
       setHasMore(nextHasMore)
+      latestScannedBlockRef.current = nextLatestScanned
       cachedActivityState = {
         executions: ordered,
         nextFromBlock: nextCursor,
         lastUpdated: updatedAt,
         hasMore: nextHasMore,
+        latestScannedBlock: nextLatestScanned,
       }
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Failed to load Divine Manager activity')
