@@ -111,9 +111,14 @@ const formatCompact = (amount: bigint) => {
   return `${sign}${formatAmount(bnAbs(amount))}`
 }
 
+const formatUsdValue = (value: number) => {
+  const absoluteValue = Math.abs(value)
+  return absoluteValue > 0 && absoluteValue < 0.01 ? smallUsdFormatter.format(absoluteValue) : usdFormatter.format(absoluteValue)
+}
+
 const formatUsdSigned = (value: number) => {
   const normalized = value < 0 ? 0 : value
-  const formatted = normalized > 0 && normalized < 0.01 ? smallUsdFormatter.format(normalized) : usdFormatter.format(normalized)
+  const formatted = formatUsdValue(normalized)
   return normalized > 0 ? `+ ${formatted}` : formatted
 }
 
@@ -574,7 +579,7 @@ export const DivineManagerActivity = ({
   )
 
   const renderValueContent = (gainRows: DisplayGainRow[], itemKey: string, usdValue: string, burnAmount: bigint) => {
-    const burnUsdValue = usdFormatter.format(Math.abs(Number(formatUnits(burnAmount, 18)) * holycUSD))
+    const burnUsdValue = formatUsdValue(Number(formatUnits(burnAmount, 18)) * holycUSD)
 
     return (
       <div className={styles.valueContent}>
@@ -977,9 +982,9 @@ export const DivineManagerActivity = ({
             const tokenPriceUsdValue = isUsableUsdValue(usdPrice) ? tokenAmount * usdPrice : null
             const onChainUsdValue = Number(formatUnits(burn.jitSpent, 18)) * jitUSD
             const usdValue = isUsableUsdValue(tokenPriceUsdValue)
-              ? usdFormatter.format(tokenPriceUsdValue)
+              ? formatUsdValue(tokenPriceUsdValue)
               : isUsableUsdValue(onChainUsdValue)
-                ? usdFormatter.format(onChainUsdValue)
+                ? formatUsdValue(onChainUsdValue)
                 : '—'
             const tokenLabel = isViewingBurns
               ? 'Briah burned'
