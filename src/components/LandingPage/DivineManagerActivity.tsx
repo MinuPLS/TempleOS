@@ -18,7 +18,7 @@ import WplsLogo from '../../assets/TokenLogos/wpls.png'
 import BriahLogo from '../../assets/TokenLogos/Briah.png'
 import CoinMafiaLogo from '../../assets/TokenLogos/CoinMafiaLogo.png'
 import DumbLogo from '../../assets/TokenLogos/Dumb.png'
-import FupaLogo from '../../assets/TokenLogos/FUPA.png'
+import FupaLogo from '../../assets/TokenLogos/FUPA.jpg'
 import styles from './LandingPage.module.css'
 import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 

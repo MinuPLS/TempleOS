@@ -1,5 +1,5 @@
 import { getAddress } from 'viem'
-import { ERC20_ABI, HOLY_C_ADDRESS, JIT_ADDRESS, WPLS_ADDRESS, DAI_ADDRESS } from '@/config/contracts'
+import { DAI_ADDRESS, ERC20_ABI, HOLY_C_ADDRESS, JIT_ADDRESS, PDAI_ADDRESS, WPLS_ADDRESS } from '@/config/contracts'
 import type { AssetRef } from './types'
 import { shortAddr } from './resolvePool'
 import type { ResolveClient, ResolveStorage } from './resolvePool'
@@ -30,6 +30,11 @@ const SEED_TOKENS: Record<string, AssetRef> = {
   },
   [DAI_ADDRESS.toLowerCase()]: {
     address: DAI_ADDRESS,
+    symbol: 'DAI',
+    decimals: 18,
+  },
+  [PDAI_ADDRESS.toLowerCase()]: {
+    address: PDAI_ADDRESS,
     symbol: 'DAI',
     decimals: 18,
   },

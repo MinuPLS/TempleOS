@@ -6,7 +6,8 @@ import CompilerLogo from '../assets/TokenLogos/Compilerv0.png'
 import CoinMafiaLogo from '../assets/TokenLogos/CoinMafiaLogo.png'
 import BriahLogo from '../assets/TokenLogos/Briah.png'
 import DumbLogo from '../assets/TokenLogos/Dumb.png'
-import FupaLogo from '../assets/TokenLogos/FUPA.png'
+import FupaLogo from '../assets/TokenLogos/FUPA.jpg'
+import PdaiLogo from '../assets/TokenLogos/pDAI.jpg'
 import {
   BRIAH_TOKEN_ADDRESS,
   COINMAFIA_TOKEN_ADDRESS,
@@ -14,6 +15,7 @@ import {
   FUPA_TOKEN_ADDRESS,
   HOLY_C_ADDRESS,
   JIT_ADDRESS,
+  PDAI_ADDRESS,
   WPLS_ADDRESS,
 } from '@/config/contracts'
 
@@ -25,6 +27,7 @@ const LOCAL_LOGOS: Record<string, string> = {
   [BRIAH_TOKEN_ADDRESS.toLowerCase()]: BriahLogo,
   [DUMB_TOKEN_ADDRESS.toLowerCase()]: DumbLogo,
   [FUPA_TOKEN_ADDRESS.toLowerCase()]: FupaLogo,
+  [PDAI_ADDRESS.toLowerCase()]: PdaiLogo,
 }
 
 const LOCAL_LOGO_BY_SYMBOL_LOWER: Record<string, string> = {
