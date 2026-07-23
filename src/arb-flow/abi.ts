@@ -7,6 +7,16 @@ export const TICKET_ABI_PARAMETERS = parseAbiParameters(
 )
 
 export const BYTES_ABI_PARAMETERS = parseAbiParameters('bytes')
+export const AOT_EXEMPT_ABI_PARAMETERS = parseAbiParameters('address[] pools, bytes ticket')
+export const AOT_PLAIN_FUNDED_ABI_PARAMETERS = parseAbiParameters('uint256 managerFundingWpls, bytes ticket')
+export const AOT_EXEMPT_FUNDED_ABI_PARAMETERS = parseAbiParameters(
+  'address[] pools, uint256 managerFundingWpls, bytes ticket'
+)
+
+export const AOT_EXECUTE_PLAIN_SELECTOR = '0x4e50d553'
+export const AOT_EXECUTE_EXEMPT_SELECTOR = '0x6af7ae2d'
+export const AOT_EXECUTE_PLAIN_FUNDED_SELECTOR = '0x96caad4d'
+export const AOT_EXECUTE_EXEMPT_FUNDED_SELECTOR = '0xd725eae8'
 
 export type LegKey = 0 | 1 | 2 | 3
 export const LEG_COMPILE: LegKey = 0

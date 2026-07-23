@@ -2220,6 +2220,10 @@
   filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.65));
 }
 
+.partnerLogoFupa:hover {
+  filter: drop-shadow(0 4px 14px rgba(96, 165, 250, 0.65));
+}
+
 .activityHeading {
   flex: 0 0 auto;
   min-width: 220px;
@@ -2311,6 +2315,27 @@
     column-gap: 6px;
     row-gap: 6px;
     flex-shrink: 0;
+  }
+
+  .partnerLogosRow {
+    display: grid;
+    grid-template-columns: repeat(2, 40px);
+    gap: 4px;
+  }
+
+  .partnerLogoBtn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .partnerLogoBtn img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .partnerLogoDumb img {
+    width: 40px;
+    height: 40px;
   }
   
   .viewToggleButton {

@@ -1,5 +1,12 @@
 import { decodeAbiParameters, slice, getAddress, isHex } from 'viem'
 import {
+  AOT_EXEMPT_ABI_PARAMETERS,
+  AOT_EXEMPT_FUNDED_ABI_PARAMETERS,
+  AOT_EXECUTE_EXEMPT_FUNDED_SELECTOR,
+  AOT_EXECUTE_EXEMPT_SELECTOR,
+  AOT_EXECUTE_PLAIN_FUNDED_SELECTOR,
+  AOT_EXECUTE_PLAIN_SELECTOR,
+  AOT_PLAIN_FUNDED_ABI_PARAMETERS,
   BYTES_ABI_PARAMETERS,
   EXECUTE_SELECTOR,
   ExecutionTicket,
@@ -32,18 +39,40 @@ const normalizeLegKey = (key: number): TicketLeg['key'] | null => {
 const normalizePath = (path: readonly string[]): readonly string[] =>
   path.map((p) => getAddress(p))
 
+const extractTicketPayload = (input: `0x${string}`, selector: string): `0x${string}` | null => {
+  const encodedArgs = slice(input, 4)
+
+  if (selector === EXECUTE_SELECTOR || selector === AOT_EXECUTE_PLAIN_SELECTOR) {
+    return decodeAbiParameters(BYTES_ABI_PARAMETERS, encodedArgs)[0]
+  }
+
+  if (selector === AOT_EXECUTE_EXEMPT_SELECTOR) {
+    return decodeAbiParameters(AOT_EXEMPT_ABI_PARAMETERS, encodedArgs)[1]
+  }
+
+  if (selector === AOT_EXECUTE_PLAIN_FUNDED_SELECTOR) {
+    return decodeAbiParameters(AOT_PLAIN_FUNDED_ABI_PARAMETERS, encodedArgs)[1]
+  }
+
+  if (selector === AOT_EXECUTE_EXEMPT_FUNDED_SELECTOR) {
+    return decodeAbiParameters(AOT_EXEMPT_FUNDED_ABI_PARAMETERS, encodedArgs)[2]
+  }
+
+  return null
+}
+
 export const decodeExecuteCalldata = (input: string): DecodedCalldata => {
   if (!isHex(input) || input.length < 10) {
     return { ticket: null, isExecuteCall: false, warning: 'empty or non-hex input' }
   }
 
   const selector = input.slice(0, 10).toLowerCase()
-  if (selector !== EXECUTE_SELECTOR) {
-    return { ticket: null, isExecuteCall: false, warning: `selector ${selector} is not execute()` }
-  }
 
   try {
-    const [payload] = decodeAbiParameters(BYTES_ABI_PARAMETERS, slice(input as `0x${string}`, 4))
+    const payload = extractTicketPayload(input, selector)
+    if (!payload) {
+      return { ticket: null, isExecuteCall: false, warning: `selector ${selector} is not a manager execution` }
+    }
     const raw = decodeAbiParameters(TICKET_ABI_PARAMETERS, payload)[0]
 
     const legs: TicketLeg[] = []

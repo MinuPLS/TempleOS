@@ -6,20 +6,25 @@ import CompilerLogo from '../assets/TokenLogos/Compilerv0.png'
 import CoinMafiaLogo from '../assets/TokenLogos/CoinMafiaLogo.png'
 import BriahLogo from '../assets/TokenLogos/Briah.png'
 import DumbLogo from '../assets/TokenLogos/Dumb.png'
-import { HOLY_C_ADDRESS, JIT_ADDRESS, WPLS_ADDRESS } from '@/config/contracts'
-
-// Partner buy-&-burn tokens an arb can route through (logos ship in the repo).
-const COINMAFIA_ADDRESS = '0x562866b6483894240739211049E109312E9A9A67'
-const BRIAH_ADDRESS = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a'
-const DUMB_ADDRESS = '0xe65112d2f120c8cb23ADC80D8E8122c0c8b7fF8D'
+import FupaLogo from '../assets/TokenLogos/FUPA.png'
+import {
+  BRIAH_TOKEN_ADDRESS,
+  COINMAFIA_TOKEN_ADDRESS,
+  DUMB_TOKEN_ADDRESS,
+  FUPA_TOKEN_ADDRESS,
+  HOLY_C_ADDRESS,
+  JIT_ADDRESS,
+  WPLS_ADDRESS,
+} from '@/config/contracts'
 
 const LOCAL_LOGOS: Record<string, string> = {
   [HOLY_C_ADDRESS.toLowerCase()]: HolyCLogo,
   [JIT_ADDRESS.toLowerCase()]: JITLogo,
   [WPLS_ADDRESS.toLowerCase()]: WplsLogo,
-  [COINMAFIA_ADDRESS.toLowerCase()]: CoinMafiaLogo,
-  [BRIAH_ADDRESS.toLowerCase()]: BriahLogo,
-  [DUMB_ADDRESS.toLowerCase()]: DumbLogo,
+  [COINMAFIA_TOKEN_ADDRESS.toLowerCase()]: CoinMafiaLogo,
+  [BRIAH_TOKEN_ADDRESS.toLowerCase()]: BriahLogo,
+  [DUMB_TOKEN_ADDRESS.toLowerCase()]: DumbLogo,
+  [FUPA_TOKEN_ADDRESS.toLowerCase()]: FupaLogo,
 }
 
 const LOCAL_LOGO_BY_SYMBOL_LOWER: Record<string, string> = {
@@ -33,6 +38,7 @@ const LOCAL_LOGO_BY_SYMBOL_LOWER: Record<string, string> = {
   coinmafia: CoinMafiaLogo,
   briah: BriahLogo,
   dumb: DumbLogo,
+  fupa: FupaLogo,
 }
 
 export const COMPILER_LOGO = CompilerLogo

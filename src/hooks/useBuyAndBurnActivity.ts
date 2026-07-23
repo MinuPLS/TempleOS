@@ -3,8 +3,16 @@ import { getPublicClient } from '@wagmi/core'
 import { formatUnits } from 'viem'
 import { config, pulseChain } from '@/config/wagmi'
 import {
+  BRIAH_BUY_AND_BURN_ADDRESS,
+  BRIAH_TOKEN_ADDRESS,
+  COINMAFIA_BUY_AND_BURN_ADDRESS,
+  COINMAFIA_TOKEN_ADDRESS,
   DAI_ADDRESS,
+  DUMB_BUY_AND_BURN_ADDRESS,
+  DUMB_TOKEN_ADDRESS,
   ERC20_ABI,
+  FUPA_BUY_AND_BURN_ADDRESS,
+  FUPA_TOKEN_ADDRESS,
   HOLY_C_ADDRESS,
   JIT_ADDRESS,
   UNISWAP_V2_FACTORY_ABI,
@@ -29,13 +37,6 @@ type BuyAndBurnConfig = {
   tokenAddress?: `0x${string}`
   logLabel: string
 }
-
-const BRIAH_BUY_AND_BURN_CONTRACT = '0x7DA770d10B6a62Fc9DC5A9682bDF2849d2b617d4' as const
-const BRIAH_TOKEN = '0xA80736067abDc215a3b6B66a57c6e608654d0C9a' as const
-const COINMAFIA_BUY_AND_BURN_CONTRACT = '0xbC289B8a84ACf05d1aA9Ec72cdf5F22dE4bb3A39' as const
-const COINMAFIA_TOKEN = '0x562866b6483894240739211049E109312E9A9A67' as const
-const DUMB_BUY_AND_BURN_CONTRACT = '0x3AdC613625D5c2668c921821d91b602c36c7F401' as const
-const DUMB_TOKEN = '0xe65112d2f120c8cb23ADC80D8E8122c0c8b7fF8D' as const
 
 const BUY_AND_BURN_ABI = [
   {
@@ -77,23 +78,30 @@ const setCachedState = (cacheKey: string, state: BurnCache) => {
 
 const BRIAH_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'briah-buy-and-burn',
-  contractAddress: BRIAH_BUY_AND_BURN_CONTRACT,
-  tokenAddress: BRIAH_TOKEN,
+  contractAddress: BRIAH_BUY_AND_BURN_ADDRESS,
+  tokenAddress: BRIAH_TOKEN_ADDRESS,
   logLabel: 'Briah',
 }
 
 const COINMAFIA_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'coinmafia-buy-and-burn',
-  contractAddress: COINMAFIA_BUY_AND_BURN_CONTRACT,
-  tokenAddress: COINMAFIA_TOKEN,
+  contractAddress: COINMAFIA_BUY_AND_BURN_ADDRESS,
+  tokenAddress: COINMAFIA_TOKEN_ADDRESS,
   logLabel: 'CoinMafia',
 }
 
 const DUMB_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'dumb-buy-and-burn',
-  contractAddress: DUMB_BUY_AND_BURN_CONTRACT,
-  tokenAddress: DUMB_TOKEN,
+  contractAddress: DUMB_BUY_AND_BURN_ADDRESS,
+  tokenAddress: DUMB_TOKEN_ADDRESS,
   logLabel: 'Dumb',
+}
+
+const FUPA_CONFIG: BuyAndBurnConfig = {
+  cacheKey: 'fupa-buy-and-burn',
+  contractAddress: FUPA_BUY_AND_BURN_ADDRESS,
+  tokenAddress: FUPA_TOKEN_ADDRESS,
+  logLabel: 'FUPA',
 }
 
 type PulsePublicClient = NonNullable<ReturnType<typeof getPublicClient>>
@@ -581,3 +589,4 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
 export const useBuyAndBurnActivity = () => useBuyAndBurnActivityBase(BRIAH_CONFIG)
 export const useCoinMafiaBuyAndBurnActivity = () => useBuyAndBurnActivityBase(COINMAFIA_CONFIG)
 export const useDumbBuyAndBurnActivity = () => useBuyAndBurnActivityBase(DUMB_CONFIG)
+export const useFupaBuyAndBurnActivity = () => useBuyAndBurnActivityBase(FUPA_CONFIG)

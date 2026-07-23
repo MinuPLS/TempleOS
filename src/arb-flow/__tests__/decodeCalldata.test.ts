@@ -1,7 +1,18 @@
 import { describe, it, expect } from 'vitest'
+import { decodeAbiParameters, encodeFunctionData, parseAbi, slice, type Hex } from 'viem'
 import { decodeExecuteCalldata } from '../decodeCalldata'
-import { ASSET_HC, LEG_COMPILE, LEG_SWAP_SUPPORTING_FOT } from '../abi'
+import { ASSET_HC, BYTES_ABI_PARAMETERS, LEG_COMPILE, LEG_SWAP_SUPPORTING_FOT } from '../abi'
 import { loadFixture, FIXTURE_TX_1, FIXTURE_TX_2 } from './fixtureLoader'
+
+const RELAYER_EXECUTION_ABI = parseAbi([
+  'function executePlain(bytes ticket)',
+  'function executeExempt(address[] pools, bytes ticket)',
+  'function executePlainFunded(uint256 managerFundingWpls, bytes ticket)',
+  'function executeExemptFunded(address[] pools, uint256 managerFundingWpls, bytes ticket)',
+])
+
+const extractTicketPayload = (managerInput: string) =>
+  decodeAbiParameters(BYTES_ABI_PARAMETERS, slice(managerInput as Hex, 4))[0]
 
 describe('decodeExecuteCalldata', () => {
   it('decodes tx-34a495 as an HC_CORE ticket (compile + swap)', () => {
@@ -48,6 +59,32 @@ describe('decodeExecuteCalldata', () => {
     expect(ticket.legs[0].key).toBe(LEG_COMPILE)
     expect(ticket.legs[1].key).toBe(LEG_SWAP_SUPPORTING_FOT)
     expect(ticket.legs[1].path).toHaveLength(2)
+  })
+
+  it.each([
+    'executePlain',
+    'executeExempt',
+    'executePlainFunded',
+    'executeExemptFunded',
+  ] as const)('unwraps %s calldata from Ahead-Of-Time Relayer V2', (functionName) => {
+    const fx = loadFixture(FIXTURE_TX_1)
+    const payload = extractTicketPayload(fx.input)
+    const pool = '0x7fa560cbe6d7c0d6d408b3fd9e59137d3324c76e' as const
+    const relayerInput =
+      functionName === 'executePlain'
+        ? encodeFunctionData({ abi: RELAYER_EXECUTION_ABI, functionName, args: [payload] })
+        : functionName === 'executeExempt'
+          ? encodeFunctionData({ abi: RELAYER_EXECUTION_ABI, functionName, args: [[pool], payload] })
+          : functionName === 'executePlainFunded'
+            ? encodeFunctionData({ abi: RELAYER_EXECUTION_ABI, functionName, args: [1n, payload] })
+            : encodeFunctionData({ abi: RELAYER_EXECUTION_ABI, functionName, args: [[pool], 1n, payload] })
+
+    const { ticket, isExecuteCall, warning } = decodeExecuteCalldata(relayerInput)
+
+    expect(isExecuteCall).toBe(true)
+    expect(warning).toBeUndefined()
+    expect(ticket?.targetAsset).toBe(ASSET_HC)
+    expect(ticket?.legs).toHaveLength(2)
   })
 
   it('returns isExecuteCall=false for non-execute selectors', () => {

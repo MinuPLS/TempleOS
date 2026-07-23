@@ -1,19 +1,20 @@
 ## Divine Manager Feed – Developer Notes
 
-_Last updated: 2025-02-14 (Codex agent)._
+_Last updated: 2026-07-23._
 
 ### Current scope
 
 The `/dashboard` landing page now includes a live “Automated arbs” card that:
 
-1. Queries the on-chain `TicketExecuted` event emitted by `0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de` (DivineManager) on PulseChain.
+1. Queries the on-chain `TicketExecuted` event emitted by DivineManagerV2 at `0x50DF180Ea29a7872b54C5EC5241d4b889E4DEBF0` on PulseChain.
 2. Fetches the full transaction receipts for the latest ~50 events and parses every ERC‑20 `Transfer`.
 3. Reconstructs the compile / restore / swap sequence for each execution, including:
    - HolyC ↔ JIT compiler hops (4% fee surfaced as burn).
    - PulseX swaps against the 3 known pairs (HC/WPLS, JIT/WPLS, HC/JIT).
    - JIT transfer tax burns and compiler burns routed to `0x000…0000` / `0x000…0369`.
 4. Produces renderable steps with icons, net deltas, burn totals, and estimated USD value.
-5. Displays the steps inside a tooltip timeline and shows transaction hashes + burn stats in the list view.
+5. Unwraps calls sent through Ahead-Of-Time Relayer V2 at `0x9E39d3c00A49AA244A62740f7209D4C133b5780c` before decoding the unchanged execution ticket.
+6. Tracks the Briah, CoinMafia, DUMB, and FUPA partner buy-and-burn contracts in separate views.
 
 ### Key files
 
@@ -27,17 +28,18 @@ The `/dashboard` landing page now includes a live “Automated arbs” card that
 ### How the parser works
 
 1. **Log fetch**: `useDivineManagerActivity` (hook) uses `getPublicClient` from wagmi to read logs for `TicketExecuted`. We limit to ~200k blocks and slice to 50 events.
-2. **Receipts**: For each log we call `getTransactionReceipt` to inspect every ERC20 `Transfer`.
-3. **Token detection**: We normalize addresses (HolyC, JIT, WPLS, PulseX pool addresses) and categorize transfers by direction:
+2. **Relayer calldata**: V2 transactions target the relayer. The flow decoder extracts the ticket bytes from `executePlain`, `executeExempt`, and both funded variants.
+3. **Receipts**: For each log we call `getTransactionReceipt` to inspect every ERC20 `Transfer`.
+4. **Token detection**: We normalize addresses (HolyC, JIT, WPLS, PulseX pool addresses) and categorize transfers by direction:
    - `DivineManager → compiler (JIT contract)`: compile or restore.
    - `DivineManager ↔ pair` (HC/WPLS, JIT/WPLS, HC/JIT): swaps.
    - `→ burn` (0x0 / 0x369): permanent supply removal.
-4. **Step queueing**:
+5. **Step queueing**:
    - When HolyC leaves manager and lands in JIT contract, we enqueue a `compile` step and match it to the following JIT mint.
    - When JIT leaves manager and hits zero address we enqueue a `restore`.
    - When manager interacts with a pair we create a `swap` step keyed by the pair address.
    - Each step object tracks token in/out amounts, pool metadata, and burn contributions.
-5. **Filtering**: We drop logs where there’s no HolyC/JIT movement to keep policy events out of the feed.
+6. **Filtering**: We drop logs where there’s no HolyC/JIT movement to keep policy events out of the feed.
 
 ### UI behavior
 

@@ -453,7 +453,7 @@ export function LandingPage() {
                 {showPartnerDetails ? (
                   <>
                     <p className={styles.sideSectionDescription}>
-                      Every profitable HolyC/JIT arb shares 75% of its take with partnered tokens. Partners are supplied with their own JIT pool — enough for the engine to buy&burn their token after each successful arb.
+                      Every profitable HolyC/JIT arb shares half of its take with partnered tokens. Partners are supplied with their own JIT pool — enough for the engine to buy&burn their token after each successful arb.
                     </p>
                   </>
                 ) : (
