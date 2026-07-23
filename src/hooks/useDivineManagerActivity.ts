@@ -5,7 +5,7 @@ import { config, pulseChain } from '@/config/wagmi'
 import {
   CONTRACT_ADDRESSES,
   DIVINE_MANAGER_ABI,
-  DIVINE_MANAGER_ADDRESS,
+  DIVINE_MANAGER_ADDRESSES,
   FEEDER_BOT_ADDRESS,
   FEEDER_PARTNER_ADDRESS,
   FEEDER_SETTLEMENT_DEAD_ADDRESS,
@@ -75,6 +75,7 @@ interface BaseActivityExecution {
 
 export interface DivineManagerExecution extends BaseActivityExecution {
   source: 'divine-manager'
+  managerAddress: `0x${string}`
   strategyId: string
   jobNonce: string
   holyBurned: bigint
@@ -135,6 +136,7 @@ type ParsedTransfer = {
 }
 
 type PulsePublicClient = NonNullable<ReturnType<typeof getPublicClient>>
+type DivineManagerEventLog = Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]
 
 type FeederTxKind = 'compile' | 'restore' | 'swap' | 'settlement-burn' | 'settlement-partner' | 'ignore'
 
@@ -186,7 +188,6 @@ const TRANSFER_EVENT = parseAbiItem('event Transfer(address indexed from, addres
 const HOLY_ADDRESS_LOWER = HOLY_C_ADDRESS.toLowerCase()
 const JIT_ADDRESS_LOWER = JIT_ADDRESS.toLowerCase()
 const WPLS_ADDRESS_LOWER = WPLS_ADDRESS.toLowerCase()
-const DIVINE_MANAGER_ADDRESS_LOWER = DIVINE_MANAGER_ADDRESS.toLowerCase()
 const FEEDER_BOT_ADDRESS_LOWER = FEEDER_BOT_ADDRESS.toLowerCase()
 const FEEDER_PARTNER_ADDRESS_LOWER = FEEDER_PARTNER_ADDRESS.toLowerCase()
 const FEEDER_SETTLEMENT_DEAD_ADDRESS_LOWER = FEEDER_SETTLEMENT_DEAD_ADDRESS.toLowerCase()
@@ -343,9 +344,10 @@ const createStep = (
 
 const buildDivineExecution = async (
   publicClient: PulsePublicClient,
-  log: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]
+  log: DivineManagerEventLog
 ): Promise<DivineManagerExecution | null> => {
   const blockNumber = log.blockNumber ?? 0n
+  const managerAddressLower = log.address.toLowerCase()
   let block: Awaited<ReturnType<PulsePublicClient['getBlock']>>
   let receipt: Awaited<ReturnType<PulsePublicClient['getTransactionReceipt']>>
   try {
@@ -387,7 +389,7 @@ const buildDivineExecution = async (
     const poolTo = PAIR_METADATA[toAddress]
     const poolFrom = PAIR_METADATA[fromAddress]
 
-    if (poolTo && fromAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+    if (poolTo && fromAddress === managerAddressLower) {
       const step = createStep(
         `${log.transactionHash}-${steps.length + 1}-swap`,
         'swap',
@@ -404,7 +406,7 @@ const buildDivineExecution = async (
       swapQueues.get(toAddress)!.push(step)
     }
 
-    if (poolFrom && toAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+    if (poolFrom && toAddress === managerAddressLower) {
       const queue = swapQueues.get(fromAddress)
       if (queue?.length) {
         const step = queue.find((candidate) => candidate.tokenOutAmount === 0n) ?? queue.shift()
@@ -416,7 +418,7 @@ const buildDivineExecution = async (
     }
 
     if (tokenAddress === HOLY_ADDRESS_LOWER) {
-      if (fromAddress === DIVINE_MANAGER_ADDRESS_LOWER && BURN_ADDRESS_SET.has(toAddress)) {
+      if (fromAddress === managerAddressLower && BURN_ADDRESS_SET.has(toAddress)) {
         holyBurned += transfer.value
         for (let index = completedRestores.length - 1; index >= 0; index -= 1) {
           const candidate = completedRestores[index]
@@ -428,11 +430,11 @@ const buildDivineExecution = async (
         }
       }
 
-      if (toAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+      if (toAddress === managerAddressLower) {
         holyIn += transfer.value
       }
 
-      if (fromAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+      if (fromAddress === managerAddressLower) {
         holyOut += transfer.value
         if (toAddress === JIT_ADDRESS_LOWER) {
           const step = createStep(
@@ -448,7 +450,7 @@ const buildDivineExecution = async (
         }
       }
 
-      if (fromAddress === JIT_ADDRESS_LOWER && toAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+      if (fromAddress === JIT_ADDRESS_LOWER && toAddress === managerAddressLower) {
         const restoreStep = restoreQueue.find((candidate) => candidate.tokenOutAmount === 0n)
         if (restoreStep) {
           restoreStep.tokenOutAmount = transfer.value
@@ -462,7 +464,7 @@ const buildDivineExecution = async (
         jitBurned += transfer.value
       }
 
-      if (toAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+      if (toAddress === managerAddressLower) {
         jitIn += transfer.value
         if (fromAddress === ZERO_ADDRESS.toLowerCase()) {
           const pendingCompile = compileQueue.find((candidate) => candidate.tokenOutAmount === 0n)
@@ -477,7 +479,7 @@ const buildDivineExecution = async (
         }
       }
 
-      if (fromAddress === DIVINE_MANAGER_ADDRESS_LOWER) {
+      if (fromAddress === managerAddressLower) {
         jitOut += transfer.value
         if (toAddress === ZERO_ADDRESS.toLowerCase()) {
           const step = createStep(
@@ -503,6 +505,7 @@ const buildDivineExecution = async (
 
   return {
     source: 'divine-manager',
+    managerAddress: log.address,
     transactionHash: log.transactionHash,
     blockNumber,
     timestamp: Number(block.timestamp) * 1000,
@@ -558,20 +561,25 @@ const fetchDivineExecutions = async ({
 
   while (toBlock >= minBlock && batches < batchLimit && (ignoreTargetCount || executionMap.size < targetCount)) {
     const fromBlock = toBlock - currentChunk + 1n > minBlock ? toBlock - currentChunk + 1n : minBlock
-    let logs: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>
+    let logs: DivineManagerEventLog[]
 
     try {
-      logs = (await withRetry(
+      const managerLogs = await withRetry(
         () =>
-          publicClient.getContractEvents({
-            address: DIVINE_MANAGER_ADDRESS,
-            abi: DIVINE_MANAGER_ABI,
-            eventName: 'TicketExecuted',
-            fromBlock,
-            toBlock,
-          }),
+          Promise.all(
+            DIVINE_MANAGER_ADDRESSES.map((address) =>
+              publicClient.getContractEvents({
+                address,
+                abi: DIVINE_MANAGER_ABI,
+                eventName: 'TicketExecuted',
+                fromBlock,
+                toBlock,
+              })
+            )
+          ),
         MAX_RETRIES
-      )) as Awaited<ReturnType<PulsePublicClient['getContractEvents']>>
+      )
+      logs = managerLogs.flat() as DivineManagerEventLog[]
       if (currentChunk < BLOCK_CHUNK) {
         const nextChunk = currentChunk * 2n
         currentChunk = nextChunk > BLOCK_CHUNK ? BLOCK_CHUNK : nextChunk
@@ -587,8 +595,7 @@ const fetchDivineExecutions = async ({
     // Skip logs whose execution we already hold so a refresh never re-fetches
     // block + receipt for transactions already in the cache.
     const freshLogs = logs.filter(
-      (log: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]) =>
-        log.transactionHash && !executionMap.has(log.transactionHash)
+      (log) => log.transactionHash && !executionMap.has(log.transactionHash)
     )
     if (freshLogs.length) {
       const CHUNK_SIZE = 2
@@ -596,7 +603,7 @@ const fetchDivineExecutions = async ({
         const result = await Promise.all(
           freshLogs
             .slice(index, index + CHUNK_SIZE)
-            .map((log: Awaited<ReturnType<PulsePublicClient['getContractEvents']>>[number]) => buildDivineExecution(publicClient, log))
+            .map((log) => buildDivineExecution(publicClient, log))
         )
         result.forEach((execution) => {
           if (execution) {

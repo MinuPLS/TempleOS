@@ -9,6 +9,7 @@ import {
   useDumbBuyAndBurnActivity,
   useFupaBuyAndBurnActivity,
 } from '@/hooks/useBuyAndBurnActivity'
+import { DIVINE_MANAGER_ADDRESS } from '@/config/contracts'
 import { formatRelativeTime } from '@/lib/time'
 import { ArbFlowInline } from '../ArbFlow/ArbFlowInline'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
@@ -683,6 +684,10 @@ export const DivineManagerActivity = ({
     const gainRows = getExecutionGainRows(execution)
     const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
     const isFlowOpen = flowTxHash === execution.transactionHash
+    const managerLabel =
+      execution.managerAddress?.toLowerCase() === DIVINE_MANAGER_ADDRESS.toLowerCase()
+        ? 'DivineManagerV2'
+        : 'Divine Manager'
     const toggleFlow = () =>
       setFlowTxHash((prev) => (prev === execution.transactionHash ? null : execution.transactionHash))
 
@@ -691,7 +696,7 @@ export const DivineManagerActivity = ({
         <div className={styles.txRowHeader}>
           <div className={styles.txRowMain}>
             <div className={styles.txRowTitleLine}>
-              <span className={`${styles.sourceBadge} ${styles.sourceBadgeManager}`}>{getSourceBadgeLabel(execution.source)}</span>
+              <span className={`${styles.sourceBadge} ${styles.sourceBadgeManager}`}>{managerLabel}</span>
               <button
                 type="button"
                 className={`${styles.viewFlowButton}${isFlowOpen ? ` ${styles.viewFlowButtonActive}` : ''}`}

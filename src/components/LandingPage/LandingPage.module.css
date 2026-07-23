@@ -2220,6 +2220,11 @@
   filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.65));
 }
 
+.partnerLogoFupa img {
+  width: 56px;
+  height: 56px;
+}
+
 .partnerLogoFupa:hover {
   filter: drop-shadow(0 4px 14px rgba(96, 165, 250, 0.65));
 }
@@ -2336,6 +2341,11 @@
   .partnerLogoDumb img {
     width: 40px;
     height: 40px;
+  }
+
+  .partnerLogoFupa img {
+    width: 42px;
+    height: 42px;
   }
   
   .viewToggleButton {

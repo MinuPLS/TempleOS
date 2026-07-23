@@ -6,14 +6,14 @@ _Last updated: 2026-07-23._
 
 The `/dashboard` landing page now includes a live “Automated arbs” card that:
 
-1. Queries the on-chain `TicketExecuted` event emitted by DivineManagerV2 at `0x50DF180Ea29a7872b54C5EC5241d4b889E4DEBF0` on PulseChain.
+1. Queries the on-chain `TicketExecuted` event emitted by both DivineManagerV2 at `0x50DF180Ea29a7872b54C5EC5241d4b889E4DEBF0` and the legacy DivineManager at `0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de` on PulseChain, preserving one chronological history across the cutover.
 2. Fetches the full transaction receipts for the latest ~50 events and parses every ERC‑20 `Transfer`.
 3. Reconstructs the compile / restore / swap sequence for each execution, including:
    - HolyC ↔ JIT compiler hops (4% fee surfaced as burn).
    - PulseX swaps against the 3 known pairs (HC/WPLS, JIT/WPLS, HC/JIT).
    - JIT transfer tax burns and compiler burns routed to `0x000…0000` / `0x000…0369`.
 4. Produces renderable steps with icons, net deltas, burn totals, and estimated USD value.
-5. Unwraps calls sent through Ahead-Of-Time Relayer V2 at `0x9E39d3c00A49AA244A62740f7209D4C133b5780c` before decoding the unchanged execution ticket.
+5. Unwraps calls sent through both Ahead-Of-Time Relayer V2 at `0x9E39d3c00A49AA244A62740f7209D4C133b5780c` and legacy relayer `0x91F76e6C9d9cA8aC5eFf08f08c3403A392BdDd13` before decoding the unchanged execution ticket.
 6. Tracks the Briah, CoinMafia, DUMB, and FUPA partner buy-and-burn contracts in separate views.
 
 ### Key files
