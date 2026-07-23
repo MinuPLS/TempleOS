@@ -26,11 +26,12 @@ export interface PoolData {
 export interface TokenPrices {
   holycUSD: number;
   jitUSD: number;
+  wplsUSD: number;
 }
 
 export const usePoolData = () => {
   const [poolData, setPoolData] = useState<PoolData[]>([]);
-  const [tokenPrices, setTokenPrices] = useState<TokenPrices>({ holycUSD: 0, jitUSD: 0 });
+  const [tokenPrices, setTokenPrices] = useState<TokenPrices>({ holycUSD: 0, jitUSD: 0, wplsUSD: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -120,7 +121,8 @@ export const usePoolData = () => {
 
       setTokenPrices({ 
         holycUSD: Number(formatUnits(holycPriceInUsdBigInt, 18)), 
-        jitUSD: Number(formatUnits(jitPriceInUsdBigInt, 18)) 
+        jitUSD: Number(formatUnits(jitPriceInUsdBigInt, 18)),
+        wplsUSD: Number(formatUnits(wplsPriceInUsdBigInt, 18)),
       });
 
       // Calculate liquidity USD values with precise BigInt arithmetic

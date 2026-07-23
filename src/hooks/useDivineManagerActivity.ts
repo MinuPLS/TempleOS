@@ -84,6 +84,8 @@ export interface DivineManagerExecution extends BaseActivityExecution {
   holyOut: bigint
   jitIn: bigint
   jitOut: bigint
+  wplsIn: bigint
+  wplsOut: bigint
 }
 
 export interface FeederArbExecution extends BaseActivityExecution {
@@ -368,6 +370,8 @@ const buildDivineExecution = async (
   let holyOut = 0n
   let jitIn = 0n
   let jitOut = 0n
+  let wplsIn = 0n
+  let wplsOut = 0n
   const steps: DivineManagerStep[] = []
   const compileQueue: DivineManagerStep[] = []
   const restoreQueue: DivineManagerStep[] = []
@@ -497,9 +501,28 @@ const buildDivineExecution = async (
         }
       }
     }
+
+    if (tokenAddress === WPLS_ADDRESS_LOWER) {
+      if (toAddress === managerAddressLower) {
+        wplsIn += transfer.value
+      }
+
+      if (fromAddress === managerAddressLower) {
+        wplsOut += transfer.value
+      }
+    }
   })
 
-  if (holyBurned === 0n && jitBurned === 0n && holyIn === 0n && holyOut === 0n && jitIn === 0n && jitOut === 0n) {
+  if (
+    holyBurned === 0n &&
+    jitBurned === 0n &&
+    holyIn === 0n &&
+    holyOut === 0n &&
+    jitIn === 0n &&
+    jitOut === 0n &&
+    wplsIn === 0n &&
+    wplsOut === 0n
+  ) {
     return null
   }
 
@@ -517,6 +540,8 @@ const buildDivineExecution = async (
     holyOut,
     jitIn,
     jitOut,
+    wplsIn,
+    wplsOut,
     steps,
   }
 }

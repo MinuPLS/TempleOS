@@ -14,6 +14,7 @@ import { formatRelativeTime } from '@/lib/time'
 import { ArbFlowInline } from '../ArbFlow/ArbFlowInline'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
+import WplsLogo from '../../assets/TokenLogos/wpls.png'
 import BriahLogo from '../../assets/TokenLogos/Briah.png'
 import CoinMafiaLogo from '../../assets/TokenLogos/CoinMafiaLogo.png'
 import DumbLogo from '../../assets/TokenLogos/Dumb.png'
@@ -33,7 +34,7 @@ type BurnActivityItem = {
 }
 
 type FeederExecution = Extract<ActivityExecution, { source: 'feeder-bot' }>
-type TokenSymbol = 'HOLYC' | 'JIT'
+type TokenSymbol = 'HOLYC' | 'JIT' | 'WPLS'
 type ViewMode = 'arbs' | 'burns' | 'mafia' | 'dumb' | 'fupa'
 
 type DisplayGainRow = {
@@ -65,6 +66,13 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
+})
+
+const smallUsdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 6,
 })
 
 const shortenHex = (value: string, size = 4) => {
@@ -105,7 +113,7 @@ const formatCompact = (amount: bigint) => {
 
 const formatUsdSigned = (value: number) => {
   const normalized = value < 0 ? 0 : value
-  const formatted = usdFormatter.format(normalized)
+  const formatted = normalized > 0 && normalized < 0.01 ? smallUsdFormatter.format(normalized) : usdFormatter.format(normalized)
   return normalized > 0 ? `+ ${formatted}` : formatted
 }
 
@@ -149,30 +157,49 @@ const sortByTimestamp = (left: { timestamp: number }, right: { timestamp: number
 const getSourceBadgeLabel = (source: ActivityExecution['source']) =>
   source === 'feeder-bot' ? 'Feeder Bot' : 'Divine Manager'
 
-const getTokenLogo = (symbol: 'HOLYC' | 'JIT') => (symbol === 'HOLYC' ? HolyCLogo : JITLogo)
+const getTokenLogo = (symbol: TokenSymbol) =>
+  symbol === 'HOLYC' ? HolyCLogo : symbol === 'JIT' ? JITLogo : WplsLogo
+
+const TOKEN_DUST_THRESHOLD = 1_000_000_000_000n
+const isMeaningfulTokenDelta = (amount: bigint) => bnAbs(amount) > TOKEN_DUST_THRESHOLD
+
+const getDivineManagerTokenDeltas = (execution: Extract<ActivityExecution, { source: 'divine-manager' }>) => ({
+  HOLYC: execution.holyIn - execution.holyOut,
+  JIT: execution.jitIn - execution.jitOut,
+  WPLS: (execution.wplsIn ?? 0n) - (execution.wplsOut ?? 0n),
+})
 
 const getExecutionGainRows = (execution: ActivityExecution): DisplayGainRow[] => {
   if (isFeederExecution(execution)) {
     return [{ symbol: execution.netTokenSymbol, amount: execution.netTokenAmount }]
   }
 
+  const deltas = getDivineManagerTokenDeltas(execution)
   const gainRows: DisplayGainRow[] = [
-    { symbol: 'HOLYC', amount: execution.holyIn - execution.holyOut },
-    { symbol: 'JIT', amount: execution.jitIn - execution.jitOut },
+    { symbol: 'HOLYC', amount: deltas.HOLYC },
+    { symbol: 'JIT', amount: deltas.JIT },
+    { symbol: 'WPLS', amount: deltas.WPLS },
   ]
-  const nonZeroGainRows = gainRows.filter((row) => row.amount !== 0n)
+  const meaningfulGainRows = gainRows.filter((row) => isMeaningfulTokenDelta(row.amount))
 
-  return nonZeroGainRows.length > 0 ? nonZeroGainRows : [{ symbol: 'HOLYC', amount: 0n }]
+  return meaningfulGainRows.length > 0 ? meaningfulGainRows : [{ symbol: 'HOLYC', amount: 0n }]
 }
 
 const getFeederExecutionUsdGain = (execution: FeederExecution, holycUSD: number, jitUSD: number) =>
   Number(formatUnits(execution.netTokenAmount, 18)) * (execution.netTokenSymbol === 'HOLYC' ? holycUSD : jitUSD)
 
-const getExecutionUsdGain = (execution: ActivityExecution, holycUSD: number, jitUSD: number) =>
-  isFeederExecution(execution)
-    ? getFeederExecutionUsdGain(execution, holycUSD, jitUSD)
-    : Number(formatUnits(execution.holyIn - execution.holyOut, 18)) * holycUSD +
-      Number(formatUnits(execution.jitIn - execution.jitOut, 18)) * jitUSD
+const getExecutionUsdGain = (execution: ActivityExecution, holycUSD: number, jitUSD: number, wplsUSD: number) => {
+  if (isFeederExecution(execution)) {
+    return getFeederExecutionUsdGain(execution, holycUSD, jitUSD)
+  }
+
+  const deltas = getDivineManagerTokenDeltas(execution)
+  return (
+    Number(formatUnits(deltas.HOLYC, 18)) * holycUSD +
+    Number(formatUnits(deltas.JIT, 18)) * jitUSD +
+    Number(formatUnits(deltas.WPLS, 18)) * wplsUSD
+  )
+}
 
 const getFeederRouteLabel = (route: FeederExecution['route']) =>
   route === 'hc-start-jit-gain' ? 'HC -> JIT loop' : 'JIT -> HC loop'
@@ -311,7 +338,7 @@ export const DivineManagerActivity = ({
   hasMore,
   tokenPrices,
 }: DivineManagerActivityProps) => {
-  const { holycUSD, jitUSD } = tokenPrices
+  const { holycUSD, jitUSD, wplsUSD } = tokenPrices
   const [pageByView, setPageByView] = useState<Record<ViewMode, number>>({
     arbs: 1,
     burns: 1,
@@ -533,7 +560,8 @@ export const DivineManagerActivity = ({
 
   const explorerBase = 'https://otter.pulsechain.com'
 
-  const getGainClassName = (symbol: DisplayGainRow['symbol']) => (symbol === 'HOLYC' ? styles.holyText : styles.jitText)
+  const getGainClassName = (symbol: DisplayGainRow['symbol']) =>
+    symbol === 'HOLYC' ? styles.holyText : symbol === 'JIT' ? styles.jitText : styles.wplsText
   const renderTokenRows = (gainRows: DisplayGainRow[], itemKey: string, options?: { signed?: boolean }) => (
     <div className={styles.tokenStack}>
       {gainRows.map((gain) => (
@@ -682,7 +710,7 @@ export const DivineManagerActivity = ({
   const renderDivineManagerExecutionCard = (execution: Extract<ActivityExecution, { source: 'divine-manager' }>) => {
     const burnAmount = execution.holyBurned
     const gainRows = getExecutionGainRows(execution)
-    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
+    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD, wplsUSD))
     const isFlowOpen = flowTxHash === execution.transactionHash
     const managerLabel =
       execution.managerAddress?.toLowerCase() === DIVINE_MANAGER_ADDRESS.toLowerCase()
@@ -764,7 +792,7 @@ export const DivineManagerActivity = ({
   const renderFeederExecutionCard = (execution: FeederExecution) => {
     const burnAmount = execution.settlement.burnedAmount
     const gainRows = getExecutionGainRows(execution)
-    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD))
+    const usdValue = formatUsdSigned(getExecutionUsdGain(execution, holycUSD, jitUSD, wplsUSD))
     const latestVisibleTransaction = getFeederLatestVisibleTransaction(execution)
 
     return (

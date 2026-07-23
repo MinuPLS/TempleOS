@@ -3030,6 +3030,11 @@
   font-weight: 600;
 }
 
+.wplsText {
+  color: rgba(244, 114, 182, 0.95);
+  font-weight: 600;
+}
+
 .profitText {
   color: #4ade80;
   font-weight: 600;
