@@ -2220,11 +2220,6 @@
   filter: drop-shadow(0 4px 14px rgba(236, 72, 153, 0.65));
 }
 
-.partnerLogoFupa img {
-  width: 56px;
-  height: 56px;
-}
-
 .partnerLogoFupa:hover {
   filter: drop-shadow(0 4px 14px rgba(96, 165, 250, 0.65));
 }
@@ -2343,11 +2338,6 @@
     height: 40px;
   }
 
-  .partnerLogoFupa img {
-    width: 42px;
-    height: 42px;
-  }
-  
   .viewToggleButton {
     padding: 6px 10px;
     font-size: 10px;
