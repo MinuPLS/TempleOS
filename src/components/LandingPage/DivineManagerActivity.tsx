@@ -10,7 +10,6 @@ import {
   useFupaBuyAndBurnActivity,
 } from '@/hooks/useBuyAndBurnActivity'
 import { DIVINE_MANAGER_ADDRESS } from '@/config/contracts'
-import { getDivineManagerAssetSymbol } from '@/lib/divineManagerV2'
 import { formatRelativeTime } from '@/lib/time'
 import { ArbFlowInline } from '../ArbFlow/ArbFlowInline'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
@@ -788,7 +787,7 @@ export const DivineManagerActivity = ({
                 transition={{ duration: 0.22 }}
               >
                 <div className={styles.valueCard}>
-                  <ArbFlowInline txHash={execution.transactionHash} />
+                  <ArbFlowInline txHash={execution.transactionHash} tokenPrices={tokenPrices} />
                 </div>
               </motion.div>
             ) : (
@@ -801,38 +800,13 @@ export const DivineManagerActivity = ({
                 transition={{ duration: 0.22 }}
               >
                 <div className={styles.valueHeader}>
-                  <span className={styles.valueLabel}>{v2Settlement ? 'Manager retained' : 'Tokens gained'}</span>
+                  <span className={styles.valueLabel}>Tokens gained</span>
                   <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
                 </div>
                 {v2Settlement?.status === 'missing' ? (
                   <div className={styles.v2SettlementWarning}>Settlement data unavailable — totals were not inferred from token outflows.</div>
                 ) : (
                   renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)
-                )}
-                {v2Settlement && v2Settlement.status !== 'missing' && (
-                  <div className={styles.v2AllocationPanel}>
-                    <div className={styles.v2AllocationHeader}>
-                      <span>Allocated to partner burners</span>
-                      <strong>
-                        {formatAmount(v2Settlement.totalAllocated)}{' '}
-                        {v2Settlement.asset === null ? '' : getDivineManagerAssetSymbol(v2Settlement.asset)}
-                      </strong>
-                    </div>
-                    <div className={styles.v2AllocationGrid}>
-                      {v2Settlement.allocations.map((allocation) => {
-                        const symbol = getDivineManagerAssetSymbol(allocation.sourceAsset)
-                        return (
-                          <div key={`${execution.transactionHash}-${allocation.recipient}`} className={styles.v2AllocationItem}>
-                            <span>{allocation.recipientLabel}</span>
-                            <strong>{formatAmount(allocation.sourceAmount)} {symbol}</strong>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {v2Settlement.status === 'mismatch' && (
-                      <div className={styles.v2SettlementWarning}>{v2Settlement.warnings.join(' · ')}</div>
-                    )}
-                  </div>
                 )}
               </motion.div>
             )}

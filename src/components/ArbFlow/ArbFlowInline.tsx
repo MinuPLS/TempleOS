@@ -4,6 +4,7 @@ import { formatUnits } from 'viem'
 import { ChevronLeft, ChevronRight, Droplet, Flame, Workflow, ExternalLink } from 'lucide-react'
 import type { ArbFlow, AssetRef, FlowEdge, FlowEdgeKind, FlowNode } from '@/arb-flow/types'
 import { PULSEX_LOGO, colorForSymbol, resolveTokenLogo } from '@/arb-flow/getTokenLogo'
+import { buildSettlementSummary } from '@/arb-flow/settlementSummary'
 import { useArbFlow } from '@/arb-flow/useArbFlow'
 import { TokenLogo } from './TokenLogo'
 import styles from './ArbFlow.module.css'
@@ -46,6 +47,27 @@ const fmtAmt = (value: bigint, decimals = 18): string => {
   if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`
   if (abs >= 1_000) return `${(n / 1_000).toFixed(2)}K`
   return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
+
+type FlowTokenPrices = {
+  holycUSD: number
+  jitUSD: number
+  wplsUSD: number
+}
+
+const usdFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+const priceForAsset = (asset: AssetRef, prices: FlowTokenPrices): number | null => {
+  const symbol = asset.symbol.toLowerCase()
+  if (symbol === 'holyc' || symbol === 'hc') return prices.holycUSD
+  if (symbol === 'jit') return prices.jitUSD
+  if (symbol === 'wpls' || symbol === 'pls') return prices.wplsUSD
+  return null
 }
 
 interface Pt {
@@ -241,9 +263,10 @@ const buildLayout = (flow: ArbFlow) => {
 
 interface ArbFlowInlineProps {
   txHash: string
+  tokenPrices?: FlowTokenPrices
 }
 
-export const ArbFlowInline = memo<ArbFlowInlineProps>(({ txHash }) => {
+export const ArbFlowInline = memo<ArbFlowInlineProps>(({ txHash, tokenPrices }) => {
   const { flow, isLoading, error } = useArbFlow(txHash)
 
   if (isLoading) {
@@ -270,10 +293,10 @@ export const ArbFlowInline = memo<ArbFlowInlineProps>(({ txHash }) => {
     )
   }
 
-  return <SequencedFlow flow={flow} />
+  return <SequencedFlow flow={flow} tokenPrices={tokenPrices} />
 })
 
-const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
+const SequencedFlow = memo<{ flow: ArbFlow; tokenPrices?: FlowTokenPrices }>(({ flow, tokenPrices }) => {
   const layout = useMemo(() => buildLayout(flow), [flow])
   const { stations, steps, vbX, vbW, vbH, colorSet, stationToStep, pathPoints, segColors } = layout
   const stepCount = steps.length
@@ -310,26 +333,21 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
   }, [activeStep])
 
   // Where the proceeds went: settlement burn + legacy split or V2 partner allocations.
-  const settlement = useMemo(() => {
-    const aggregate = (kind: FlowEdgeKind) => {
-      const byToken = new Map<string, { asset: AssetRef; amount: bigint }>()
-      for (const sink of flow.sinks) {
-        if (sink.kind !== kind) continue
-        const key = sink.tokenIn.address.toLowerCase()
-        const entry = byToken.get(key)
-        if (entry) entry.amount += sink.amountIn
-        else byToken.set(key, { asset: sink.tokenIn, amount: sink.amountIn })
-      }
-      return Array.from(byToken.values()).filter((e) => e.amount > 0n)
+  const settlement = useMemo(() => buildSettlementSummary(flow.sinks), [flow.sinks])
+  const partnerBuyBurnUsd = useMemo(() => {
+    if (!tokenPrices || settlement.partnerBuyBurn.length === 0) return null
+
+    let total = 0
+    for (const entry of settlement.partnerBuyBurn) {
+      const price = priceForAsset(entry.asset, tokenPrices)
+      const amount = Number(formatUnits(entry.amount, entry.asset.decimals))
+      if (price === null || !Number.isFinite(price) || price <= 0 || !Number.isFinite(amount)) return null
+      total += amount * price
     }
-    return {
-      burned: aggregate('burn'),
-      buyBurn: aggregate('split'),
-      partnerAllocations: flow.sinks.filter((sink) => sink.kind === 'partner'),
-    }
-  }, [flow])
+    return Number.isFinite(total) ? total : null
+  }, [settlement.partnerBuyBurn, tokenPrices])
   const hasSettlement =
-    settlement.burned.length > 0 || settlement.buyBurn.length > 0 || settlement.partnerAllocations.length > 0
+    settlement.burned.length > 0 || settlement.buyBurn.length > 0 || settlement.partnerBuyBurn.length > 0
 
   if (stepCount === 0) {
     return (
@@ -494,20 +512,22 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
 
       {hasSettlement && (
         <div className={`${styles.settlementPanel}${atEnd ? ` ${styles.settlementPanelActive}` : ''}`}>
-          {settlement.partnerAllocations.length > 0 && (
+          {settlement.partnerBuyBurn.length > 0 && (
             <div className={`${styles.settlementCard} ${styles.settlementCardSplit}`}>
               <span className={styles.settlementLabel}>
-                <Droplet size={12} /> Allocated to partner burners
+                <Droplet size={12} /> Partner Buy&amp;Burn
               </span>
               <div className={styles.settlementTokens}>
-                {settlement.partnerAllocations.map((allocation) => (
-                  <span key={allocation.id} className={styles.settlementToken}>
-                    <TokenLogo address={allocation.tokenIn.address} symbol={allocation.tokenIn.symbol} size={18} />
-                    <span className={styles.settlementRecipient}>{allocation.recipientLabel}</span>
-                    {fmtAmt(allocation.amountIn, allocation.tokenIn.decimals)} {allocation.tokenIn.symbol}
+                {settlement.partnerBuyBurn.map((entry) => (
+                  <span key={`partner-${entry.asset.address}`} className={styles.settlementToken}>
+                    <TokenLogo address={entry.asset.address} symbol={entry.asset.symbol} size={18} />
+                    {fmtAmt(entry.amount, entry.asset.decimals)} {entry.asset.symbol}
                   </span>
                 ))}
               </div>
+              <span className={styles.settlementUsd}>
+                {partnerBuyBurnUsd === null ? 'USD value unavailable' : `Total value · ≈ ${usdFormatter.format(partnerBuyBurnUsd)}`}
+              </span>
             </div>
           )}
           {settlement.buyBurn.length > 0 && (
@@ -528,7 +548,7 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
           {settlement.burned.length > 0 && (
             <div className={`${styles.settlementCard} ${styles.settlementCardBurn}`}>
               <span className={styles.settlementLabel}>
-                <Flame size={12} /> Burned (removed from supply)
+                <Flame size={12} /> Burned Supply
               </span>
               <div className={styles.settlementTokens}>
                 {settlement.burned.map((e) => (

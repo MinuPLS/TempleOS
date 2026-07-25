@@ -15,6 +15,7 @@ import {
   FUPA_TOKEN_ADDRESS,
   HOLY_C_ADDRESS,
   JIT_ADDRESS,
+  LEGACY_DAI_ADDRESS,
   PDAI_ADDRESS,
   WPLS_ADDRESS,
 } from '@/config/contracts'
@@ -28,6 +29,7 @@ const LOCAL_LOGOS: Record<string, string> = {
   [DUMB_TOKEN_ADDRESS.toLowerCase()]: DumbLogo,
   [FUPA_TOKEN_ADDRESS.toLowerCase()]: FupaLogo,
   [PDAI_ADDRESS.toLowerCase()]: PdaiLogo,
+  [LEGACY_DAI_ADDRESS.toLowerCase()]: PdaiLogo,
 }
 
 const LOCAL_LOGO_BY_SYMBOL_LOWER: Record<string, string> = {
