@@ -309,7 +309,7 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
     return new Set([activeStep.fromKey, activeStep.toKey, activeStep.poolKey].filter(Boolean) as string[])
   }, [activeStep])
 
-  // Where the proceeds went: settlement burn + the split routed to partner buy-&-burn.
+  // Where the proceeds went: settlement burn + legacy split or V2 partner allocations.
   const settlement = useMemo(() => {
     const aggregate = (kind: FlowEdgeKind) => {
       const byToken = new Map<string, { asset: AssetRef; amount: bigint }>()
@@ -322,9 +322,14 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
       }
       return Array.from(byToken.values()).filter((e) => e.amount > 0n)
     }
-    return { burned: aggregate('burn'), buyBurn: aggregate('split') }
+    return {
+      burned: aggregate('burn'),
+      buyBurn: aggregate('split'),
+      partnerAllocations: flow.sinks.filter((sink) => sink.kind === 'partner'),
+    }
   }, [flow])
-  const hasSettlement = settlement.burned.length > 0 || settlement.buyBurn.length > 0
+  const hasSettlement =
+    settlement.burned.length > 0 || settlement.buyBurn.length > 0 || settlement.partnerAllocations.length > 0
 
   if (stepCount === 0) {
     return (
@@ -489,6 +494,22 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
 
       {hasSettlement && (
         <div className={`${styles.settlementPanel}${atEnd ? ` ${styles.settlementPanelActive}` : ''}`}>
+          {settlement.partnerAllocations.length > 0 && (
+            <div className={`${styles.settlementCard} ${styles.settlementCardSplit}`}>
+              <span className={styles.settlementLabel}>
+                <Droplet size={12} /> Allocated to partner burners
+              </span>
+              <div className={styles.settlementTokens}>
+                {settlement.partnerAllocations.map((allocation) => (
+                  <span key={allocation.id} className={styles.settlementToken}>
+                    <TokenLogo address={allocation.tokenIn.address} symbol={allocation.tokenIn.symbol} size={18} />
+                    <span className={styles.settlementRecipient}>{allocation.recipientLabel}</span>
+                    {fmtAmt(allocation.amountIn, allocation.tokenIn.decimals)} {allocation.tokenIn.symbol}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {settlement.buyBurn.length > 0 && (
             <div className={`${styles.settlementCard} ${styles.settlementCardSplit}`}>
               <span className={styles.settlementLabel}>
@@ -520,6 +541,12 @@ const SequencedFlow = memo<{ flow: ArbFlow }>(({ flow }) => {
             </div>
           )}
         </div>
+      )}
+      {flow.v2Settlement?.status === 'mismatch' && (
+        <div className={styles.settlementWarning}>{flow.v2Settlement.warnings.join(' · ')}</div>
+      )}
+      {flow.v2Settlement?.status === 'missing' && (
+        <div className={styles.settlementWarning}>V2 settlement events were not found; manager outflows were not treated as allocations.</div>
       )}
     </div>
   )

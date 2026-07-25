@@ -6,7 +6,7 @@ export type AssetRef = {
   decimals: number
 }
 
-export type FlowNodeKind = 'asset' | 'pool' | 'compiler' | 'burn' | 'split' | 'manager' | 'topoff'
+export type FlowNodeKind = 'asset' | 'pool' | 'compiler' | 'burn' | 'split' | 'partner' | 'manager' | 'topoff' | 'unknown'
 
 export interface FlowNode {
   id: string
@@ -21,7 +21,7 @@ export interface FlowNode {
   }
 }
 
-export type FlowEdgeKind = 'compile' | 'restore' | 'swap' | 'burn' | 'split' | 'topoff'
+export type FlowEdgeKind = 'compile' | 'restore' | 'swap' | 'burn' | 'split' | 'partner' | 'topoff' | 'unknown'
 
 export interface FlowEdge {
   id: string
@@ -36,6 +36,8 @@ export interface FlowEdge {
   amountOut: bigint
   feeOrTax?: bigint
   hopIndex?: number
+  recipientLabel?: string
+  recipientBps?: number
 }
 
 export interface InventoryDelta {
@@ -61,6 +63,7 @@ export interface ArbFlow {
   splitDestination: Address | null
   targetAsset: AssetRef
   decodeWarnings: string[]
+  v2Settlement: import('@/lib/divineManagerV2').V2ProfitSettlement | null
 }
 
 export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'

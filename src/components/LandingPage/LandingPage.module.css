@@ -2678,6 +2678,72 @@
   box-sizing: border-box;
 }
 
+.v2AllocationPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(34, 211, 238, 0.18);
+}
+
+.v2AllocationHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+}
+
+.v2AllocationHeader strong {
+  color: #67e8f9;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.v2AllocationGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.v2AllocationItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(8, 51, 68, 0.2);
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 12px;
+}
+
+.v2AllocationItem strong {
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.v2SettlementWarning {
+  padding: 9px 11px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 9px;
+  background: rgba(120, 53, 15, 0.15);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .v2AllocationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .valueHeader {
   display: flex;
   align-items: center;

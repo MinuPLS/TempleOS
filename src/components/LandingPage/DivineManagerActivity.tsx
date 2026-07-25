@@ -10,6 +10,7 @@ import {
   useFupaBuyAndBurnActivity,
 } from '@/hooks/useBuyAndBurnActivity'
 import { DIVINE_MANAGER_ADDRESS } from '@/config/contracts'
+import { getDivineManagerAssetSymbol } from '@/lib/divineManagerV2'
 import { formatRelativeTime } from '@/lib/time'
 import { ArbFlowInline } from '../ArbFlow/ArbFlowInline'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
@@ -169,9 +170,26 @@ const TOKEN_DUST_THRESHOLD = 1_000_000_000_000n
 const isMeaningfulTokenDelta = (amount: bigint) => bnAbs(amount) > TOKEN_DUST_THRESHOLD
 
 const getDivineManagerTokenDeltas = (execution: Extract<ActivityExecution, { source: 'divine-manager' }>) => ({
-  HOLYC: execution.holyIn - execution.holyOut,
-  JIT: execution.jitIn - execution.jitOut,
-  WPLS: (execution.wplsIn ?? 0n) - (execution.wplsOut ?? 0n),
+  ...(execution.v2Settlement
+    ? {
+        HOLYC:
+          execution.v2Settlement.status !== 'missing' && execution.v2Settlement.asset === 0
+            ? execution.v2Settlement.retainedProfit
+            : 0n,
+        JIT:
+          execution.v2Settlement.status !== 'missing' && execution.v2Settlement.asset === 1
+            ? execution.v2Settlement.retainedProfit
+            : 0n,
+        WPLS:
+          execution.v2Settlement.status !== 'missing' && execution.v2Settlement.asset === 2
+            ? execution.v2Settlement.retainedProfit
+            : 0n,
+      }
+    : {
+        HOLYC: execution.holyIn - execution.holyOut,
+        JIT: execution.jitIn - execution.jitOut,
+        WPLS: (execution.wplsIn ?? 0n) - (execution.wplsOut ?? 0n),
+      }),
 })
 
 const getExecutionGainRows = (execution: ActivityExecution): DisplayGainRow[] => {
@@ -721,6 +739,7 @@ export const DivineManagerActivity = ({
       execution.managerAddress?.toLowerCase() === DIVINE_MANAGER_ADDRESS.toLowerCase()
         ? 'DivineManagerV2'
         : 'Divine Manager'
+    const v2Settlement = execution.v2Settlement
     const toggleFlow = () =>
       setFlowTxHash((prev) => (prev === execution.transactionHash ? null : execution.transactionHash))
 
@@ -782,10 +801,39 @@ export const DivineManagerActivity = ({
                 transition={{ duration: 0.22 }}
               >
                 <div className={styles.valueHeader}>
-                  <span className={styles.valueLabel}>Tokens gained</span>
+                  <span className={styles.valueLabel}>{v2Settlement ? 'Manager retained' : 'Tokens gained'}</span>
                   <span className={`${styles.valueLabel} ${styles.valueLabelRight}`}>Value gained</span>
                 </div>
-                {renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)}
+                {v2Settlement?.status === 'missing' ? (
+                  <div className={styles.v2SettlementWarning}>Settlement data unavailable — totals were not inferred from token outflows.</div>
+                ) : (
+                  renderValueContent(gainRows, execution.transactionHash, usdValue, burnAmount)
+                )}
+                {v2Settlement && v2Settlement.status !== 'missing' && (
+                  <div className={styles.v2AllocationPanel}>
+                    <div className={styles.v2AllocationHeader}>
+                      <span>Allocated to partner burners</span>
+                      <strong>
+                        {formatAmount(v2Settlement.totalAllocated)}{' '}
+                        {v2Settlement.asset === null ? '' : getDivineManagerAssetSymbol(v2Settlement.asset)}
+                      </strong>
+                    </div>
+                    <div className={styles.v2AllocationGrid}>
+                      {v2Settlement.allocations.map((allocation) => {
+                        const symbol = getDivineManagerAssetSymbol(allocation.sourceAsset)
+                        return (
+                          <div key={`${execution.transactionHash}-${allocation.recipient}`} className={styles.v2AllocationItem}>
+                            <span>{allocation.recipientLabel}</span>
+                            <strong>{formatAmount(allocation.sourceAmount)} {symbol}</strong>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {v2Settlement.status === 'mismatch' && (
+                      <div className={styles.v2SettlementWarning}>{v2Settlement.warnings.join(' · ')}</div>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

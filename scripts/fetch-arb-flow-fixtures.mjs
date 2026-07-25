@@ -12,6 +12,7 @@ const client = createPublicClient({ transport: http(RPC) })
 const TXS = [
   { id: 'tx-34a495', hash: '0x34a49536a1df7f8a72febfa379eaee915ed2dcb4a38251c8bd97414dc75f1df0' },
   { id: 'tx-d1336c', hash: '0xd1336c079e956e71d2e823cdf4661d046a2adc75029f3d35c30967d86a23faec' },
+  { id: 'tx-a2e9e4-v2', hash: '0xa2e9e4f1a02c745041cc10eb2636b0e7da4628407cc8c51a9e62e687df2b13ea' },
 ]
 
 const TicketExecuted = parseAbiItem(

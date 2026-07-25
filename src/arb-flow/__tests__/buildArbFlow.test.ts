@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { buildArbFlow, BuildContext } from '../buildArbFlow'
 import { PoolResolver } from '../resolvePool'
 import { TokenResolver } from '../resolveToken'
-import { loadFixture, FIXTURE_TX_1, FIXTURE_TX_2 } from './fixtureLoader'
-import { JIT_ADDRESS } from '@/config/contracts'
+import { loadFixture, FIXTURE_TX_1, FIXTURE_TX_2, FIXTURE_TX_V2 } from './fixtureLoader'
+import { DIVINE_MANAGER_ADDRESS, JIT_ADDRESS } from '@/config/contracts'
 
 const EQUAL_SPLITTER = '0xF40A86C1Edd640e574b6560f155178A2A5267885'
 
@@ -25,6 +25,14 @@ const makeCtx = (splitDest: string | null = EQUAL_SPLITTER): BuildContext => ({
   managerAddress: '0x7EE5476ae357b02F3F61Ba0d8369945d3615E0de',
   jitCompilerAddress: JIT_ADDRESS,
   splitDestination: splitDest,
+  poolResolver: new PoolResolver(throwClient, memStorage()),
+  tokenResolver: new TokenResolver(throwClient, memStorage()),
+})
+
+const makeV2Ctx = (): BuildContext => ({
+  managerAddress: DIVINE_MANAGER_ADDRESS,
+  jitCompilerAddress: JIT_ADDRESS,
+  splitDestination: null,
   poolResolver: new PoolResolver(throwClient, memStorage()),
   tokenResolver: new TokenResolver(throwClient, memStorage()),
 })
@@ -160,6 +168,55 @@ describe('buildArbFlow — tx-d1336c (leftover JIT, spec §8 example 2)', () => 
     expect(burn).toBeDefined()
     expect(div18(burn!.amountIn)).toBeCloseTo(65_251.27, 1)
     expect(div18(flow.burnedHolyC)).toBeCloseTo(65_251.27, 1)
+  })
+})
+
+describe('buildArbFlow — tx-a2e9e4 (DivineManagerV2 mixed PulseX JIT cycle)', () => {
+  const fx = loadFixture(FIXTURE_TX_V2)
+
+  it('decodes four exact swaps without treating markers or pair addresses as assets', async () => {
+    const { flow, warnings } = await buildArbFlow(
+      { txHash: fx.hash, blockNumber: fx.blockNumber, timestamp: fx.timestamp, input: fx.input, logs: fx.logs, from: fx.from },
+      makeV2Ctx()
+    )
+
+    expect(flow.routeLabel).toBe('JIT_CYCLE')
+    expect(flow.legs).toHaveLength(4)
+    expect(flow.legs.map((leg) => `${leg.tokenIn.symbol}->${leg.tokenOut.symbol}`)).toEqual([
+      'JIT->DAI',
+      'DAI->WPLS',
+      'WPLS->Briah',
+      'Briah->JIT',
+    ])
+    expect(flow.legs.map((leg) => flow.nodes.find((node) => node.id === leg.poolId)?.address?.toLowerCase())).toEqual([
+      '0xccf4d4d6c0945bc0fe3ceb83ff491b279f464bac',
+      '0x947b4633e32e0c7f2c76753b43f008480715416d',
+      '0xd8836e8975a6bbeafbde651e4d1ff59dc99d45c0',
+      '0xd303beb71c5ab830b45680c5f2788eda88e0d856',
+    ])
+    expect(flow.legs.some((leg) => leg.tokenIn.address === '0x0000000000000000000000000000000000000000')).toBe(false)
+    expect(warnings.filter((warning) => warning.includes('unrecognized manager'))).toEqual([])
+  })
+
+  it('uses authoritative V2 settlement and exact partner allocations', async () => {
+    const { flow } = await buildArbFlow(
+      { txHash: fx.hash, blockNumber: fx.blockNumber, timestamp: fx.timestamp, input: fx.input, logs: fx.logs, from: fx.from },
+      makeV2Ctx()
+    )
+    const settlement = flow.v2Settlement
+    expect(settlement?.status).toBe('complete')
+    expect(div18(settlement!.retainedProfit)).toBeCloseTo(644.5527084739, 9)
+    expect(div18(settlement!.totalAllocated)).toBeCloseTo(41.7638375986, 9)
+    expect(settlement?.allocations.map((allocation) => allocation.recipientLabel)).toEqual([
+      'Briah',
+      'CoinMafia',
+      'Dumb',
+      'FUPA',
+    ])
+    expect(flow.sinks.filter((sink) => sink.kind === 'partner')).toHaveLength(4)
+    expect(flow.sinks.some((sink) => sink.kind === 'partner' && div18(sink.amountIn) > 100_000)).toBe(false)
+    expect(div18(flow.burnedHolyC)).toBeCloseTo(75.4799603738, 9)
+    expect(div18(flow.gross!.amount)).toBeCloseTo(686.3165460725, 9)
   })
 })
 

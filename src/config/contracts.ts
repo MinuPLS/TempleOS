@@ -3,6 +3,7 @@ export const JIT_ADDRESS = '0x57909025ACE10D5dE114d96E3EC84F282895870c' as const
 export const WPLS_ADDRESS = '0xA1077a294dDE1B09bB078844df40758a5D0f9a27' as const;
 export const DAI_ADDRESS = '0xefD766cCb38EaF1dfd701853BFCe31359239F305' as const;
 export const PDAI_ADDRESS = '0xf598cB1D27Fb2c5C731F535AD6c1D0ec5EfE1320' as const;
+export const LEGACY_DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F' as const;
 
 export const PULSEX_ROUTER_ADDRESS = '0x165C3410fC91EF562C50559f7d2289fEbed552d9' as const;
 export const UNISWAP_V2_FACTORY_ADDRESS = '0x1715a3E4A142d8b698131108995174F37aEBA10D' as const;
@@ -453,6 +454,35 @@ export const DIVINE_MANAGER_ABI = [
       { indexed: false, internalType: 'uint256', name: 'profitWPLS', type: 'uint256' },
     ],
     name: 'TicketExecuted',
+    type: 'event',
+  },
+] as const
+
+export const DIVINE_MANAGER_V2_EVENTS_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'address', name: 'recipient', type: 'address' },
+      { indexed: true, internalType: 'uint8', name: 'sourceAsset', type: 'uint8' },
+      { indexed: true, internalType: 'uint8', name: 'paidAsset', type: 'uint8' },
+      { indexed: false, internalType: 'uint256', name: 'sourceAmount', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'paidAmount', type: 'uint256' },
+      { indexed: false, internalType: 'uint16', name: 'bps', type: 'uint16' },
+    ],
+    name: 'ProfitPaid',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'bytes32', name: 'jobNonce', type: 'bytes32' },
+      { indexed: true, internalType: 'uint8', name: 'asset', type: 'uint8' },
+      { indexed: false, internalType: 'uint256', name: 'grossProfit', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'protectedProfit', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'shareableProfit', type: 'uint256' },
+      { indexed: false, internalType: 'uint256', name: 'totalAllocated', type: 'uint256' },
+    ],
+    name: 'ProfitSettled',
     type: 'event',
   },
 ] as const

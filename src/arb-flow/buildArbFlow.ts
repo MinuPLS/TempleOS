@@ -6,6 +6,7 @@ import {
   WPLS_ADDRESS,
 } from '@/config/contracts'
 import { decodeExecuteCalldata } from './decodeCalldata'
+import { decodeSwapPath, type DecodedSwapPath } from './decodeSwapPath'
 import { parseReceiptLogs, ParsedTransfer, ParsedLogs } from './parseLogs'
 import { PoolResolver, poolInfoToNode, poolLabel, shortAddr } from './resolvePool'
 import { TokenResolver } from './resolveToken'
@@ -30,6 +31,7 @@ import {
   LEG_SWAP_SUPPORTING_FOT,
   TicketLeg,
 } from './abi'
+import { isDivineManagerV2, parseV2ProfitSettlement } from '@/lib/divineManagerV2'
 
 export interface BuildInput {
   txHash: string
@@ -124,6 +126,9 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
   const parsed: ParsedLogs = parseReceiptLogs(input.logs)
   const transfers = parsed.transfers
   const consumed = new Set<number>()
+  const isV2 = isDivineManagerV2(manager)
+  const v2Settlement = isV2 ? parseV2ProfitSettlement(input.logs, manager) : null
+  if (v2Settlement?.warnings.length) warnings.push(...v2Settlement.warnings)
 
   const { ticket } = decodeExecuteCalldata(input.input)
   if (!ticket && input.input && input.input.slice(0, 10).toLowerCase() === '0x09c5eabe') {
@@ -135,9 +140,17 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
   for (const t of transfers) {
     tokenAddresses.add(t.tokenAddress.toLowerCase())
   }
+  const decodedSwapPaths = new Map<TicketLeg, DecodedSwapPath>()
   if (ticket) {
     for (const leg of ticket.legs) {
-      for (const p of leg.path) tokenAddresses.add(p.toLowerCase())
+      if (leg.key !== LEG_SWAP_EXACT && leg.key !== LEG_SWAP_SUPPORTING_FOT) continue
+      try {
+        const decodedPath = decodeSwapPath(leg.path)
+        decodedSwapPaths.set(leg, decodedPath)
+        for (const token of decodedPath.tokens) tokenAddresses.add(token.toLowerCase())
+      } catch (error) {
+        warnings.push(error instanceof Error ? `swap path decode failed: ${error.message}` : 'swap path decode failed')
+      }
     }
   }
   const tokenMap = new Map<string, AssetRef>()
@@ -228,6 +241,19 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
         id,
         kind: 'split',
         label: '💧 Split',
+        address: addr,
+      })
+    }
+    return id
+  }
+
+  const ensurePartnerNode = (addr: string, label: string): string => {
+    const id = toNodeId('partner', addr)
+    if (!nodes.has(id)) {
+      nodes.set(id, {
+        id,
+        kind: 'partner',
+        label,
         address: addr,
       })
     }
@@ -386,7 +412,9 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
   }
 
   const buildSwapLeg = async (leg: TicketLeg): Promise<void> => {
-    const path = leg.path
+    const decodedPath = decodedSwapPaths.get(leg)
+    if (!decodedPath) return
+    const path = decodedPath.tokens
     if (path.length < 2) {
       warnings.push(`swap leg with path.length=${path.length}, skipping`)
       return
@@ -401,7 +429,9 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
       const tokenIn = tokenMap.get(inLower) ?? (await ctx.tokenResolver.resolve(inLower))
       const tokenOut = tokenMap.get(outLower) ?? (await ctx.tokenResolver.resolve(outLower))
 
-      const poolLower = await findPoolForHop(tokenInAddr, tokenOutAddr)
+      const poolLower = decodedPath.encoded
+        ? decodedPath.pairs[hop].toLowerCase()
+        : await findPoolForHop(tokenInAddr, tokenOutAddr)
       const poolInfo = await ctx.poolResolver.resolve(poolLower, {
         token0: tokenIn,
         token1: tokenOut,
@@ -484,9 +514,45 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
   }
 
   // ---- Sinks: remaining unconsumed transfers ----
-  const splitDest = ctx.splitDestination
-    ? ctx.splitDestination.toLowerCase()
-    : detectSplitDestination(transfers, manager, consumed)
+  const splitDest = isV2
+    ? null
+    : ctx.splitDestination
+      ? ctx.splitDestination.toLowerCase()
+      : detectSplitDestination(transfers, manager, consumed)
+
+  if (v2Settlement) {
+    for (const allocation of v2Settlement.allocations) {
+      const sourceToken = assetByIndex(allocation.sourceAsset)
+      const paidToken = assetByIndex(allocation.paidAsset)
+      const recipientLower = allocation.recipient.toLowerCase()
+      const transferMatch = matchTransfer(
+        transfers,
+        consumed,
+        (transfer) =>
+          transfer.tokenAddress.toLowerCase() === paidToken.address.toLowerCase() &&
+          transfer.from.toLowerCase() === manager &&
+          transfer.to.toLowerCase() === recipientLower &&
+          transfer.value === allocation.paidAmount
+      )
+      if (transferMatch) consumed.add(transferMatch.index)
+      else warnings.push(`ProfitPaid transfer to ${allocation.recipientLabel} was not found in receipt transfers`)
+
+      sinks.push({
+        id: `${input.txHash}-sink-${order}-partner`,
+        kind: 'partner',
+        order,
+        from: ensureManagerNode(),
+        to: ensurePartnerNode(allocation.recipient, allocation.recipientLabel),
+        tokenIn: sourceToken,
+        amountIn: allocation.sourceAmount,
+        tokenOut: paidToken,
+        amountOut: allocation.paidAmount,
+        recipientLabel: allocation.recipientLabel,
+        recipientBps: allocation.bps,
+      })
+      order += 1
+    }
+  }
 
   for (let i = 0; i < transfers.length; i += 1) {
     if (consumed.has(i)) continue
@@ -582,18 +648,19 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
       symbol: 'UNK',
       decimals: 18,
     }
-    const sinkId = toNodeId('split', t.to)
+    const sinkKind = isV2 ? 'unknown' : 'split'
+    const sinkId = toNodeId(sinkKind, t.to)
     if (!nodes.has(sinkId)) {
       nodes.set(sinkId, {
         id: sinkId,
-        kind: 'split',
+        kind: sinkKind,
         label: `Sink ${shortAddr(t.to)}`,
         address: t.to,
       })
     }
     sinks.push({
       id: `${input.txHash}-sink-${order}-unknown`,
-      kind: 'split',
+      kind: sinkKind,
       order,
       from: ensureManagerNode(),
       to: sinkId,
@@ -657,6 +724,9 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
       gross = { asset: endAsset, amount: lastOut }
     }
   }
+  if (v2Settlement && v2Settlement.asset !== null && v2Settlement.status !== 'missing') {
+    gross = { asset: assetByIndex(v2Settlement.asset), amount: v2Settlement.grossProfit }
+  }
 
   ensureManagerNode()
 
@@ -680,6 +750,7 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
     splitDestination: splitDest ? getAddress(splitDest) : null,
     targetAsset,
     decodeWarnings: warnings,
+    v2Settlement,
   }
 
   return { flow, warnings }

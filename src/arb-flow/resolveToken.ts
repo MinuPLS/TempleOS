@@ -1,5 +1,17 @@
 import { getAddress } from 'viem'
-import { DAI_ADDRESS, ERC20_ABI, HOLY_C_ADDRESS, JIT_ADDRESS, PDAI_ADDRESS, WPLS_ADDRESS } from '@/config/contracts'
+import {
+  BRIAH_TOKEN_ADDRESS,
+  COINMAFIA_TOKEN_ADDRESS,
+  DAI_ADDRESS,
+  DUMB_TOKEN_ADDRESS,
+  ERC20_ABI,
+  FUPA_TOKEN_ADDRESS,
+  HOLY_C_ADDRESS,
+  JIT_ADDRESS,
+  LEGACY_DAI_ADDRESS,
+  PDAI_ADDRESS,
+  WPLS_ADDRESS,
+} from '@/config/contracts'
 import type { AssetRef } from './types'
 import { shortAddr } from './resolvePool'
 import type { ResolveClient, ResolveStorage } from './resolvePool'
@@ -36,6 +48,31 @@ const SEED_TOKENS: Record<string, AssetRef> = {
   [PDAI_ADDRESS.toLowerCase()]: {
     address: PDAI_ADDRESS,
     symbol: 'DAI',
+    decimals: 18,
+  },
+  [LEGACY_DAI_ADDRESS.toLowerCase()]: {
+    address: LEGACY_DAI_ADDRESS,
+    symbol: 'DAI',
+    decimals: 18,
+  },
+  [BRIAH_TOKEN_ADDRESS.toLowerCase()]: {
+    address: BRIAH_TOKEN_ADDRESS,
+    symbol: 'Briah',
+    decimals: 18,
+  },
+  [COINMAFIA_TOKEN_ADDRESS.toLowerCase()]: {
+    address: COINMAFIA_TOKEN_ADDRESS,
+    symbol: 'CoinMafia',
+    decimals: 18,
+  },
+  [DUMB_TOKEN_ADDRESS.toLowerCase()]: {
+    address: DUMB_TOKEN_ADDRESS,
+    symbol: 'Dumb',
+    decimals: 18,
+  },
+  [FUPA_TOKEN_ADDRESS.toLowerCase()]: {
+    address: FUPA_TOKEN_ADDRESS,
+    symbol: 'FUPA',
     decimals: 18,
   },
 }

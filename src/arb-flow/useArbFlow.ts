@@ -11,6 +11,7 @@ import { buildArbFlow, BuildContext } from '@/arb-flow/buildArbFlow'
 import { PoolResolver, ResolveClient } from '@/arb-flow/resolvePool'
 import { TokenResolver } from '@/arb-flow/resolveToken'
 import type { ArbFlow } from '@/arb-flow/types'
+import { isDivineManagerV2 } from '@/lib/divineManagerV2'
 
 interface UseArbFlowState {
   flow: ArbFlow | null
@@ -57,14 +58,16 @@ export const useArbFlow = (txHash: string | null) => {
         ) ?? DIVINE_MANAGER_ADDRESS
 
       let splitDestination: string | null = null
-      try {
-        splitDestination = (await publicClient.readContract({
-          address: managerAddress,
-          abi: DIVINE_MANAGER_ABI,
-          functionName: 'splitDestination',
-        })) as string
-      } catch {
-        splitDestination = null
+      if (!isDivineManagerV2(managerAddress)) {
+        try {
+          splitDestination = (await publicClient.readContract({
+            address: managerAddress,
+            abi: DIVINE_MANAGER_ABI,
+            functionName: 'splitDestination',
+          })) as string
+        } catch {
+          splitDestination = null
+        }
       }
 
       const clientAdapter: ResolveClient = {

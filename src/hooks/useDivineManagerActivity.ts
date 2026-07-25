@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getPublicClient } from '@wagmi/core'
 import { getAddress, parseAbiItem } from 'viem'
 import { config, pulseChain } from '@/config/wagmi'
+import { isDivineManagerV2, parseV2ProfitSettlement, type V2ProfitSettlement } from '@/lib/divineManagerV2'
 import {
   CONTRACT_ADDRESSES,
   DIVINE_MANAGER_ABI,
@@ -86,6 +87,7 @@ export interface DivineManagerExecution extends BaseActivityExecution {
   jitOut: bigint
   wplsIn: bigint
   wplsOut: bigint
+  v2Settlement: V2ProfitSettlement | null
 }
 
 export interface FeederArbExecution extends BaseActivityExecution {
@@ -373,6 +375,9 @@ const buildDivineExecution = async (
   let wplsIn = 0n
   let wplsOut = 0n
   const steps: DivineManagerStep[] = []
+  const v2Settlement = isDivineManagerV2(log.address)
+    ? parseV2ProfitSettlement(receipt.logs, log.address)
+    : null
   const compileQueue: DivineManagerStep[] = []
   const restoreQueue: DivineManagerStep[] = []
   const completedRestores: DivineManagerStep[] = []
@@ -542,6 +547,7 @@ const buildDivineExecution = async (
     jitOut,
     wplsIn,
     wplsOut,
+    v2Settlement,
     steps,
   }
 }

@@ -737,3 +737,19 @@
   color: rgba(255, 255, 255, 0.92);
   font-variant-numeric: tabular-nums;
 }
+
+.settlementRecipient {
+  color: rgba(255, 255, 255, 0.62);
+  font-weight: 500;
+  margin-right: auto;
+}
+
+.settlementWarning {
+  padding: 9px 11px;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 9px;
+  background: rgba(120, 53, 15, 0.15);
+  color: #fde68a;
+  font-size: 12px;
+  line-height: 1.4;
+}
