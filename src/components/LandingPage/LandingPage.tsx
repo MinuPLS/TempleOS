@@ -13,6 +13,7 @@ import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
 
 const EFFECTIVE_BURN_STATS_URL = `${import.meta.env.BASE_URL}effective-burn-stats.json`
+const MOBILE_DIVINE_LAYOUT_QUERY = '(max-width: 900px)'
 const TOKEN_DECIMALS = 18n
 const DECIMAL_DIVISOR = 10n ** TOKEN_DECIMALS
 const burnUsdFormatter = new Intl.NumberFormat('en-US', {
@@ -58,6 +59,9 @@ export function LandingPage() {
   const [isBurnLoading, setIsBurnLoading] = useState(false)
   const [burnError, setBurnError] = useState<string | null>(null)
   const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false)
+  const [isMobileDivineLayout, setIsMobileDivineLayout] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(MOBILE_DIVINE_LAYOUT_QUERY).matches
+  )
   const { tokenPrices } = usePoolData()
   const {
     tokenStats,
@@ -72,6 +76,15 @@ export function LandingPage() {
     lastUpdated: divineLastUpdated,
     refresh: refreshDivine,
   } = useDivineManagerActivity()
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_DIVINE_LAYOUT_QUERY)
+    const updateLayout = (event: MediaQueryListEvent) => setIsMobileDivineLayout(event.matches)
+
+    setIsMobileDivineLayout(mediaQuery.matches)
+    mediaQuery.addEventListener('change', updateLayout)
+    return () => mediaQuery.removeEventListener('change', updateLayout)
+  }, [])
 
   const heroLinks = [
     {
@@ -566,7 +579,7 @@ export function LandingPage() {
 
               </div>
 
-              <ConnectedLiquidityPools tokenPrices={tokenPrices} />
+              {!isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} /> : null}
             </aside>
             <div className={styles.divineFeedColumn}>
               <DivineManagerActivity
@@ -578,6 +591,7 @@ export function LandingPage() {
                 tokenPrices={tokenPrices}
               />
             </div>
+            {isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} /> : null}
           </div>
         </section>
       </div>
