@@ -53,7 +53,8 @@ const BUY_AND_BURN_ABI = [
 
 const BLOCK_CHUNK = 2_500n
 const MIN_BLOCK_CHUNK = 250n
-const TARGET_EXECUTION_COUNT = 100 // 20 pages * 5 items per page
+const TARGET_EXECUTION_COUNT = 20
+const ARCHIVE_BATCH_SIZE = 20
 const MAX_BATCHES_PER_FETCH = 40 // Increased to cover same range with smaller chunks
 const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
@@ -559,6 +560,18 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
     }, REFRESH_INTERVAL)
     return () => clearInterval(interval)
   }, [fetchData, fetchPrice])
+
+  useEffect(() => {
+    if (!hasMore || isLoading || isLoadingMore || isFetchingRef.current) return
+    const timer = setTimeout(() => {
+      void fetchData({
+        loadMore: true,
+        silent: true,
+        targetCount: executionsRef.current.length + ARCHIVE_BATCH_SIZE,
+      })
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [fetchData, hasMore, isLoading, isLoadingMore, lastUpdated])
 
   return {
     executions,

@@ -23,7 +23,6 @@ import styles from './LandingPage.module.css'
 import type { TokenPrices } from '../UniswapPools/hooks/usePoolData'
 
 const PAGE_SIZE = 5
-const PAGE_BLOCK = 20
 const FEEDER_BURST_GAP_MS = 3_600_000
 
 type BurnActivityItem = {
@@ -344,7 +343,6 @@ interface DivineManagerActivityProps {
   error: string | null
   lastUpdated: number | null
   onRefresh: () => void
-  onLoadMore: () => void
   hasMore: boolean
   tokenPrices: TokenPrices
 }
@@ -356,7 +354,6 @@ export const DivineManagerActivity = ({
   error,
   lastUpdated,
   onRefresh,
-  onLoadMore,
   hasMore,
   tokenPrices,
 }: DivineManagerActivityProps) => {
@@ -387,7 +384,6 @@ export const DivineManagerActivity = ({
     error: burnError,
     refresh: refreshBurns,
     silentRefresh: silentRefreshBurns,
-    loadMore: loadMoreBurns,
     lastUpdated: burnLastUpdated,
     tokenUsdPrice: briahUsdPrice,
   } = useBuyAndBurnActivity()
@@ -400,7 +396,6 @@ export const DivineManagerActivity = ({
     error: mafiaError,
     refresh: refreshMafia,
     silentRefresh: silentRefreshMafia,
-    loadMore: loadMoreMafia,
     lastUpdated: mafiaLastUpdated,
     tokenUsdPrice: coinMafiaUsdPrice,
   } = useCoinMafiaBuyAndBurnActivity()
@@ -413,7 +408,6 @@ export const DivineManagerActivity = ({
     error: dumbError,
     refresh: refreshDumb,
     silentRefresh: silentRefreshDumb,
-    loadMore: loadMoreDumb,
     lastUpdated: dumbLastUpdated,
     tokenUsdPrice: dumbUsdPrice,
   } = useDumbBuyAndBurnActivity()
@@ -426,7 +420,6 @@ export const DivineManagerActivity = ({
     error: fupaError,
     refresh: refreshFupa,
     silentRefresh: silentRefreshFupa,
-    loadMore: loadMoreFupa,
     lastUpdated: fupaLastUpdated,
     tokenUsdPrice: fupaUsdPrice,
   } = useFupaBuyAndBurnActivity()
@@ -531,25 +524,10 @@ export const DivineManagerActivity = ({
         : isViewingFupa
           ? hasMoreFupa
           : hasMore
-  const handleLoadMore = isViewingBurns
-    ? () => void loadMoreBurns()
-    : isViewingMafia
-      ? () => void loadMoreMafia()
-      : isViewingDumb
-        ? () => void loadMoreDumb()
-        : isViewingFupa
-          ? () => void loadMoreFupa()
-          : onLoadMore
-
   const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
   const start = (pageIndex - 1) * PAGE_SIZE
   const pageItems = useMemo(() => currentData.slice(start, start + PAGE_SIZE), [currentData, start])
-  const totalPageDisplay =
-    totalPages > PAGE_BLOCK && currentHasMore
-      ? `${Math.floor(totalPages / PAGE_BLOCK) * PAGE_BLOCK}+`
-      : totalPages
-  const shouldShowLoadMore = currentHasMore && pageIndex === totalPages
 
   const handlePrev = () =>
     setPageByView((prev) => {
@@ -1079,16 +1057,11 @@ export const DivineManagerActivity = ({
               : renderDivineManagerExecutionCard(arbItem)
         })}
       </div>
-      {shouldShowLoadMore && (
+      {currentHasMore && !currentError && (
         <div className={styles.activityLoadMoreRow}>
-          <button
-            type="button"
-            className={styles.activityLoadMoreButton}
-            onClick={handleLoadMore}
-            disabled={currentLoadingMore || currentLoading}
-          >
-            {currentLoadingMore ? 'Loading more…' : 'Load older activity'}
-          </button>
+          <span className={styles.activityHint} role="status">
+            {currentLoadingMore ? 'Loading archived activity…' : 'Preparing archived activity…'}
+          </span>
         </div>
       )}
       <div className={styles.activityFooter}>
@@ -1096,7 +1069,7 @@ export const DivineManagerActivity = ({
           <ChevronLeft size={16} />
         </button>
         <span className={styles.pageIndicator}>
-          {pageIndex}/{totalPageDisplay}
+          {pageIndex}/{totalPages}
         </span>
         <button onClick={handleNext} disabled={pageIndex === totalPages} aria-label="Next page">
           <ChevronRight size={16} />

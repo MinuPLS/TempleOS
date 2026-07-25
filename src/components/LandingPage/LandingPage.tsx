@@ -72,7 +72,6 @@ export function LandingPage() {
     error: divineError,
     lastUpdated: divineLastUpdated,
     refresh: refreshDivine,
-    loadMore: loadMoreDivine,
   } = useDivineManagerActivity()
 
   const heroLinks = [
@@ -576,7 +575,6 @@ export function LandingPage() {
                 error={divineError}
                 lastUpdated={divineLastUpdated}
                 onRefresh={refreshDivine}
-                onLoadMore={loadMoreDivine}
                 hasMore={hasMoreDivine}
                 tokenPrices={tokenPrices}
               />

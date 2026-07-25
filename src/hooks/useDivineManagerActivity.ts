@@ -177,13 +177,11 @@ const MAX_RETRIES = 3
 const FEEDER_CURSOR_OVERLAP = 128n
 // Small overlap re-scanned on an incremental refresh to absorb reorgs / off-by-one.
 const DIVINE_TIP_OVERLAP = 8n
-// A cold start loads the first 7 pages (PAGE_SIZE 5 in the feed) of arbs; deeper
-// history is fetched on demand via loadMore, keeping the initial paint fast.
-const COLD_START_TARGET = 35
-const LOAD_MORE_INCREMENT = 35
-// The activity card renders five rows per page. Show ten full pages from the
-// indexed feed immediately, then hydrate the remaining archive in the background.
-const INDEXED_INITIAL_ACTIVITY_COUNT = 50
+// Start with a compact first screen, then hydrate all historic activity
+// automatically in equal-sized batches without a user-facing "load older" step.
+const COLD_START_TARGET = 20
+const LOAD_MORE_INCREMENT = 20
+const INDEXED_INITIAL_ACTIVITY_COUNT = 20
 // If the tip gap exceeds one incremental window (or is negative, e.g. a reorg) we
 // cold-start straight to the latest arbs instead of bridging a huge stretch.
 const INCREMENTAL_MAX_GAP = BLOCK_CHUNK * BigInt(MAX_BATCHES_PER_FETCH)
@@ -819,26 +817,29 @@ const fetchCachedDivineExecutions = async ({
   }
 }
 
-// D1 already contains the compact, pre-parsed execution rows, so loading the
-// full Divine Manager history is inexpensive (currently two API pages). This
-// is intentionally separate from the Feeder Bot, whose old browser RPC scan
-// remains paginated until it receives its own indexer.
-const fetchAllCachedDivineExecutions = async (feedUrl: string) => {
-  const executionMap = new Map<string, DivineManagerExecution>()
-  let cursor: string | null = null
+const hydrateCachedDivineArchive = async ({
+  feedUrl,
+  firstPage,
+  onProgress,
+}: {
+  feedUrl: string
+  firstPage: { executions: DivineManagerExecution[]; nextCursor: string | null }
+  onProgress: (result: { executions: DivineManagerExecution[]; nextCursor: string | null }) => void
+}) => {
+  const executionMap = new Map(firstPage.executions.map((execution) => [execution.transactionHash, execution]))
+  let cursor = firstPage.nextCursor
 
-  do {
-    const page = await fetchCachedDivineExecutions({ feedUrl, cursor, limit: 100 })
+  while (cursor) {
+    const page = await fetchCachedDivineExecutions({ feedUrl, cursor, limit: LOAD_MORE_INCREMENT })
     page.executions.forEach((execution) => executionMap.set(execution.transactionHash, execution))
-    const nextCursor = page.nextCursor
-    if (nextCursor === cursor) break
-    cursor = nextCursor
-  } while (cursor)
-
-  return {
-    executions: Array.from(executionMap.values()),
-    nextCursor: null,
+    const previousCursor = cursor
+    cursor = page.nextCursor
+    const result = { executions: Array.from(executionMap.values()), nextCursor: cursor }
+    onProgress(result)
+    if (cursor === previousCursor) break
   }
+
+  return { executions: Array.from(executionMap.values()), nextCursor: cursor }
 }
 
 const summarizeFeederTransaction = async (
@@ -1581,11 +1582,8 @@ export const useDivineManagerActivity = () => {
           : 0n
         : 0n
 
-      // The browser-only Feeder path stays capped to keep its RPC work bounded.
-      // The indexed Divine Manager path instead gets its full compact history.
-      const sourceTargetCount = loadMore
-        ? Math.max(divineExisting.size, feederExisting.size) + LOAD_MORE_INCREMENT
-        : COLD_START_TARGET
+      const divineTargetCount = loadMore ? divineExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
+      const feederTargetCount = loadMore ? feederExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
 
       const indexedFeedUrl = import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
       const feederPromise = fetchFeederExecutions({
@@ -1594,7 +1592,7 @@ export const useDivineManagerActivity = () => {
         latestBlock,
         loadMore,
         cursor: loadMore ? nextFromBlockRef.current.feeder : null,
-        targetCount: sourceTargetCount,
+        targetCount: feederTargetCount,
         minBlock: feederMinBlock,
         ignoreTargetCount: isIncrementalRefresh,
       })
@@ -1603,7 +1601,7 @@ export const useDivineManagerActivity = () => {
 
       if (indexedFeedUrl && isColdStart) {
         // Do not make the fast D1-backed experience wait for the Feeder Bot's
-        // browser RPC scan. The first ten pages are useful immediately; the
+        // browser RPC scan. The first 20 records are useful immediately; the
         // remainder fills in while that independent scan continues.
         const initialDivine = await fetchCachedDivineExecutions({
           feedUrl: indexedFeedUrl,
@@ -1632,17 +1630,39 @@ export const useDivineManagerActivity = () => {
           latestScannedBlock: latestScannedBlockRef.current,
         }
 
-        ;[divineResult, feederResult] = await Promise.all([
-          fetchAllCachedDivineExecutions(indexedFeedUrl),
-          feederPromise,
-        ])
+        const archivePromise = hydrateCachedDivineArchive({
+          feedUrl: indexedFeedUrl,
+          firstPage: initialDivine,
+          onProgress: (archive) => {
+            const archiveExecutions = sortExecutions([
+              ...archive.executions,
+              ...Array.from(feederExisting.values()),
+            ])
+            const archiveUpdatedAt = Date.now()
+            const archiveCursor: FeedCursor = {
+              divine: archive.nextCursor,
+              feeder: nextFromBlockRef.current.feeder,
+            }
+            setExecutions(archiveExecutions)
+            setLastUpdated(archiveUpdatedAt)
+            setNextFromBlock(archiveCursor)
+            cachedActivityState = {
+              executions: archiveExecutions,
+              nextFromBlock: archiveCursor,
+              lastUpdated: archiveUpdatedAt,
+              hasMore: true,
+              latestScannedBlock: latestScannedBlockRef.current,
+            }
+          },
+        })
+        ;[divineResult, feederResult] = await Promise.all([archivePromise, feederPromise])
       } else if (indexedFeedUrl && isIncrementalRefresh) {
         // A newly indexed Divine execution must not wait for the independent
         // Feeder RPC scan before it becomes visible in the activity card.
         const latestDivine = await fetchCachedDivineExecutions({
           feedUrl: indexedFeedUrl,
           cursor: null,
-          limit: COLD_START_TARGET,
+          limit: divineTargetCount,
         })
         divineResult = {
           executions: Array.from(
@@ -1671,11 +1691,14 @@ export const useDivineManagerActivity = () => {
       } else {
         ;[divineResult, feederResult] = await Promise.all([
           indexedFeedUrl
-            ? fetchCachedDivineExecutions({
+            ? (loadMore && nextFromBlockRef.current.divine === null
+                ? Promise.resolve({ executions: Array.from(divineExisting.values()), nextCursor: null })
+                : fetchCachedDivineExecutions({
               feedUrl: indexedFeedUrl,
               cursor: loadMore ? nextFromBlockRef.current.divine : null,
-              limit: sourceTargetCount,
-              }).then((result) => ({
+              limit: divineTargetCount,
+                })
+              ).then((result) => ({
               // A tip refresh returns the newest page only. Merge it into the
               // already-paginated set so pressing Refresh never discards rows
               // the visitor previously loaded.
@@ -1693,7 +1716,7 @@ export const useDivineManagerActivity = () => {
               latestBlock,
               loadMore,
               cursor: loadMore ? nextFromBlockRef.current.divine : null,
-              targetCount: sourceTargetCount,
+              targetCount: divineTargetCount,
               minBlock: divineMinBlock,
               ignoreTargetCount: isIncrementalRefresh,
             }),
@@ -1753,6 +1776,14 @@ export const useDivineManagerActivity = () => {
 
     return () => clearInterval(interval)
   }, [fetchActivity])
+
+  useEffect(() => {
+    if (!hasMore || isLoading || isLoadingMore || isFetchingRef.current) return
+    const timer = setTimeout(() => {
+      void fetchActivity({ silent: true, loadMore: true })
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [fetchActivity, hasMore, isLoading, isLoadingMore, lastUpdated])
 
   return {
     executions,
