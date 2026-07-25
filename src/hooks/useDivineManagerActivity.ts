@@ -167,9 +167,9 @@ type FeederTxSummary = {
 
 const BLOCK_CHUNK = 2_500n
 const MIN_BLOCK_CHUNK = 250n
-// The Worker indexes the tip every minute; poll on the same cadence so open
-// dashboards display a completed arb on the next indexed snapshot.
-const REFRESH_INTERVAL = 60_000
+// The static snapshot catches up immediately on entry. Once open, a five-minute
+// background sweep keeps RPC use modest; manual refresh remains immediate.
+const REFRESH_INTERVAL = 300_000
 const MAX_BATCHES_PER_FETCH = 40
 const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
