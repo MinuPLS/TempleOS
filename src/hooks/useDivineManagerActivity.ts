@@ -714,6 +714,13 @@ type CachedDivineManagerExecution = {
   } | null
 }
 
+type StaticDivineManagerSnapshot = {
+  schemaVersion?: number
+  indexedThroughBlock?: string
+  historicalComplete?: boolean
+  items?: CachedDivineManagerExecution[]
+}
+
 const asBigInt = (value: string | undefined) => BigInt(value || '0')
 
 const hydrateCachedDivineExecution = (value: CachedDivineManagerExecution): DivineManagerExecution | null => {
@@ -817,6 +824,23 @@ const fetchCachedDivineExecutions = async ({
       return execution ? [execution] : []
     }),
     nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null,
+  }
+}
+
+const fetchStaticDivineSnapshot = async (snapshotUrl: string) => {
+  const response = await fetch(snapshotUrl, { cache: 'no-store' })
+  if (!response.ok) throw new Error(`Static Divine Manager snapshot returned ${response.status}`)
+  const body = (await response.json()) as StaticDivineManagerSnapshot
+  if (!Array.isArray(body.items) || typeof body.indexedThroughBlock !== 'string' || !/^\d+$/.test(body.indexedThroughBlock)) {
+    throw new Error('Static Divine Manager snapshot returned an invalid payload')
+  }
+
+  return {
+    executions: body.items.flatMap((item) => {
+      const execution = hydrateCachedDivineExecution(item)
+      return execution ? [execution] : []
+    }),
+    indexedThroughBlock: BigInt(body.indexedThroughBlock),
   }
 }
 
@@ -1590,7 +1614,11 @@ export const useDivineManagerActivity = () => {
       const divineTargetCount = loadMore ? divineExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
       const feederTargetCount = loadMore ? feederExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
 
-      const indexedFeedUrl = import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
+      // The normal public path is a GitHub-hosted static snapshot. The Worker is
+      // retained only as a fallback when that snapshot is unavailable, so visitor
+      // refreshes do not consume the Worker's daily request allowance.
+      const staticSnapshotUrl = import.meta.env.VITE_DIVINE_MANAGER_STATIC_SNAPSHOT_URL?.trim()
+      const indexedFeedUrl = staticSnapshotUrl ? undefined : import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
       const feederPromise = fetchFeederExecutions({
         publicClient,
         existingExecutions: feederExisting,
@@ -1604,7 +1632,50 @@ export const useDivineManagerActivity = () => {
       let divineResult: { executions: DivineManagerExecution[]; nextCursor: string | null }
       let feederResult: Awaited<ReturnType<typeof fetchFeederExecutions>>
 
-      if (indexedFeedUrl && isColdStart) {
+      if (staticSnapshotUrl && isColdStart) {
+        const snapshot = await fetchStaticDivineSnapshot(staticSnapshotUrl)
+        const snapshotDivine = new Map(snapshot.executions.map((execution) => [execution.transactionHash, execution]))
+        const catchUpMinBlock = snapshot.indexedThroughBlock > DIVINE_TIP_OVERLAP
+          ? snapshot.indexedThroughBlock - DIVINE_TIP_OVERLAP
+          : 0n
+        const initialExecutions = sortExecutions([
+          ...snapshot.executions,
+          ...Array.from(feederExisting.values()),
+        ])
+        const initialUpdatedAt = Date.now()
+        const initialCursor: FeedCursor = {
+          divine: null,
+          feeder: nextFromBlockRef.current.feeder,
+        }
+        setExecutions(initialExecutions)
+        setLastUpdated(initialUpdatedAt)
+        setNextFromBlock(initialCursor)
+        // The Feeder still hydrates independently; all Divine archive rows are
+        // already present in the static snapshot.
+        setHasMore(true)
+        setIsLoading(false)
+        cachedActivityState = {
+          executions: initialExecutions,
+          nextFromBlock: initialCursor,
+          lastUpdated: initialUpdatedAt,
+          hasMore: true,
+          latestScannedBlock: snapshot.indexedThroughBlock,
+        }
+
+        ;[divineResult, feederResult] = await Promise.all([
+          fetchOnchainDivineExecutions({
+            publicClient,
+            existingExecutions: snapshotDivine,
+            latestBlock,
+            loadMore: false,
+            cursor: null,
+            targetCount: snapshotDivine.size + COLD_START_TARGET,
+            minBlock: catchUpMinBlock,
+            ignoreTargetCount: true,
+          }),
+          feederPromise,
+        ])
+      } else if (indexedFeedUrl && isColdStart) {
         // Do not make the fast D1-backed experience wait for the Feeder Bot's
         // browser RPC scan. The first 20 records are useful immediately; the
         // remainder fills in while that independent scan continues.

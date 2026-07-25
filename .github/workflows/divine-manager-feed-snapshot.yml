@@ -1,0 +1,37 @@
+name: Divine Manager Feed Snapshot
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: divine-manager-feed-snapshot
+  cancel-in-progress: false
+
+jobs:
+  update-divine-manager-feed-snapshot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update static Divine Manager feed
+        run: node scripts/update-divine-manager-feed-snapshot.mjs
+
+      - name: Commit static snapshot
+        run: |
+          git config user.name "divine-manager-feed-bot"
+          git config user.email "divine-manager-feed-bot@users.noreply.github.com"
+          git add public/divine-manager-feed.json
+          git commit -m "chore(feed): update Divine Manager snapshot"
+          git push
