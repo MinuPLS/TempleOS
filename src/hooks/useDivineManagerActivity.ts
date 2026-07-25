@@ -1617,7 +1617,8 @@ export const useDivineManagerActivity = () => {
       // The normal public path is a GitHub-hosted static snapshot. The Worker is
       // retained only as a fallback when that snapshot is unavailable, so visitor
       // refreshes do not consume the Worker's daily request allowance.
-      const staticSnapshotUrl = import.meta.env.VITE_DIVINE_MANAGER_STATIC_SNAPSHOT_URL?.trim()
+      const staticSnapshotUrl =
+        import.meta.env.VITE_DIVINE_MANAGER_STATIC_SNAPSHOT_URL?.trim() || '/divine-manager-feed.json'
       const indexedFeedUrl = staticSnapshotUrl ? undefined : import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
       const feederPromise = fetchFeederExecutions({
         publicClient,
@@ -1853,14 +1854,6 @@ export const useDivineManagerActivity = () => {
 
     return () => clearInterval(interval)
   }, [fetchActivity])
-
-  useEffect(() => {
-    if (!hasMore || isLoading || isLoadingMore || isFetchingRef.current) return
-    const timer = setTimeout(() => {
-      void fetchActivity({ silent: true, loadMore: true })
-    }, 150)
-    return () => clearTimeout(timer)
-  }, [fetchActivity, hasMore, isLoading, isLoadingMore, lastUpdated])
 
   return {
     executions,

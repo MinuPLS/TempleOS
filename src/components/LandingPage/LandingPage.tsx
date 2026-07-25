@@ -67,8 +67,6 @@ export function LandingPage() {
   const {
     executions: divineExecutions,
     isLoading: isDivineLoading,
-    isLoadingMore: isDivineLoadingMore,
-    hasMore: hasMoreDivine,
     error: divineError,
     lastUpdated: divineLastUpdated,
     refresh: refreshDivine,
@@ -571,11 +569,9 @@ export function LandingPage() {
               <DivineManagerActivity
                 executions={divineExecutions}
                 isLoading={isDivineLoading}
-                isLoadingMore={isDivineLoadingMore}
                 error={divineError}
                 lastUpdated={divineLastUpdated}
                 onRefresh={refreshDivine}
-                hasMore={hasMoreDivine}
                 tokenPrices={tokenPrices}
               />
             </div>

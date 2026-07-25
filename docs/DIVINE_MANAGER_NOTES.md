@@ -1,6 +1,6 @@
 ## Divine Manager Feed – Developer Notes
 
-_Last updated: 2026-07-23._
+_Last updated: 2026-07-25._
 
 ### Current scope
 
@@ -44,6 +44,9 @@ The `/dashboard` landing page now includes a live “Automated arbs” card that
 ### UI behavior
 
 * The list is paginated (5 per page) with manual arrows and a refresh button.
+* Divine Manager history loads from `public/divine-manager-feed.json`, then the client
+  catches up from the snapshot block. Open dashboards poll silently every five minutes.
+* Archive pagination is not swept repeatedly in the browser and has no loading banner.
 * Each row shows:
   * `Execute` title + truncated hash.
   * HolyC and JIT burn stats (with flame icon).
@@ -62,7 +65,9 @@ The `/dashboard` landing page now includes a live “Automated arbs” card that
 3. **EOA caller context**: surfacing the caller (bot vs owner) or linking to their address can provide provenance.
 4. **Route detection**: present compile/restore/swap sequences in natural language even when more than two steps occur (e.g., HC→JIT, JIT→HC/WPLS, swap to WPLS, restore).
 5. **Trace-level verification**: We derive steps solely from transfers; optionally inspect `receipt.logs` for pair `Sync/Swap` events or use execution traces for better ordering.
-6. **Persistent caching**: The hook re-fetches all receipts every minute. Introduce caching or indexing if RPC rate limits become a problem.
+6. **Remaining client RPC work**: Feeder Bot and partner buy-and-burn activity still scan
+   on chain once at startup and every five minutes; move these into snapshots too if RPC
+   limits become a problem.
 7. **Tooltips**: Evaluate accessibility / mobile (maybe convert to accordion).
 8. **Icons**: We use the existing token logos and a basic compiler chip. If design provides new assets (e.g., dedicated compiler/pool icons) slot them into the tooltip.
 

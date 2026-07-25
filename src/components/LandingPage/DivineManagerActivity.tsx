@@ -339,22 +339,18 @@ const buildBurstGainRows = (burst: FeederBurstDisplayItem): DisplayGainRow[] => 
 interface DivineManagerActivityProps {
   executions: ActivityExecution[]
   isLoading: boolean
-  isLoadingMore: boolean
   error: string | null
   lastUpdated: number | null
-  onRefresh: () => void
-  hasMore: boolean
+  onRefresh: () => Promise<void>
   tokenPrices: TokenPrices
 }
 
 export const DivineManagerActivity = ({
   executions,
   isLoading,
-  isLoadingMore,
   error,
   lastUpdated,
   onRefresh,
-  hasMore,
   tokenPrices,
 }: DivineManagerActivityProps) => {
   const { holycUSD, jitUSD, wplsUSD } = tokenPrices
@@ -379,11 +375,8 @@ export const DivineManagerActivity = ({
   const {
     executions: burnExecutions,
     isLoading: isBurnLoading,
-    isLoadingMore: isBurnLoadingMore,
-    hasMore: hasMoreBurns,
     error: burnError,
     refresh: refreshBurns,
-    silentRefresh: silentRefreshBurns,
     lastUpdated: burnLastUpdated,
     tokenUsdPrice: briahUsdPrice,
   } = useBuyAndBurnActivity()
@@ -391,11 +384,8 @@ export const DivineManagerActivity = ({
   const {
     executions: mafiaExecutions,
     isLoading: isMafiaLoading,
-    isLoadingMore: isMafiaLoadingMore,
-    hasMore: hasMoreMafia,
     error: mafiaError,
     refresh: refreshMafia,
-    silentRefresh: silentRefreshMafia,
     lastUpdated: mafiaLastUpdated,
     tokenUsdPrice: coinMafiaUsdPrice,
   } = useCoinMafiaBuyAndBurnActivity()
@@ -403,11 +393,8 @@ export const DivineManagerActivity = ({
   const {
     executions: dumbExecutions,
     isLoading: isDumbLoading,
-    isLoadingMore: isDumbLoadingMore,
-    hasMore: hasMoreDumb,
     error: dumbError,
     refresh: refreshDumb,
-    silentRefresh: silentRefreshDumb,
     lastUpdated: dumbLastUpdated,
     tokenUsdPrice: dumbUsdPrice,
   } = useDumbBuyAndBurnActivity()
@@ -415,11 +402,8 @@ export const DivineManagerActivity = ({
   const {
     executions: fupaExecutions,
     isLoading: isFupaLoading,
-    isLoadingMore: isFupaLoadingMore,
-    hasMore: hasMoreFupa,
     error: fupaError,
     refresh: refreshFupa,
-    silentRefresh: silentRefreshFupa,
     lastUpdated: fupaLastUpdated,
     tokenUsdPrice: fupaUsdPrice,
   } = useFupaBuyAndBurnActivity()
@@ -463,15 +447,6 @@ export const DivineManagerActivity = ({
         : isViewingFupa
           ? isFupaLoading
           : isLoading
-  const currentLoadingMore = isViewingBurns
-    ? isBurnLoadingMore
-    : isViewingMafia
-      ? isMafiaLoadingMore
-      : isViewingDumb
-        ? isDumbLoadingMore
-        : isViewingFupa
-          ? isFupaLoadingMore
-          : isLoadingMore
   const currentError = isViewingBurns
     ? burnError
     : isViewingMafia
@@ -491,39 +466,23 @@ export const DivineManagerActivity = ({
           ? fupaLastUpdated
           : lastUpdated
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (isRefreshing) return
     setIsRefreshing(true)
 
-    const promises: Promise<void>[] = [
-      silentRefreshBurns(),
-      silentRefreshMafia(),
-      silentRefreshDumb(),
-      silentRefreshFupa(),
-    ]
-    if (isViewingBurns) {
-      void refreshBurns()
-    } else if (isViewingMafia) {
-      void refreshMafia()
-    } else if (isViewingDumb) {
-      void refreshDumb()
-    } else if (isViewingFupa) {
-      void refreshFupa()
+    try {
+      await Promise.allSettled([
+        onRefresh(),
+        refreshBurns(),
+        refreshMafia(),
+        refreshDumb(),
+        refreshFupa(),
+      ])
+    } finally {
+      setIsRefreshing(false)
     }
-    onRefresh()
-
-    void Promise.allSettled(promises).then(() => setIsRefreshing(false))
   }
 
-  const currentHasMore = isViewingBurns
-    ? hasMoreBurns
-    : isViewingMafia
-      ? hasMoreMafia
-      : isViewingDumb
-        ? hasMoreDumb
-        : isViewingFupa
-          ? hasMoreFupa
-          : hasMore
   const totalPages = Math.max(1, Math.ceil(currentData.length / PAGE_SIZE))
   const pageIndex = Math.min(page, totalPages)
   const start = (pageIndex - 1) * PAGE_SIZE
@@ -921,11 +880,8 @@ export const DivineManagerActivity = ({
             </div>
             <button
               className={`${styles.activityRefreshButton}${isRefreshing || currentLoading ? ` ${styles.refreshSpinning}` : ''}`}
-              onClick={() => {
-                if (currentLoadingMore) return
-                handleRefresh()
-              }}
-              disabled={currentLoadingMore || isRefreshing}
+              onClick={() => void handleRefresh()}
+              disabled={isRefreshing || currentLoading}
               aria-label="Refresh feed"
             >
               <RotateCcw size={16} />
@@ -1057,13 +1013,6 @@ export const DivineManagerActivity = ({
               : renderDivineManagerExecutionCard(arbItem)
         })}
       </div>
-      {currentHasMore && !currentError && (
-        <div className={styles.activityLoadMoreRow}>
-          <span className={styles.activityHint} role="status">
-            {currentLoadingMore ? 'Loading archived activity…' : 'Preparing archived activity…'}
-          </span>
-        </div>
-      )}
       <div className={styles.activityFooter}>
         <button onClick={handlePrev} disabled={pageIndex === 1} aria-label="Previous page">
           <ChevronLeft size={16} />
