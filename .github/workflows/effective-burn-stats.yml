@@ -1,4 +1,4 @@
-name: Effective Burn Stats
+name: Static Dashboard Snapshots
 
 on:
   schedule:
@@ -25,19 +25,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Update static effective burn stats
-        run: node scripts/update-effective-burn-stats.mjs
+      - name: Update static dashboard data
+        run: |
+          node scripts/update-effective-burn-stats.mjs
+          node scripts/update-divine-manager-feed-snapshot.mjs
         env:
           PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
 
-      - name: Commit stats file if changed
+      - name: Commit snapshots if changed
         run: |
-          if git status --porcelain | grep -q "public/effective-burn-stats.json"; then
-            git config user.name "effective-burn-bot"
-            git config user.email "effective-burn-bot@users.noreply.github.com"
-            git add public/effective-burn-stats.json
-            git commit -m "chore(stats): update effective burn snapshot"
+          if git status --porcelain | grep -Eq "public/(effective-burn-stats|divine-manager-feed)\.json"; then
+            git config user.name "dashboard-snapshot-bot"
+            git config user.email "dashboard-snapshot-bot@users.noreply.github.com"
+            git add public/effective-burn-stats.json public/divine-manager-feed.json
+            git commit -m "chore(stats): update dashboard snapshots"
             git push
           else
-            echo "No stats changes"
+            echo "No snapshot changes"
           fi
