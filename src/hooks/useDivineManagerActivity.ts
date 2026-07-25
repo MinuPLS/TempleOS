@@ -1636,6 +1636,38 @@ export const useDivineManagerActivity = () => {
           fetchAllCachedDivineExecutions(indexedFeedUrl),
           feederPromise,
         ])
+      } else if (indexedFeedUrl && isIncrementalRefresh) {
+        // A newly indexed Divine execution must not wait for the independent
+        // Feeder RPC scan before it becomes visible in the activity card.
+        const latestDivine = await fetchCachedDivineExecutions({
+          feedUrl: indexedFeedUrl,
+          cursor: null,
+          limit: COLD_START_TARGET,
+        })
+        divineResult = {
+          executions: Array.from(
+            new Map([
+              ...divineExisting,
+              ...latestDivine.executions.map((execution) => [execution.transactionHash, execution] as const),
+            ]).values()
+          ),
+          nextCursor: latestDivine.nextCursor,
+        }
+        const latestExecutions = sortExecutions([
+          ...divineResult.executions,
+          ...Array.from(feederExisting.values()),
+        ])
+        const latestUpdatedAt = Date.now()
+        setExecutions(latestExecutions)
+        setLastUpdated(latestUpdatedAt)
+        cachedActivityState = {
+          executions: latestExecutions,
+          nextFromBlock: nextFromBlockRef.current,
+          lastUpdated: latestUpdatedAt,
+          hasMore,
+          latestScannedBlock: latestBlock,
+        }
+        feederResult = await feederPromise
       } else {
         ;[divineResult, feederResult] = await Promise.all([
           indexedFeedUrl
