@@ -1416,6 +1416,374 @@
   opacity: 0.4;
 }
 
+.liquidityPoolsCard {
+  position: relative;
+  flex: 0 0 340px;
+  min-height: 340px;
+  overflow: hidden;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(20, 20, 35, 0.95), rgba(12, 17, 34, 0.98));
+  border: 1px solid rgba(96, 165, 250, 0.16);
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.liquidityPoolsCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(96, 165, 250, 0.36), transparent);
+  opacity: 0.5;
+}
+
+.liquidityPoolsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.liquidityPoolsHeading {
+  min-width: 0;
+  flex: 1;
+}
+
+.liquidityPoolsTitle {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.liquidityPoolsSubtitle {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: rgba(203, 213, 225, 0.58);
+}
+
+.liquidityPoolsActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.liquidityPoolsError {
+  margin: 0;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.12);
+  color: #fca5a5;
+  font-size: 11px;
+}
+
+.liquidityPoolsPanels {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.liquidityPoolsPanel {
+  width: 100%;
+  height: 100%;
+  transition: opacity 140ms ease;
+}
+
+.liquidityPoolsPanelHidden {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.liquidityPoolsPanelVisible {
+  position: relative;
+  opacity: 1;
+}
+
+.liquidityPoolsViewport {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.liquidityPoolsViewport::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.liquidityPoolsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 6px;
+}
+
+.liquidityPoolCard {
+  min-width: 0;
+  border-radius: 11px;
+  background: rgba(4, 5, 12, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  overflow: hidden;
+  transition: border-color 100ms ease, background 100ms ease, box-shadow 100ms ease;
+}
+
+.liquidityPoolCard:hover {
+  border-color: rgba(96, 165, 250, 0.2);
+  background: rgba(10, 13, 25, 0.82);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.14);
+}
+
+.liquidityPoolCardExpanded {
+  border-color: rgba(96, 165, 250, 0.24);
+  background: rgba(8, 11, 23, 0.9);
+}
+
+.liquidityPoolToggle {
+  width: 100%;
+  min-height: 54px;
+  padding: 7px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.liquidityPoolToggle:focus-visible {
+  outline: 1px solid rgba(96, 165, 250, 0.72);
+  outline-offset: -2px;
+  border-radius: 10px;
+}
+
+.liquidityPoolLogos {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.liquidityPoolLogo {
+  position: relative;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #0b0e1a;
+  background: #111827;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.38);
+}
+
+.liquidityPoolLogo + .liquidityPoolLogo {
+  z-index: 1;
+  margin-left: -14px;
+}
+
+.liquidityPoolName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f8fafc;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.liquidityPoolSummary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.liquidityPoolValue {
+  color: rgba(241, 245, 249, 0.88);
+  font-size: 9.5px;
+  line-height: 1;
+  font-weight: 700;
+  font-feature-settings: 'tnum';
+  white-space: nowrap;
+}
+
+.liquidityPoolChevron {
+  flex: 0 0 auto;
+  color: rgba(148, 163, 184, 0.48);
+  transition: transform 120ms ease, color 100ms ease;
+}
+
+.liquidityPoolCard:hover .liquidityPoolChevron,
+.liquidityPoolCardExpanded .liquidityPoolChevron {
+  color: rgba(147, 197, 253, 0.88);
+}
+
+.liquidityPoolChevronOpen {
+  transform: rotate(180deg);
+}
+
+.liquidityPoolExpandedDetails {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 140ms ease-out, opacity 90ms ease;
+}
+
+.liquidityPoolExpandedDetailsOpen {
+  max-height: 104px;
+  opacity: 1;
+}
+
+.liquidityPoolExpandedInner {
+  padding: 1px 7px 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.liquidityPoolDetailRow {
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 1px;
+  display: grid;
+  grid-template-columns: minmax(25px, auto) minmax(0, 1fr) auto 20px;
+  align-items: center;
+  gap: 5px;
+}
+
+.liquidityPoolDetailRow + .liquidityPoolDetailRow {
+  border-top: 1px solid rgba(148, 163, 184, 0.06);
+}
+
+.liquidityPoolDetailRowPair {
+  grid-template-columns: minmax(25px, auto) minmax(0, 1fr) 20px;
+}
+
+.liquidityPoolDetailLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.liquidityPoolDetailBalance {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(241, 245, 249, 0.86);
+  font-size: 8.5px;
+  font-feature-settings: 'tnum';
+}
+
+.liquidityPoolDetailRow code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(191, 219, 254, 0.74);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.liquidityPoolDetailRow .liquidityPoolCopyButton {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.liquidityPoolCopyButton {
+  flex: 0 0 auto;
+  width: 23px;
+  height: 23px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(203, 213, 225, 0.62);
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.liquidityPoolCopyButton:hover {
+  color: #f8fafc;
+  border-color: rgba(96, 165, 250, 0.3);
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.liquidityPoolCopyButtonActive {
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.pairAddressToast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 9999;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(52, 211, 153, 0.38);
+  background: rgba(5, 46, 35, 0.94);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45), 0 0 24px rgba(16, 185, 129, 0.16);
+  color: #d1fae5;
+  font-size: 13px;
+  font-weight: 700;
+  backdrop-filter: blur(14px);
+  animation: poolToastIn 180ms ease-out;
+}
+
+@keyframes poolToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.liquidityPoolSkeleton {
+  min-height: 54px;
+  border-color: rgba(148, 163, 184, 0.08);
+  background:
+    linear-gradient(100deg, transparent 25%, rgba(148, 163, 184, 0.08) 42%, transparent 60%),
+    rgba(4, 5, 12, 0.68);
+  background-size: 220% 100%;
+  animation: poolSkeletonSweep 1.4s ease-in-out infinite;
+}
+
+@keyframes poolSkeletonSweep {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 .burnMeterHeader {
   display: flex;
   align-items: flex-start;
@@ -2035,6 +2403,23 @@
   .divineLayout {
     grid-template-columns: minmax(0, 1fr);
     gap: 32px;
+  }
+
+  .liquidityPoolsCard {
+    flex-basis: auto;
+    min-height: 520px;
+    max-height: 760px;
+  }
+}
+
+@media (max-width: 520px) {
+  .liquidityPoolsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .liquidityPoolsCard {
+    min-height: 560px;
+    padding-inline: 14px;
   }
 }
 

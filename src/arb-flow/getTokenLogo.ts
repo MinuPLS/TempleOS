@@ -119,23 +119,53 @@ export const resolveTokenLogo = (asset: { address: string; symbol: string }): To
   if (bySymbol) return { src: bySymbol, isInitials: false }
 
   const dexCache = readDexCache()
-  const cached = dexCache[symKey]
+  const cached = dexCache[lowerAddr] ?? dexCache[symKey]
   if (cached?.url) return { src: cached.url, isInitials: false }
 
   return { src: buildInitialsDataUrl(asset.symbol), isInitials: true }
 }
 
 export const fetchDexscreenerLogo = async (
-  symbol: string,
+  asset: string | { address?: string; symbol: string },
   chainId = 369
 ): Promise<string | null> => {
+  const symbol = typeof asset === 'string' ? asset : asset.symbol
+  const address = typeof asset === 'string' ? '' : asset.address?.toLowerCase() ?? ''
   if (!symbol || symbol.startsWith('0x')) return null
   const symKey = symbol.toLowerCase()
+  const cacheKey = address || symKey
   const dexCache = readDexCache()
-  const cached = dexCache[symKey]
+  const cached = dexCache[cacheKey] ?? dexCache[symKey]
   if (cached?.url) return cached.url
 
   try {
+    const chainSlug = chainId === 369 ? 'pulsechain' : String(chainId)
+    if (/^0x[a-f0-9]{40}$/.test(address)) {
+      const tokenResponse = await fetch(
+        `https://api.dexscreener.com/tokens/v1/${chainSlug}/${encodeURIComponent(address)}`
+      )
+      if (tokenResponse.ok) {
+        const payload = (await tokenResponse.json()) as unknown
+        const pairs = (Array.isArray(payload) ? payload : []) as Array<{
+          baseToken?: { address?: string; symbol?: string }
+          info?: { imageUrl?: string }
+        }>
+        const addressMatch = pairs.find(
+          (pair) => pair.baseToken?.address?.toLowerCase() === address && pair.info?.imageUrl
+        )
+        const symbolMatch = pairs.find(
+          (pair) => pair.baseToken?.symbol?.toLowerCase() === symKey && pair.info?.imageUrl
+        )
+        const tokenLogo = addressMatch?.info?.imageUrl ?? symbolMatch?.info?.imageUrl ?? null
+        if (tokenLogo) {
+          dexCache[address] = { url: tokenLogo, ts: Date.now() }
+          dexCache[symKey] = { url: tokenLogo, ts: Date.now() }
+          writeDexCache(dexCache)
+          return tokenLogo
+        }
+      }
+    }
+
     const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(symbol)}`)
     if (!res.ok) return null
     const data = (await res.json()) as {
@@ -146,9 +176,10 @@ export const fetchDexscreenerLogo = async (
       }>
     }
     const pairs = data.pairs ?? []
-    const match = pairs.find((p) => p.chainId === String(chainId) && p.baseToken?.symbol?.toLowerCase() === symKey)
+    const match = pairs.find((p) => p.chainId === chainSlug && p.baseToken?.symbol?.toLowerCase() === symKey)
     const logo = match?.info?.imageUrl ?? null
     if (logo) {
+      if (address) dexCache[address] = { url: logo, ts: Date.now() }
       dexCache[symKey] = { url: logo, ts: Date.now() }
       writeDexCache(dexCache)
     }

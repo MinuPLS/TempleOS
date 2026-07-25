@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
+import { ConnectedLiquidityPools } from './ConnectedLiquidityPools'
 import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft, RotateCcw, Info } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
@@ -564,6 +565,8 @@ export function LandingPage() {
                 </div>
 
               </div>
+
+              <ConnectedLiquidityPools tokenPrices={tokenPrices} />
             </aside>
             <div className={styles.divineFeedColumn}>
               <DivineManagerActivity

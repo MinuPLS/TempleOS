@@ -29,15 +29,16 @@ jobs:
         run: |
           node scripts/update-effective-burn-stats.mjs
           node scripts/update-divine-manager-feed-snapshot.mjs
+          node scripts/update-divine-manager-pools-snapshot.mjs
         env:
           PULSECHAIN_RPC_URL: ${{ secrets.PULSECHAIN_RPC_URL }}
 
       - name: Commit snapshots if changed
         run: |
-          if git status --porcelain | grep -Eq "public/(effective-burn-stats|divine-manager-feed)\.json"; then
+          if git status --porcelain | grep -Eq "public/(effective-burn-stats|divine-manager-(feed|pools))\.json"; then
             git config user.name "dashboard-snapshot-bot"
             git config user.email "dashboard-snapshot-bot@users.noreply.github.com"
-            git add public/effective-burn-stats.json public/divine-manager-feed.json
+            git add public/effective-burn-stats.json public/divine-manager-feed.json public/divine-manager-pools.json
             git commit -m "chore(stats): update dashboard snapshots"
             git push
           else
