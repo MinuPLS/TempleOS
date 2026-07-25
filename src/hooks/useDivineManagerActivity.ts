@@ -816,6 +816,28 @@ const fetchCachedDivineExecutions = async ({
   }
 }
 
+// D1 already contains the compact, pre-parsed execution rows, so loading the
+// full Divine Manager history is inexpensive (currently two API pages). This
+// is intentionally separate from the Feeder Bot, whose old browser RPC scan
+// remains paginated until it receives its own indexer.
+const fetchAllCachedDivineExecutions = async (feedUrl: string) => {
+  const executionMap = new Map<string, DivineManagerExecution>()
+  let cursor: string | null = null
+
+  do {
+    const page = await fetchCachedDivineExecutions({ feedUrl, cursor, limit: 100 })
+    page.executions.forEach((execution) => executionMap.set(execution.transactionHash, execution))
+    const nextCursor = page.nextCursor
+    if (nextCursor === cursor) break
+    cursor = nextCursor
+  } while (cursor)
+
+  return {
+    executions: Array.from(executionMap.values()),
+    nextCursor: null,
+  }
+}
+
 const summarizeFeederTransaction = async (
   publicClient: PulsePublicClient,
   hash: `0x${string}`
@@ -1556,8 +1578,8 @@ export const useDivineManagerActivity = () => {
           : 0n
         : 0n
 
-      // Cold start loads the first 7 pages; loadMore extends the loaded set; an
-      // incremental refresh ignores the target and sweeps the whole tip range.
+      // The browser-only Feeder path stays capped to keep its RPC work bounded.
+      // The indexed Divine Manager path instead gets its full compact history.
       const sourceTargetCount = loadMore
         ? Math.max(divineExisting.size, feederExisting.size) + LOAD_MORE_INCREMENT
         : COLD_START_TARGET
@@ -1565,11 +1587,14 @@ export const useDivineManagerActivity = () => {
       const indexedFeedUrl = import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
       const [divineResult, feederResult] = await Promise.all([
         indexedFeedUrl
-          ? fetchCachedDivineExecutions({
-              feedUrl: indexedFeedUrl,
-              cursor: loadMore ? nextFromBlockRef.current.divine : null,
-              limit: sourceTargetCount,
-            }).then((result) => ({
+          ? (isColdStart
+              ? fetchAllCachedDivineExecutions(indexedFeedUrl)
+              : fetchCachedDivineExecutions({
+                  feedUrl: indexedFeedUrl,
+                  cursor: loadMore ? nextFromBlockRef.current.divine : null,
+                  limit: sourceTargetCount,
+                })
+            ).then((result) => ({
               // A tip refresh returns the newest page only. Merge it into the
               // already-paginated set so pressing Refresh never discards rows
               // the visitor previously loaded.
