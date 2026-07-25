@@ -113,7 +113,9 @@ interface FetchOptions {
 }
 
 interface FeedCursor {
-  divine: bigint | null
+  // The indexed Divine Manager feed uses an opaque, stable pagination cursor.
+  // The Feeder Bot still scans blocks in the browser, so it retains its block cursor.
+  divine: string | null
   feeder: bigint | null
 }
 
@@ -165,7 +167,9 @@ type FeederTxSummary = {
 
 const BLOCK_CHUNK = 2_500n
 const MIN_BLOCK_CHUNK = 250n
-const REFRESH_INTERVAL = 300_000
+// The Worker indexes the tip every minute; poll on the same cadence so open
+// dashboards display a completed arb on the next indexed snapshot.
+const REFRESH_INTERVAL = 60_000
 const MAX_BATCHES_PER_FETCH = 40
 const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
@@ -552,7 +556,7 @@ const buildDivineExecution = async (
   }
 }
 
-const fetchDivineExecutions = async ({
+const fetchOnchainDivineExecutions = async ({
   publicClient,
   existingExecutions,
   latestBlock,
@@ -566,7 +570,7 @@ const fetchDivineExecutions = async ({
   existingExecutions: Map<string, DivineManagerExecution>
   latestBlock: bigint
   loadMore: boolean
-  cursor: bigint | null
+  cursor: string | null
   targetCount: number
   minBlock?: bigint
   ignoreTargetCount?: boolean
@@ -585,7 +589,7 @@ const fetchDivineExecutions = async ({
     latestBlock,
     minBlock,
   })
-  let toBlock = loadMore && cursor !== null ? cursor : latestBlock
+  let toBlock = loadMore && cursor !== null ? BigInt(cursor) : latestBlock
   let batches = 0
   let localNextFrom: bigint | null = cursor
   let currentChunk = BLOCK_CHUNK
@@ -651,7 +655,164 @@ const fetchDivineExecutions = async ({
 
   return {
     executions: Array.from(executionMap.values()),
-    nextFromBlock: localNextFrom,
+    nextCursor: localNextFrom?.toString() ?? null,
+  }
+}
+
+type CachedDivineManagerExecution = {
+  source?: string
+  managerAddress?: string
+  transactionHash?: string
+  blockNumber?: string
+  timestamp?: number
+  strategyId?: string
+  jobNonce?: string
+  holyBurned?: string
+  jitBurned?: string
+  holyIn?: string
+  holyOut?: string
+  jitIn?: string
+  jitOut?: string
+  wplsIn?: string
+  wplsOut?: string
+  steps?: Array<{
+    id?: string
+    type?: StepType
+    label?: string
+    tokenInSymbol?: StepToken
+    tokenOutSymbol?: StepToken
+    tokenInAmount?: string
+    tokenOutAmount?: string
+    pool?: PoolKey
+    isSettlement?: boolean
+    settlementAmount?: string
+    burns?: { holyc?: string; jit?: string }
+  }>
+  v2Settlement?: {
+    status?: V2ProfitSettlement['status']
+    jobNonce?: string | null
+    asset?: number | null
+    grossProfit?: string
+    protectedProfit?: string
+    shareableProfit?: string
+    totalAllocated?: string
+    retainedProfit?: string
+    allocations?: Array<{
+      recipient?: string
+      recipientLabel?: string
+      sourceAsset?: number
+      paidAsset?: number
+      sourceAmount?: string
+      paidAmount?: string
+      bps?: number
+    }>
+    warnings?: string[]
+  } | null
+}
+
+const asBigInt = (value: string | undefined) => BigInt(value || '0')
+
+const hydrateCachedDivineExecution = (value: CachedDivineManagerExecution): DivineManagerExecution | null => {
+  if (
+    value.source !== 'divine-manager' ||
+    !value.managerAddress ||
+    !value.transactionHash ||
+    !value.blockNumber ||
+    !Number.isFinite(value.timestamp)
+  ) {
+    return null
+  }
+
+  try {
+    const v2Settlement = value.v2Settlement
+      ? {
+          status: value.v2Settlement.status ?? 'missing',
+          jobNonce: value.v2Settlement.jobNonce as `0x${string}` | null,
+          asset: value.v2Settlement.asset === 0 || value.v2Settlement.asset === 1 || value.v2Settlement.asset === 2
+            ? value.v2Settlement.asset
+            : null,
+          grossProfit: asBigInt(value.v2Settlement.grossProfit),
+          protectedProfit: asBigInt(value.v2Settlement.protectedProfit),
+          shareableProfit: asBigInt(value.v2Settlement.shareableProfit),
+          totalAllocated: asBigInt(value.v2Settlement.totalAllocated),
+          retainedProfit: asBigInt(value.v2Settlement.retainedProfit),
+          allocations: (value.v2Settlement.allocations ?? []).flatMap((allocation) => {
+            if (!allocation.recipient || allocation.sourceAsset === undefined || allocation.paidAsset === undefined) return []
+            return [{
+              recipient: allocation.recipient as `0x${string}`,
+              recipientLabel: allocation.recipientLabel ?? allocation.recipient,
+              sourceAsset: allocation.sourceAsset as 0 | 1 | 2,
+              paidAsset: allocation.paidAsset as 0 | 1 | 2,
+              sourceAmount: asBigInt(allocation.sourceAmount),
+              paidAmount: asBigInt(allocation.paidAmount),
+              bps: allocation.bps ?? 0,
+            }]
+          }),
+          warnings: value.v2Settlement.warnings ?? [],
+        }
+      : null
+    const steps: DivineManagerStep[] = (value.steps ?? []).flatMap((step) => {
+      if (!step.id || !step.type || !step.label || !step.tokenInSymbol || !step.tokenOutSymbol) return []
+      return [{
+        id: step.id,
+        type: step.type,
+        label: step.label,
+        tokenInSymbol: step.tokenInSymbol,
+        tokenOutSymbol: step.tokenOutSymbol,
+        tokenInAmount: asBigInt(step.tokenInAmount),
+        tokenOutAmount: asBigInt(step.tokenOutAmount),
+        ...(step.pool ? { pool: step.pool } : {}),
+        ...(step.isSettlement ? { isSettlement: true } : {}),
+        ...(step.settlementAmount ? { settlementAmount: asBigInt(step.settlementAmount) } : {}),
+        burns: { holyc: asBigInt(step.burns?.holyc), jit: asBigInt(step.burns?.jit) },
+      }]
+    })
+    return {
+      source: 'divine-manager',
+      managerAddress: value.managerAddress as `0x${string}`,
+      transactionHash: value.transactionHash as `0x${string}`,
+      blockNumber: asBigInt(value.blockNumber),
+      timestamp: value.timestamp!,
+      strategyId: (value.strategyId || '0x') as `0x${string}`,
+      jobNonce: (value.jobNonce || '0x') as `0x${string}`,
+      holyBurned: asBigInt(value.holyBurned),
+      jitBurned: asBigInt(value.jitBurned),
+      holyIn: asBigInt(value.holyIn),
+      holyOut: asBigInt(value.holyOut),
+      jitIn: asBigInt(value.jitIn),
+      jitOut: asBigInt(value.jitOut),
+      wplsIn: asBigInt(value.wplsIn),
+      wplsOut: asBigInt(value.wplsOut),
+      v2Settlement,
+      steps,
+    }
+  } catch {
+    return null
+  }
+}
+
+const fetchCachedDivineExecutions = async ({
+  feedUrl,
+  cursor,
+  limit,
+}: {
+  feedUrl: string
+  cursor: string | null
+  limit: number
+}) => {
+  const url = new URL('/divine-manager/activity', feedUrl)
+  url.searchParams.set('limit', String(Math.min(Math.max(limit, 1), 100)))
+  if (cursor) url.searchParams.set('cursor', cursor)
+  const response = await fetch(url)
+  if (!response.ok) throw new Error(`Cached Divine Manager feed returned ${response.status}`)
+  const body = (await response.json()) as { items?: CachedDivineManagerExecution[]; nextCursor?: string | null }
+  if (!Array.isArray(body.items)) throw new Error('Cached Divine Manager feed returned an invalid payload')
+  return {
+    executions: body.items.flatMap((item) => {
+      const execution = hydrateCachedDivineExecution(item)
+      return execution ? [execution] : []
+    }),
+    nextCursor: typeof body.nextCursor === 'string' ? body.nextCursor : null,
   }
 }
 
@@ -1401,17 +1562,35 @@ export const useDivineManagerActivity = () => {
         ? Math.max(divineExisting.size, feederExisting.size) + LOAD_MORE_INCREMENT
         : COLD_START_TARGET
 
+      const indexedFeedUrl = import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
       const [divineResult, feederResult] = await Promise.all([
-        fetchDivineExecutions({
-          publicClient,
-          existingExecutions: divineExisting,
-          latestBlock,
-          loadMore,
-          cursor: loadMore ? nextFromBlockRef.current.divine : null,
-          targetCount: sourceTargetCount,
-          minBlock: divineMinBlock,
-          ignoreTargetCount: isIncrementalRefresh,
-        }),
+        indexedFeedUrl
+          ? fetchCachedDivineExecutions({
+              feedUrl: indexedFeedUrl,
+              cursor: loadMore ? nextFromBlockRef.current.divine : null,
+              limit: sourceTargetCount,
+            }).then((result) => ({
+              // A tip refresh returns the newest page only. Merge it into the
+              // already-paginated set so pressing Refresh never discards rows
+              // the visitor previously loaded.
+              executions: Array.from(
+                new Map([
+                  ...divineExisting,
+                  ...result.executions.map((execution) => [execution.transactionHash, execution] as const),
+                ]).values()
+              ),
+              nextCursor: result.nextCursor,
+            }))
+          : fetchOnchainDivineExecutions({
+              publicClient,
+              existingExecutions: divineExisting,
+              latestBlock,
+              loadMore,
+              cursor: loadMore ? nextFromBlockRef.current.divine : null,
+              targetCount: sourceTargetCount,
+              minBlock: divineMinBlock,
+              ignoreTargetCount: isIncrementalRefresh,
+            }),
         fetchFeederExecutions({
           publicClient,
           existingExecutions: feederExisting,
@@ -1431,8 +1610,8 @@ export const useDivineManagerActivity = () => {
       // adopt the freshly returned cursors.
       const nextCursor: FeedCursor = isIncrementalRefresh
         ? nextFromBlockRef.current
-        : {
-            divine: divineResult.nextFromBlock,
+          : {
+            divine: divineResult.nextCursor,
             feeder: feederResult.nextFromBlock,
           }
       const nextHasMore = nextCursor.divine !== null || nextCursor.feeder !== null
