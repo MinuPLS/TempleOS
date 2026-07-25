@@ -181,6 +181,9 @@ const DIVINE_TIP_OVERLAP = 8n
 // history is fetched on demand via loadMore, keeping the initial paint fast.
 const COLD_START_TARGET = 35
 const LOAD_MORE_INCREMENT = 35
+// The activity card renders five rows per page. Show ten full pages from the
+// indexed feed immediately, then hydrate the remaining archive in the background.
+const INDEXED_INITIAL_ACTIVITY_COUNT = 50
 // If the tip gap exceeds one incremental window (or is negative, e.g. a reorg) we
 // cold-start straight to the latest arbs instead of bridging a huge stretch.
 const INCREMENTAL_MAX_GAP = BLOCK_CHUNK * BigInt(MAX_BATCHES_PER_FETCH)
@@ -1585,16 +1588,62 @@ export const useDivineManagerActivity = () => {
         : COLD_START_TARGET
 
       const indexedFeedUrl = import.meta.env.VITE_DIVINE_MANAGER_FEED_URL?.trim()
-      const [divineResult, feederResult] = await Promise.all([
-        indexedFeedUrl
-          ? (isColdStart
-              ? fetchAllCachedDivineExecutions(indexedFeedUrl)
-              : fetchCachedDivineExecutions({
-                  feedUrl: indexedFeedUrl,
-                  cursor: loadMore ? nextFromBlockRef.current.divine : null,
-                  limit: sourceTargetCount,
-                })
-            ).then((result) => ({
+      const feederPromise = fetchFeederExecutions({
+        publicClient,
+        existingExecutions: feederExisting,
+        latestBlock,
+        loadMore,
+        cursor: loadMore ? nextFromBlockRef.current.feeder : null,
+        targetCount: sourceTargetCount,
+        minBlock: feederMinBlock,
+        ignoreTargetCount: isIncrementalRefresh,
+      })
+      let divineResult: { executions: DivineManagerExecution[]; nextCursor: string | null }
+      let feederResult: Awaited<ReturnType<typeof fetchFeederExecutions>>
+
+      if (indexedFeedUrl && isColdStart) {
+        // Do not make the fast D1-backed experience wait for the Feeder Bot's
+        // browser RPC scan. The first ten pages are useful immediately; the
+        // remainder fills in while that independent scan continues.
+        const initialDivine = await fetchCachedDivineExecutions({
+          feedUrl: indexedFeedUrl,
+          cursor: null,
+          limit: INDEXED_INITIAL_ACTIVITY_COUNT,
+        })
+        const initialExecutions = sortExecutions([
+          ...initialDivine.executions,
+          ...Array.from(feederExisting.values()),
+        ])
+        const initialUpdatedAt = Date.now()
+        const initialCursor: FeedCursor = {
+          divine: initialDivine.nextCursor,
+          feeder: nextFromBlockRef.current.feeder,
+        }
+        setExecutions(initialExecutions)
+        setLastUpdated(initialUpdatedAt)
+        setNextFromBlock(initialCursor)
+        setHasMore(true)
+        setIsLoading(false)
+        cachedActivityState = {
+          executions: initialExecutions,
+          nextFromBlock: initialCursor,
+          lastUpdated: initialUpdatedAt,
+          hasMore: true,
+          latestScannedBlock: latestScannedBlockRef.current,
+        }
+
+        ;[divineResult, feederResult] = await Promise.all([
+          fetchAllCachedDivineExecutions(indexedFeedUrl),
+          feederPromise,
+        ])
+      } else {
+        ;[divineResult, feederResult] = await Promise.all([
+          indexedFeedUrl
+            ? fetchCachedDivineExecutions({
+              feedUrl: indexedFeedUrl,
+              cursor: loadMore ? nextFromBlockRef.current.divine : null,
+              limit: sourceTargetCount,
+              }).then((result) => ({
               // A tip refresh returns the newest page only. Merge it into the
               // already-paginated set so pressing Refresh never discards rows
               // the visitor previously loaded.
@@ -1606,7 +1655,7 @@ export const useDivineManagerActivity = () => {
               ),
               nextCursor: result.nextCursor,
             }))
-          : fetchOnchainDivineExecutions({
+            : fetchOnchainDivineExecutions({
               publicClient,
               existingExecutions: divineExisting,
               latestBlock,
@@ -1616,17 +1665,9 @@ export const useDivineManagerActivity = () => {
               minBlock: divineMinBlock,
               ignoreTargetCount: isIncrementalRefresh,
             }),
-        fetchFeederExecutions({
-          publicClient,
-          existingExecutions: feederExisting,
-          latestBlock,
-          loadMore,
-          cursor: loadMore ? nextFromBlockRef.current.feeder : null,
-          targetCount: sourceTargetCount,
-          minBlock: feederMinBlock,
-          ignoreTargetCount: isIncrementalRefresh,
-        }),
-      ])
+          feederPromise,
+        ])
+      }
 
       const ordered = sortExecutions([...divineResult.executions, ...feederResult.executions])
       const updatedAt = Date.now()
