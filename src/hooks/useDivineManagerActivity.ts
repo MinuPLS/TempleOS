@@ -1684,7 +1684,8 @@ export const useDivineManagerActivity = () => {
           executions: latestExecutions,
           nextFromBlock: nextFromBlockRef.current,
           lastUpdated: latestUpdatedAt,
-          hasMore,
+          hasMore:
+            nextFromBlockRef.current.divine !== null || nextFromBlockRef.current.feeder !== null,
           latestScannedBlock: latestBlock,
         }
         feederResult = await feederPromise
