@@ -33,6 +33,7 @@ export interface BuyAndBurnExecution {
 
 type BuyAndBurnConfig = {
   cacheKey: string
+  snapshotKey: string
   contractAddress: `0x${string}`
   startBlock: bigint
   tokenAddress?: `0x${string}`
@@ -60,11 +61,13 @@ const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
 const MAX_RETRIES = 3
 const REFRESH_INTERVAL = 300_000
+const STATIC_SNAPSHOT_TIP_OVERLAP = 8n
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
 
 type BurnCache = {
   executions: BuyAndBurnExecution[]
   nextFromBlock: bigint | null
+  indexedThroughBlock: bigint | null
   lastUpdated: number | null
   hasMore: boolean
   tokenUsdPrice: number | null
@@ -79,6 +82,7 @@ const setCachedState = (cacheKey: string, state: BurnCache) => {
 
 const BRIAH_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'briah-buy-and-burn',
+  snapshotKey: 'briah',
   contractAddress: BRIAH_BUY_AND_BURN_ADDRESS,
   startBlock: 25_075_678n,
   tokenAddress: BRIAH_TOKEN_ADDRESS,
@@ -87,6 +91,7 @@ const BRIAH_CONFIG: BuyAndBurnConfig = {
 
 const COINMAFIA_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'coinmafia-buy-and-burn',
+  snapshotKey: 'coinmafia',
   contractAddress: COINMAFIA_BUY_AND_BURN_ADDRESS,
   startBlock: 25_673_593n,
   tokenAddress: COINMAFIA_TOKEN_ADDRESS,
@@ -95,6 +100,7 @@ const COINMAFIA_CONFIG: BuyAndBurnConfig = {
 
 const DUMB_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'dumb-buy-and-burn',
+  snapshotKey: 'dumb',
   contractAddress: DUMB_BUY_AND_BURN_ADDRESS,
   startBlock: 25_941_856n,
   tokenAddress: DUMB_TOKEN_ADDRESS,
@@ -103,6 +109,7 @@ const DUMB_CONFIG: BuyAndBurnConfig = {
 
 const FUPA_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'fupa-buy-and-burn',
+  snapshotKey: 'fupa',
   contractAddress: FUPA_BUY_AND_BURN_ADDRESS,
   startBlock: 27_099_491n,
   tokenAddress: FUPA_TOKEN_ADDRESS,
@@ -125,8 +132,90 @@ type PairState = {
   reserves: readonly [bigint, bigint, number]
 }
 
+type CachedBuyAndBurnExecution = {
+  transactionHash?: string
+  tokenBurned?: string
+  jitSpent?: string
+  timestamp?: number
+  blockNumber?: number | string
+  caller?: string
+}
+
+type StaticBuyAndBurnSnapshot = {
+  schemaVersion?: number
+  indexedThroughBlock?: string
+  historicalComplete?: boolean
+  feeds?: Record<string, { items?: CachedBuyAndBurnExecution[] }>
+}
+
+let staticBuyAndBurnSnapshotPromise: Promise<StaticBuyAndBurnSnapshot> | null = null
+
 const isUsablePrice = (price: number | null | undefined): price is number =>
   typeof price === 'number' && Number.isFinite(price) && price > 0
+
+const hydrateCachedBuyAndBurnExecution = (value: CachedBuyAndBurnExecution): BuyAndBurnExecution | null => {
+  const blockNumber = Number(value.blockNumber)
+  if (
+    !value.transactionHash ||
+    !value.caller ||
+    !Number.isFinite(value.timestamp) ||
+    !Number.isSafeInteger(blockNumber) ||
+    blockNumber < 0
+  ) {
+    return null
+  }
+
+  try {
+    return {
+      transactionHash: value.transactionHash,
+      tokenBurned: BigInt(value.tokenBurned ?? '0'),
+      jitSpent: BigInt(value.jitSpent ?? '0'),
+      timestamp: value.timestamp,
+      blockNumber,
+      caller: value.caller as `0x${string}`,
+    }
+  } catch {
+    return null
+  }
+}
+
+const fetchStaticBuyAndBurnSnapshot = async ({
+  snapshotKey,
+  snapshotUrl,
+}: {
+  snapshotKey: string
+  snapshotUrl: string
+}) => {
+  if (!staticBuyAndBurnSnapshotPromise) {
+    staticBuyAndBurnSnapshotPromise = fetch(snapshotUrl, { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Static Buy & Burn snapshot returned ${response.status}`)
+        return (await response.json()) as StaticBuyAndBurnSnapshot
+      })
+      .catch((error) => {
+        staticBuyAndBurnSnapshotPromise = null
+        throw error
+      })
+  }
+
+  const snapshot = await staticBuyAndBurnSnapshotPromise
+  if (
+    !snapshot.historicalComplete ||
+    typeof snapshot.indexedThroughBlock !== 'string' ||
+    !/^\d+$/.test(snapshot.indexedThroughBlock) ||
+    !Array.isArray(snapshot.feeds?.[snapshotKey]?.items)
+  ) {
+    throw new Error('Static Buy & Burn snapshot returned an invalid payload')
+  }
+
+  return {
+    executions: snapshot.feeds[snapshotKey].items.flatMap((item) => {
+      const execution = hydrateCachedBuyAndBurnExecution(item)
+      return execution ? [execution] : []
+    }),
+    indexedThroughBlock: BigInt(snapshot.indexedThroughBlock),
+  }
+}
 
 const getTokenDecimals = async (publicClient: PulsePublicClient, tokenAddress: `0x${string}`) => {
   try {
@@ -321,8 +410,10 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
   const [lastUpdated, setLastUpdated] = useState<number | null>(cachedBurnState?.lastUpdated ?? null)
   const [tokenUsdPrice, setTokenUsdPrice] = useState<number | null>(cachedBurnState?.tokenUsdPrice ?? null)
   const [nextFromBlock, setNextFromBlock] = useState<bigint | null>(cachedBurnState?.nextFromBlock ?? null)
+  const [indexedThroughBlock, setIndexedThroughBlock] = useState<bigint | null>(cachedBurnState?.indexedThroughBlock ?? null)
   const executionsRef = useRef<BuyAndBurnExecution[]>([])
   const nextFromBlockRef = useRef<bigint | null>(null)
+  const indexedThroughBlockRef = useRef<bigint | null>(cachedBurnState?.indexedThroughBlock ?? null)
   const isFetchingRef = useRef(false)
   const hasCachedDataRef = useRef(Boolean(cachedBurnState?.executions?.length))
   const tokenUsdPriceRef = useRef<number | null>(cachedBurnState?.tokenUsdPrice ?? null)
@@ -336,6 +427,10 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
   useEffect(() => {
     nextFromBlockRef.current = nextFromBlock
   }, [nextFromBlock])
+
+  useEffect(() => {
+    indexedThroughBlockRef.current = indexedThroughBlock
+  }, [indexedThroughBlock])
 
   useEffect(() => {
     tokenUsdPriceRef.current = tokenUsdPrice
@@ -373,6 +468,7 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
       setCachedState(buyAndBurnConfig.cacheKey, {
         executions: executionsRef.current,
         nextFromBlock: nextFromBlockRef.current,
+        indexedThroughBlock: indexedThroughBlockRef.current,
         lastUpdated: lastUpdatedRef.current,
         hasMore: hasMoreRef.current,
         tokenUsdPrice: resolvedPrice,
@@ -385,8 +481,17 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
       reset = false,
       loadMore = false,
       silent = false,
+      forceScan = false,
+      minBlockOverride,
       targetCount = TARGET_EXECUTION_COUNT,
-    }: { reset?: boolean; loadMore?: boolean; silent?: boolean; targetCount?: number } = {}) => {
+    }: {
+      reset?: boolean
+      loadMore?: boolean
+      silent?: boolean
+      forceScan?: boolean
+      minBlockOverride?: bigint
+      targetCount?: number
+    } = {}) => {
       console.log('fetchData (BuyAndBurn) called', { reset, loadMore, silent, isFetching: isFetchingRef.current })
       if (isFetchingRef.current) {
         console.log('fetchData blocked by lock')
@@ -406,13 +511,16 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
         if (!publicClient) throw new Error('Public client not available')
 
         const latestBlock = await withRetry(() => publicClient.getBlockNumber())
+        const minBlock = minBlockOverride && minBlockOverride > buyAndBurnConfig.startBlock
+          ? minBlockOverride
+          : buyAndBurnConfig.startBlock
         const cursor = nextFromBlockRef.current
-        if (loadMore && (cursor === null || cursor < buyAndBurnConfig.startBlock)) {
+        if (loadMore && (cursor === null || cursor < minBlock)) {
           setHasMore(false)
           return
         }
         let toBlock = loadMore && cursor !== null ? cursor : latestBlock
-        if (toBlock < buyAndBurnConfig.startBlock) {
+        if (toBlock < minBlock) {
           setHasMore(false)
           return
         }
@@ -428,11 +536,11 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
         let batches = 0
         let currentChunk = BLOCK_CHUNK
 
-        while (toBlock >= buyAndBurnConfig.startBlock && batches < batchLimit && executionMap.size < desiredCount) {
+        while (toBlock >= minBlock && batches < batchLimit && (forceScan || executionMap.size < desiredCount)) {
           const fromBlock =
-            toBlock - currentChunk + 1n > buyAndBurnConfig.startBlock
+            toBlock - currentChunk + 1n > minBlock
               ? toBlock - currentChunk + 1n
-              : buyAndBurnConfig.startBlock
+              : minBlock
           let logs
           try {
             logs = await withRetry(
@@ -467,7 +575,7 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
           }
 
           if (logs.length === 0) {
-            localNextFrom = fromBlock > buyAndBurnConfig.startBlock ? fromBlock - 1n : null
+            localNextFrom = fromBlock > minBlock ? fromBlock - 1n : null
             toBlock = localNextFrom ?? -1n
             batches += 1
             continue
@@ -513,21 +621,27 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
             })
           })
 
-          localNextFrom = fromBlock > buyAndBurnConfig.startBlock ? fromBlock - 1n : null
+          localNextFrom = fromBlock > minBlock ? fromBlock - 1n : null
           toBlock = localNextFrom ?? -1n
           batches += 1
         }
 
         const ordered = Array.from(executionMap.values()).sort((a, b) => b.timestamp - a.timestamp)
-        const nextCursor = loadMore ? localNextFrom : nextFromBlockRef.current ?? localNextFrom
+        const nextCursor = forceScan ? nextFromBlockRef.current : loadMore ? localNextFrom : nextFromBlockRef.current ?? localNextFrom
         setExecutions(ordered)
-        setLastUpdated(Date.now())
+        const updatedAt = Date.now()
         setNextFromBlock(nextCursor)
+        setLastUpdated(updatedAt)
         setHasMore(nextCursor !== null)
+        executionsRef.current = ordered
+        nextFromBlockRef.current = nextCursor
+        lastUpdatedRef.current = updatedAt
+        hasMoreRef.current = nextCursor !== null
         setCachedState(buyAndBurnConfig.cacheKey, {
           executions: ordered,
           nextFromBlock: nextCursor,
-          lastUpdated: Date.now(),
+          indexedThroughBlock: indexedThroughBlockRef.current,
+          lastUpdated: updatedAt,
           hasMore: nextCursor !== null,
           tokenUsdPrice: tokenUsdPriceRef.current,
         })
@@ -555,24 +669,90 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
     ]
   )
 
-  useEffect(() => {
-    fetchData({
-      reset: !hasCachedDataRef.current,
-      silent: hasCachedDataRef.current,
-      targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
-    })
-    if (!tokenUsdPriceRef.current) {
-      void fetchPrice()
-    }
-    const interval = setInterval(() => {
-      fetchData({
-        silent: true,
+  const refreshFromSnapshot = useCallback(
+    (silent = false) => {
+      const snapshotThroughBlock = indexedThroughBlockRef.current
+      const minBlockOverride = snapshotThroughBlock
+        ? snapshotThroughBlock > STATIC_SNAPSHOT_TIP_OVERLAP
+          ? snapshotThroughBlock - STATIC_SNAPSHOT_TIP_OVERLAP
+          : buyAndBurnConfig.startBlock
+        : undefined
+
+      return fetchData({
+        silent,
+        forceScan: Boolean(snapshotThroughBlock),
+        minBlockOverride,
         targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
       })
+    },
+    [buyAndBurnConfig.startBlock, fetchData]
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    const snapshotUrl = import.meta.env.VITE_BUY_AND_BURN_STATIC_SNAPSHOT_URL?.trim() || '/buy-and-burn-feed.json'
+
+    const bootstrap = async () => {
+      if (!hasCachedDataRef.current) {
+        setIsLoading(true)
+        try {
+          const snapshot = await fetchStaticBuyAndBurnSnapshot({
+            snapshotKey: buyAndBurnConfig.snapshotKey,
+            snapshotUrl,
+          })
+          if (cancelled) return
+
+          const ordered = [...snapshot.executions].sort((left, right) => right.timestamp - left.timestamp)
+          const updatedAt = Date.now()
+          executionsRef.current = ordered
+          nextFromBlockRef.current = null
+          indexedThroughBlockRef.current = snapshot.indexedThroughBlock
+          lastUpdatedRef.current = updatedAt
+          hasMoreRef.current = false
+          hasCachedDataRef.current = true
+          setExecutions(ordered)
+          setNextFromBlock(null)
+          setIndexedThroughBlock(snapshot.indexedThroughBlock)
+          setHasMore(false)
+          setLastUpdated(updatedAt)
+          setCachedState(buyAndBurnConfig.cacheKey, {
+            executions: ordered,
+            nextFromBlock: null,
+            indexedThroughBlock: snapshot.indexedThroughBlock,
+            lastUpdated: updatedAt,
+            hasMore: false,
+            tokenUsdPrice: tokenUsdPriceRef.current,
+          })
+          setIsLoading(false)
+          void refreshFromSnapshot(true)
+        } catch (snapshotError) {
+          console.warn(`Static ${buyAndBurnConfig.logLabel} Buy & Burn archive unavailable; falling back to RPC`, snapshotError)
+          if (!cancelled) {
+            void fetchData({
+              reset: true,
+              targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
+            })
+          }
+        }
+      } else {
+        void refreshFromSnapshot(true)
+      }
+
+      if (!tokenUsdPriceRef.current) {
+        void fetchPrice()
+      }
+    }
+
+    void bootstrap()
+    const interval = setInterval(() => {
+      void refreshFromSnapshot(true)
       void fetchPrice()
     }, REFRESH_INTERVAL)
-    return () => clearInterval(interval)
-  }, [fetchData, fetchPrice])
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [buyAndBurnConfig.cacheKey, buyAndBurnConfig.logLabel, buyAndBurnConfig.snapshotKey, fetchData, fetchPrice, refreshFromSnapshot])
 
   return {
     executions,
@@ -580,15 +760,8 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
     isLoadingMore,
     hasMore,
     error,
-    refresh: () =>
-      fetchData({
-        targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
-      }),
-    silentRefresh: () =>
-      fetchData({
-        silent: true,
-        targetCount: Math.max(TARGET_EXECUTION_COUNT, executionsRef.current.length + 5),
-      }),
+    refresh: () => refreshFromSnapshot(),
+    silentRefresh: () => refreshFromSnapshot(true),
     loadMore: () =>
       fetchData({
         loadMore: true,
