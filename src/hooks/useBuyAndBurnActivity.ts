@@ -34,6 +34,7 @@ export interface BuyAndBurnExecution {
 type BuyAndBurnConfig = {
   cacheKey: string
   contractAddress: `0x${string}`
+  startBlock: bigint
   tokenAddress?: `0x${string}`
   logLabel: string
 }
@@ -80,6 +81,7 @@ const setCachedState = (cacheKey: string, state: BurnCache) => {
 const BRIAH_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'briah-buy-and-burn',
   contractAddress: BRIAH_BUY_AND_BURN_ADDRESS,
+  startBlock: 25_075_678n,
   tokenAddress: BRIAH_TOKEN_ADDRESS,
   logLabel: 'Briah',
 }
@@ -87,6 +89,7 @@ const BRIAH_CONFIG: BuyAndBurnConfig = {
 const COINMAFIA_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'coinmafia-buy-and-burn',
   contractAddress: COINMAFIA_BUY_AND_BURN_ADDRESS,
+  startBlock: 25_673_593n,
   tokenAddress: COINMAFIA_TOKEN_ADDRESS,
   logLabel: 'CoinMafia',
 }
@@ -94,6 +97,7 @@ const COINMAFIA_CONFIG: BuyAndBurnConfig = {
 const DUMB_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'dumb-buy-and-burn',
   contractAddress: DUMB_BUY_AND_BURN_ADDRESS,
+  startBlock: 25_941_856n,
   tokenAddress: DUMB_TOKEN_ADDRESS,
   logLabel: 'Dumb',
 }
@@ -101,6 +105,7 @@ const DUMB_CONFIG: BuyAndBurnConfig = {
 const FUPA_CONFIG: BuyAndBurnConfig = {
   cacheKey: 'fupa-buy-and-burn',
   contractAddress: FUPA_BUY_AND_BURN_ADDRESS,
+  startBlock: 27_099_491n,
   tokenAddress: FUPA_TOKEN_ADDRESS,
   logLabel: 'FUPA',
 }
@@ -403,12 +408,12 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
 
         const latestBlock = await withRetry(() => publicClient.getBlockNumber())
         const cursor = nextFromBlockRef.current
-        if (loadMore && cursor === null) {
+        if (loadMore && (cursor === null || cursor < buyAndBurnConfig.startBlock)) {
           setHasMore(false)
           return
         }
         let toBlock = loadMore && cursor !== null ? cursor : latestBlock
-        if (toBlock < 0n) {
+        if (toBlock < buyAndBurnConfig.startBlock) {
           setHasMore(false)
           return
         }
@@ -424,8 +429,11 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
         let batches = 0
         let currentChunk = BLOCK_CHUNK
 
-        while (toBlock >= 0n && batches < batchLimit && executionMap.size < desiredCount) {
-          const fromBlock = toBlock >= currentChunk ? toBlock - currentChunk + 1n : 0n
+        while (toBlock >= buyAndBurnConfig.startBlock && batches < batchLimit && executionMap.size < desiredCount) {
+          const fromBlock =
+            toBlock - currentChunk + 1n > buyAndBurnConfig.startBlock
+              ? toBlock - currentChunk + 1n
+              : buyAndBurnConfig.startBlock
           let logs
           try {
             logs = await withRetry(
@@ -460,7 +468,7 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
           }
 
           if (logs.length === 0) {
-            localNextFrom = fromBlock > 0n ? fromBlock - 1n : null
+            localNextFrom = fromBlock > buyAndBurnConfig.startBlock ? fromBlock - 1n : null
             toBlock = localNextFrom ?? -1n
             batches += 1
             continue
@@ -506,7 +514,7 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
             })
           })
 
-          localNextFrom = fromBlock > 0n ? fromBlock - 1n : null
+          localNextFrom = fromBlock > buyAndBurnConfig.startBlock ? fromBlock - 1n : null
           toBlock = localNextFrom ?? -1n
           batches += 1
         }
@@ -539,7 +547,13 @@ const useBuyAndBurnActivityBase = (buyAndBurnConfig: BuyAndBurnConfig) => {
         }
       }
     },
-    [buyAndBurnConfig.cacheKey, buyAndBurnConfig.contractAddress, buyAndBurnConfig.logLabel, fetchPrice]
+    [
+      buyAndBurnConfig.cacheKey,
+      buyAndBurnConfig.contractAddress,
+      buyAndBurnConfig.logLabel,
+      buyAndBurnConfig.startBlock,
+      fetchPrice,
+    ]
   )
 
   useEffect(() => {

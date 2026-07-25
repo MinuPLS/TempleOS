@@ -175,6 +175,9 @@ const EMPTY_BATCH_MULTIPLIER = 4
 const RETRY_DELAY_MS = 300
 const MAX_RETRIES = 3
 const FEEDER_CURSOR_OVERLAP = 128n
+// Verified contract creation block. The Feeder cannot have activity before this,
+// so treating block zero as its archive boundary only keeps the UI loading needlessly.
+const FEEDER_START_BLOCK = 27_122_135n
 // Small overlap re-scanned on an incremental refresh to absorb reorgs / off-by-one.
 const DIVINE_TIP_OVERLAP = 8n
 // Start with a compact first screen, then hydrate all historic activity
@@ -1398,7 +1401,7 @@ const fetchFeederExecutions = async ({
   minBlock?: bigint
   ignoreTargetCount?: boolean
 }) => {
-  if (loadMore && cursor === null) {
+  if (loadMore && (cursor === null || cursor < minBlock)) {
     return {
       executions: Array.from(existingExecutions.values()),
       nextFromBlock: null,
@@ -1471,7 +1474,7 @@ const fetchFeederExecutions = async ({
       })
     }
 
-    localNextFrom = fromBlock > 0n ? fromBlock - 1n : null
+    localNextFrom = fromBlock > minBlock ? fromBlock - 1n : null
     toBlock = localNextFrom ?? -1n
     batches += 1
   }
@@ -1578,9 +1581,11 @@ export const useDivineManagerActivity = () => {
         : 0n
       const feederMinBlock = isIncrementalRefresh
         ? previousTip! > FEEDER_CURSOR_OVERLAP
-          ? previousTip! - FEEDER_CURSOR_OVERLAP
-          : 0n
-        : 0n
+          ? (previousTip! - FEEDER_CURSOR_OVERLAP > FEEDER_START_BLOCK
+              ? previousTip! - FEEDER_CURSOR_OVERLAP
+              : FEEDER_START_BLOCK)
+          : FEEDER_START_BLOCK
+        : FEEDER_START_BLOCK
 
       const divineTargetCount = loadMore ? divineExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
       const feederTargetCount = loadMore ? feederExisting.size + LOAD_MORE_INCREMENT : COLD_START_TARGET
