@@ -233,15 +233,16 @@ export const ConnectedLiquidityPools = ({ tokenPrices }: ConnectedLiquidityPools
           <div className={styles.burnInfoBox}>
             <ul className={styles.burnInfoList}>
               <li>
-                <strong>Manager Routes:</strong> Shows only pools observed in archived Divine Manager executions, not
-                every HolyC or JIT pool.
+                <strong>Manager Routes:</strong> These are the main HolyC and JIT pools observed fueling the
+                DivineManager and our wider ecosystem.
               </li>
               <li>
-                <strong>Live Liquidity:</strong> Refreshes current on-chain reserves and summarizes each pool's estimated
-                USD liquidity.
+                <strong>Pool Coverage:</strong> New or existing HolyC/JIT pools only appear here once the
+                DivineManager has routed through them at least once.
               </li>
               <li>
-                <strong>Pool Details:</strong> Open a pair to view its balances and copy the token or pair addresses.
+                <strong>Live Liquidity:</strong> Refreshes current on-chain reserves and summarizes each pool's
+                estimated USD liquidity.
               </li>
             </ul>
           </div>
