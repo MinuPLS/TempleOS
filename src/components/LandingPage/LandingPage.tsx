@@ -3,7 +3,7 @@ import { formatUnits } from 'viem'
 import styles from './LandingPage.module.css'
 import { DivineManagerActivity } from './DivineManagerActivity'
 import { ConnectedLiquidityPools } from './ConnectedLiquidityPools'
-import { ArrowRight, Flame, BookOpen, Bot, Sparkles, ChevronLeft, RotateCcw, Info } from 'lucide-react'
+import { ArrowRight, Flame, BookOpen, Bot, RotateCcw, Info } from 'lucide-react'
 import { usePoolData } from '../UniswapPools/hooks/usePoolData'
 import { useDivineManagerActivity } from '@/hooks/useDivineManagerActivity'
 import StatsDashboard from '../StatsDashboard/StatsDashboard'
@@ -54,7 +54,6 @@ function formatAnnualizedRate(value: number | null) {
 }
 
 export function LandingPage() {
-  const [showPartnerDetails, setShowPartnerDetails] = useState(false)
   const [burnStats, setBurnStats] = useState<EffectiveBurnStats | null>(null)
   const [isBurnLoading, setIsBurnLoading] = useState(false)
   const [burnError, setBurnError] = useState<string | null>(null)
@@ -438,42 +437,6 @@ export function LandingPage() {
         <section className={`${styles.divineActivitySection} ${styles.bottomSection}`}>
           <div className={styles.divineLayout}>
             <aside className={styles.divineSideColumn}>
-              <div className={`${styles.sideCard} ${styles.divineSummaryCard}`}>
-                <div className={styles.sideCardHeader}>
-                  <h3 className={styles.sideSectionTitle}>
-                    {showPartnerDetails ? 'Partner Buy&Burn' : 'The Arb Guardian'}
-                  </h3>
-                  <button
-                    type="button"
-                    className={`${styles.viewToggleButton} ${styles.partnerToggleButton}`}
-                    onClick={() => setShowPartnerDetails((prev) => !prev)}
-                  >
-                    {showPartnerDetails ? (
-                      <>
-                        <ChevronLeft size={14} />
-                        Back to Arb
-                      </>
-                    ) : (
-                      <>
-                        Partner projects
-                        <Sparkles size={14} className={styles.partnerToggleIcon} />
-                      </>
-                    )}
-                  </button>
-                </div>
-                {showPartnerDetails ? (
-                  <>
-                    <p className={styles.sideSectionDescription}>
-                      Every profitable HolyC/JIT arb shares half of its take with partnered tokens. Partners are supplied with their own JIT pool — enough for the engine to buy&burn their token after each successful arb.
-                    </p>
-                  </>
-                ) : (
-                  <p className={styles.sideSectionDescription}>
-                    When a route is safely profitable, the off-chain Arb Guardian bot calls the Divine Manager to run the loop. Every time it fires, the vault grows whilst supply shrinks.
-                  </p>
-                )}
-              </div>
-
               <div className={styles.tokenStatsWrapper}>
                 <StatsDashboard
                   tokenPrices={tokenPrices}

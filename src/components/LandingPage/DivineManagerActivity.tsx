@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { formatUnits } from 'viem'
-import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame, Workflow } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ExternalLink, RotateCcw, Flame, Info, Workflow } from 'lucide-react'
 import type { ActivityExecution } from '@/hooks/useDivineManagerActivity'
 import {
   useBuyAndBurnActivity,
@@ -120,6 +120,9 @@ const formatUsdSigned = (value: number) => {
   const formatted = formatUsdValue(normalized)
   return normalized > 0 ? `+ ${formatted}` : formatted
 }
+
+const formatActivityUpdatedAt = (timestamp: number) =>
+  formatRelativeTime(timestamp).replace(/\b\w/g, (character) => character.toUpperCase())
 
 const isUsableUsdValue = (value: number | null | undefined): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value > 0
@@ -362,6 +365,7 @@ export const DivineManagerActivity = ({
     fupa: 1,
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isInfoOpen, setIsInfoOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('arbs')
   const [expandedBurstIds, setExpandedBurstIds] = useState<Set<string>>(new Set())
   const [flowTxHash, setFlowTxHash] = useState<string | null>(null)
@@ -371,6 +375,7 @@ export const DivineManagerActivity = ({
   const isViewingFupa = viewMode === 'fupa'
   const isViewingArbs = viewMode === 'arbs'
   const isViewingPartnerBurn = !isViewingArbs
+  const isShowingArbInfo = isInfoOpen && isViewingArbs
 
   const {
     executions: burnExecutions,
@@ -465,6 +470,15 @@ export const DivineManagerActivity = ({
         : isViewingFupa
           ? fupaLastUpdated
           : lastUpdated
+  const activityTransactionCount = isViewingBurns
+    ? burnExecutions.length
+    : isViewingMafia
+      ? mafiaExecutions.length
+      : isViewingDumb
+        ? dumbExecutions.length
+        : isViewingFupa
+          ? fupaExecutions.length
+          : executions.length
 
   const handleRefresh = async () => {
     if (isRefreshing) return
@@ -511,10 +525,14 @@ export const DivineManagerActivity = ({
       return next
     })
 
-  const showBurns = () => setViewMode('burns')
-  const showMafia = () => setViewMode('mafia')
-  const showDumb = () => setViewMode('dumb')
-  const showFupa = () => setViewMode('fupa')
+  const showPartnerView = (nextView: Exclude<ViewMode, 'arbs'>) => {
+    setIsInfoOpen(false)
+    setViewMode(nextView)
+  }
+  const showBurns = () => showPartnerView('burns')
+  const showMafia = () => showPartnerView('mafia')
+  const showDumb = () => showPartnerView('dumb')
+  const showFupa = () => showPartnerView('fupa')
   const showArbs = () => setViewMode('arbs')
 
   const explorerBase = 'https://otter.pulsechain.com'
@@ -802,7 +820,20 @@ export const DivineManagerActivity = ({
 
   return (
     <div className={styles.divineActivity}>
-      <div className={styles.activityHeader}>
+      {isShowingArbInfo ? (
+          <div className={styles.activityInfoNav}>
+            <p className={styles.activityInfoNavLabel}>About the Divine Manager</p>
+            <button
+              type="button"
+              className={`${styles.viewToggleButton} ${styles.activityInfoBackButton}`}
+              onClick={() => setIsInfoOpen(false)}
+              aria-label="Back to automated arb feed"
+            >
+              <ChevronLeft size={15} /> Back
+            </button>
+          </div>
+        ) : (
+          <div className={styles.activityHeader}>
         <div className={styles.activityHeading}>
           <p className={styles.sectionEyebrow}>
             {isViewingArbs ? 'Live Divine Manager executes' : 'Buy & burn'}
@@ -820,7 +851,15 @@ export const DivineManagerActivity = ({
           </h3>
           <p className={styles.sectionSubtitle}>
             {currentLastUpdated
-              ? `Updated ${formatRelativeTime(currentLastUpdated)}`
+              ? <>
+                  Updated {formatActivityUpdatedAt(currentLastUpdated)}
+                  {activityTransactionCount > 0 && (
+                    <span className={styles.activitySubtitleStat}>
+                      {' '}· {activityTransactionCount}
+                      <span className={styles.activityTransactionLabel}> Transactions</span>
+                    </span>
+                  )}
+                </>
               : isViewingPartnerBurn
                 ? 'Reading direct from vault'
                 : 'Syncing live data'}
@@ -828,8 +867,40 @@ export const DivineManagerActivity = ({
         </div>
         <div className={styles.activityHeaderRight}>
           <div className={styles.activityControls}>
-            <div className={styles.activityToggleStack}>
+            <div className={styles.activityUtilityActions}>
               {isViewingArbs ? (
+                <button
+                  type="button"
+                  className={`${styles.activityRefreshButton} ${isInfoOpen ? styles.infoButtonActive : ''}`}
+                  onClick={() => setIsInfoOpen(true)}
+                  aria-label="Show automated arb info"
+                  title="About automated arbs"
+                >
+                  <Info size={16} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.viewToggleButton} ${styles.activityInfoBackButton}`}
+                  onClick={showArbs}
+                  aria-label="Back to automated arb feed"
+                >
+                  <ChevronLeft size={14} /> Back
+                </button>
+              )}
+              <button
+                type="button"
+                className={`${styles.activityRefreshButton}${isRefreshing || currentLoading ? ` ${styles.refreshSpinning}` : ''}`}
+                onClick={() => void handleRefresh()}
+                disabled={isRefreshing || currentLoading}
+                aria-label="Refresh feed"
+                title="Refresh feed"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+            {isViewingArbs ? (
+              <div className={styles.activityToggleStack}>
                 <div className={styles.partnerLogosRow}>
                   <button
                     type="button"
@@ -868,161 +939,228 @@ export const DivineManagerActivity = ({
                     <img src={FupaLogo} alt="FUPA" />
                   </button>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className={`${styles.viewToggleButton} ${styles.partnerBurnTrigger}`}
-                  onClick={showArbs}
-                >
-                  <ChevronLeft size={14} /> Back
-                </button>
-              )}
-            </div>
-            <button
-              className={`${styles.activityRefreshButton}${isRefreshing || currentLoading ? ` ${styles.refreshSpinning}` : ''}`}
-              onClick={() => void handleRefresh()}
-              disabled={isRefreshing || currentLoading}
-              aria-label="Refresh feed"
-            >
-              <RotateCcw size={16} />
-            </button>
+              </div>
+            ) : null}
           </div>
         </div>
-      </div>
+          </div>
+        )}
 
-      {currentError && (
+      {!isShowingArbInfo && currentError && (
         <div className={styles.activityError}>
           <p>{currentError}</p>
         </div>
       )}
 
-      <div className={styles.txList}>
-        {currentLoading && pageItems.length === 0 && (
-          <p className={styles.activityHint}>
-            {isViewingBurns
-              ? 'Summoning buy-and-burn logs…'
-              : isViewingMafia
-                ? 'Summoning CoinMafia burns…'
-                : isViewingDumb
-                  ? 'Summoning Dumb burns…'
-                  : isViewingFupa
-                    ? 'Summoning FUPA burns…'
-                    : 'Loading Divine Manager executions…'}
-          </p>
-        )}
-        {!currentLoading && pageItems.length === 0 && !currentError && (
-          <p className={styles.activityHint}>
-            {isViewingBurns
-              ? 'No burn executions yet.'
-              : isViewingMafia
-                ? 'No CoinMafia burn executions yet.'
-                : isViewingDumb
-                  ? 'No Dumb burn executions yet.'
-                  : isViewingFupa
-                    ? 'No FUPA burn executions yet.'
-                    : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
-          </p>
-        )}
-
-        {pageItems.map((item) => {
-          if (isViewingPartnerBurn) {
-            const burn = item as BurnActivityItem
-            const tokenAmount = Number(formatUnits(burn.tokenBurned, 18))
-            const usdPrice = isViewingBurns
-              ? briahUsdPrice
-              : isViewingMafia
-                ? coinMafiaUsdPrice
-                : isViewingDumb
-                  ? dumbUsdPrice
-                  : fupaUsdPrice
-            const tokenPriceUsdValue = isUsableUsdValue(usdPrice) ? tokenAmount * usdPrice : null
-            const onChainUsdValue = Number(formatUnits(burn.jitSpent, 18)) * jitUSD
-            const usdValue = isUsableUsdValue(tokenPriceUsdValue)
-              ? formatUsdValue(tokenPriceUsdValue)
-              : isUsableUsdValue(onChainUsdValue)
-                ? formatUsdValue(onChainUsdValue)
-                : '—'
-            const tokenLabel = isViewingBurns
-              ? 'Briah burned'
-              : isViewingMafia
-                ? 'CoinMafia burned'
-                : isViewingDumb
-                  ? 'Dumb burned'
-                  : 'FUPA burned'
-            const tokenSymbol = isViewingBurns
-              ? 'BRIAH'
-              : isViewingMafia
-                ? 'COINMAFIA'
-                : isViewingDumb
-                  ? 'DUMB'
-                  : 'FUPA'
-            const tokenLogo = isViewingBurns
-              ? BriahLogo
-              : isViewingMafia
-                ? CoinMafiaLogo
-                : isViewingDumb
-                  ? DumbLogo
-                  : FupaLogo
-            const tokenAlt = `${tokenSymbol} logo`
-
-            return (
-              <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
-                <div className={styles.txRowHeader}>
-                  <div className={styles.txRowMain}>
-                    <p>Burn</p>
-                    <span className={styles.txRowSubtext}>{shortenHex(burn.transactionHash, 6)}</span>
-                  </div>
-                  <div className={styles.txRowHeaderMeta}>
-                    <div className={styles.txRowMetaGroup}>
-                      <span className={styles.txRowTime}>{formatRelativeTime(burn.timestamp)}</span>
-                      <a
-                        href={`${explorerBase}/tx/${burn.transactionHash}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.txRowLink}
-                      >
-                        Otterscan <ExternalLink size={13} />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                <div className={styles.burnValueRow}>
-                  <div className={styles.burnTokenSummary}>
-                    <img src={tokenLogo} alt={tokenAlt} />
-                    <div className={styles.burnTokenCopy}>
-                      <span className={styles.valueLabel}>{tokenLabel}</span>
-                      <strong className={styles.burnAmount}>
-                        {formatAmount(burn.tokenBurned, 4)} {tokenSymbol}
-                      </strong>
-                    </div>
-                  </div>
-                  <div className={styles.burnUsdBlock}>
-                    <span className={styles.valueLabel}>Est. USD value</span>
-                    <strong className={styles.burnUsdValue}>{usdValue}</strong>
-                  </div>
-                </div>
+      <div className={styles.activityPanelStack}>
+        {isShowingArbInfo ? (
+          <div className={styles.activityInfoPanel}>
+            <div className={`${styles.burnInfoBox} ${styles.activityInfoBox}`}>
+              <div className={styles.activityInfoIntro}>
+                <p className={styles.activityInfoLead}>Every successful arb, live.</p>
+                <p className={styles.activityInfoSummary}>
+                  This is the live record of every successful arbitrage executed by <strong>DivineManagerV2</strong>,
+                  the protocol&apos;s on-chain treasury and automated trade executor at the heart of TempleOS&apos;s
+                  deflationary engine. Each entry shows how a market price gap became treasury growth, HolyC burns and,
+                  when eligible, partner buy-and-burn payouts.
+                </p>
               </div>
-            )
-          }
 
-          const arbItem = item as DisplayFeedItem
-          return isFeederBurstDisplayItem(arbItem)
-            ? renderBurstCard(arbItem)
-            : isFeederExecution(arbItem)
-              ? renderFeederExecutionCard(arbItem)
-              : renderDivineManagerExecutionCard(arbItem)
-        })}
-      </div>
-      <div className={styles.activityFooter}>
-        <button onClick={handlePrev} disabled={pageIndex === 1} aria-label="Previous page">
-          <ChevronLeft size={16} />
-        </button>
-        <span className={styles.pageIndicator}>
-          {pageIndex}/{totalPages}
-        </span>
-        <button onClick={handleNext} disabled={pageIndex === totalPages} aria-label="Next page">
-          <ChevronRight size={16} />
-        </button>
+              <div className={styles.activityInfoSections}>
+                <section className={styles.activityInfoSection}>
+                  <h4>What this live feed shows</h4>
+                  <p>
+                    Every card is one completed on-chain arb. <strong>Tokens gained</strong> shows the net assets
+                    added to the protocol treasury, while{' '}
+                    <strong>Value gained</strong> estimates their USD value. The flame value records{' '}
+                    HolyC burned during settlement.{' '}
+                    <strong>View flow</strong> opens the route leg by leg, and <strong>Otterscan</strong> verifies the
+                    transaction on-chain. The four token logos switch to the partner burn receipts funded by these arbs.
+                  </p>
+                </section>
+
+                <section className={styles.activityInfoSection}>
+                  <h4>Where the profit comes from</h4>
+                  <p>
+                    HolyC and JIT share the same underlying supply, but their prices move independently across different
+                    markets. Normal trading lets those prices naturally drift apart, while JIT&apos;s burn-on-transfer
+                    mechanics can amplify the difference. When the gap becomes large enough to remain profitable after
+                    all costs, the Manager closes it and turns that temporary imbalance into protocol-owned value.
+                  </p>
+                </section>
+
+                <section className={styles.activityInfoSection}>
+                  <h4>How the value stays inside the ecosystem</h4>
+                  <p>
+                    Every successful trade builds the protocol treasury, burns HolyC and dedicates a portion of its
+                    profit to Buy&amp;Burning partnered projects. this way, market gaps that outside arbitrageurs could
+                    extract are recycled into treasury growth, supply reduction and continued positive price pressure.
+                  </p>
+                </section>
+
+                <section className={styles.activityInfoSection}>
+                  <h4>How it knows when to act</h4>
+                  <p>
+                    The off-chain <strong>Arb Guardian</strong> watches the markets and simulates possible routes using
+                    live liquidity, slippage, token fees and gas. It only calls DivineManagerV2 when a route still
+                    clears the required net profit. The caller can request an execution, but it cannot withdraw or take
+                    custody of the treasury&apos;s assets.
+                  </p>
+                </section>
+
+                <section className={styles.activityInfoSection}>
+                  <h4>Built to protect its treasury</h4>
+                  <p>
+                    Every swap, conversion and settlement happens inside <strong>one atomic transaction</strong>:
+                    either the complete route succeeds or nothing executes. Before accepting the result, the contract
+                    rechecks prices, slippage, minimum profit and the total value of the treasury.
+                  </p>
+                </section>
+
+                <section className={styles.activityInfoSection}>
+                  <h4>An execution advantage others cannot copy</h4>
+                  <p>
+                    On approved JIT routes, the Divine Manager begins the loop fee-exempt. It still tracks the burns a
+                    normal trader would owe, then settles that burn debt with a small protocol discount before the
+                    transaction ends. Because a front-runner cannot reproduce these economics, the Manager does not need
+                    to win every race to the pool.
+                  </p>
+                </section>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.activityFeedPanel}>
+            <div className={styles.txList}>
+              {currentLoading && pageItems.length === 0 && (
+                <p className={styles.activityHint}>
+                  {isViewingBurns
+                    ? 'Summoning buy-and-burn logs…'
+                    : isViewingMafia
+                      ? 'Summoning CoinMafia burns…'
+                      : isViewingDumb
+                        ? 'Summoning Dumb burns…'
+                        : isViewingFupa
+                          ? 'Summoning FUPA burns…'
+                          : 'Loading Divine Manager executions…'}
+                </p>
+              )}
+              {!currentLoading && pageItems.length === 0 && !currentError && (
+                <p className={styles.activityHint}>
+                  {isViewingBurns
+                    ? 'No burn executions yet.'
+                    : isViewingMafia
+                      ? 'No CoinMafia burn executions yet.'
+                      : isViewingDumb
+                        ? 'No Dumb burn executions yet.'
+                        : isViewingFupa
+                          ? 'No FUPA burn executions yet.'
+                          : 'No Execute transactions yet. Arb Guardian will post here once the next spread clears.'}
+                </p>
+              )}
+
+              {pageItems.map((item) => {
+                if (isViewingPartnerBurn) {
+                  const burn = item as BurnActivityItem
+                  const tokenAmount = Number(formatUnits(burn.tokenBurned, 18))
+                  const usdPrice = isViewingBurns
+                    ? briahUsdPrice
+                    : isViewingMafia
+                      ? coinMafiaUsdPrice
+                      : isViewingDumb
+                        ? dumbUsdPrice
+                        : fupaUsdPrice
+                  const tokenPriceUsdValue = isUsableUsdValue(usdPrice) ? tokenAmount * usdPrice : null
+                  const onChainUsdValue = Number(formatUnits(burn.jitSpent, 18)) * jitUSD
+                  const usdValue = isUsableUsdValue(tokenPriceUsdValue)
+                    ? formatUsdValue(tokenPriceUsdValue)
+                    : isUsableUsdValue(onChainUsdValue)
+                      ? formatUsdValue(onChainUsdValue)
+                      : '—'
+                  const tokenLabel = isViewingBurns
+                    ? 'Briah burned'
+                    : isViewingMafia
+                      ? 'CoinMafia burned'
+                      : isViewingDumb
+                        ? 'Dumb burned'
+                        : 'FUPA burned'
+                  const tokenSymbol = isViewingBurns
+                    ? 'BRIAH'
+                    : isViewingMafia
+                      ? 'COINMAFIA'
+                      : isViewingDumb
+                        ? 'DUMB'
+                        : 'FUPA'
+                  const tokenLogo = isViewingBurns
+                    ? BriahLogo
+                    : isViewingMafia
+                      ? CoinMafiaLogo
+                      : isViewingDumb
+                        ? DumbLogo
+                        : FupaLogo
+                  const tokenAlt = `${tokenSymbol} logo`
+
+                  return (
+                    <div key={burn.transactionHash} className={`${styles.txRow} ${styles.burnRow}`}>
+                      <div className={styles.txRowHeader}>
+                        <div className={styles.txRowMain}>
+                          <p>Burn</p>
+                          <span className={styles.txRowSubtext}>{shortenHex(burn.transactionHash, 6)}</span>
+                        </div>
+                        <div className={styles.txRowHeaderMeta}>
+                          <div className={styles.txRowMetaGroup}>
+                            <span className={styles.txRowTime}>{formatRelativeTime(burn.timestamp)}</span>
+                            <a
+                              href={`${explorerBase}/tx/${burn.transactionHash}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={styles.txRowLink}
+                            >
+                              Otterscan <ExternalLink size={13} />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={styles.burnValueRow}>
+                        <div className={styles.burnTokenSummary}>
+                          <img src={tokenLogo} alt={tokenAlt} />
+                          <div className={styles.burnTokenCopy}>
+                            <span className={styles.valueLabel}>{tokenLabel}</span>
+                            <strong className={styles.burnAmount}>
+                              {formatAmount(burn.tokenBurned, 4)} {tokenSymbol}
+                            </strong>
+                          </div>
+                        </div>
+                        <div className={styles.burnUsdBlock}>
+                          <span className={styles.valueLabel}>Est. USD value</span>
+                          <strong className={styles.burnUsdValue}>{usdValue}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                const arbItem = item as DisplayFeedItem
+                return isFeederBurstDisplayItem(arbItem)
+                  ? renderBurstCard(arbItem)
+                  : isFeederExecution(arbItem)
+                    ? renderFeederExecutionCard(arbItem)
+                    : renderDivineManagerExecutionCard(arbItem)
+              })}
+            </div>
+            <div className={styles.activityFooter}>
+              <button onClick={handlePrev} disabled={pageIndex === 1} aria-label="Previous page">
+                <ChevronLeft size={16} />
+              </button>
+              <span className={styles.pageIndicator}>
+                {pageIndex}/{totalPages}
+              </span>
+              <button onClick={handleNext} disabled={pageIndex === totalPages} aria-label="Next page">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -264,22 +264,20 @@ function TempleOSInfoModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-const dumbTokenomics: { icon: IconKey; label: string; value: string; note?: string }[] = [
+const dumbTokenomics: { icon: IconKey; label: string; value: string; note?: string; isTaxComponent?: boolean }[] = [
   { icon: 'coin', label: 'Total Supply', value: '28 Billion' },
   { icon: 'flame', label: 'Initial Burn', value: '14 Billion' },
-  { icon: 'tax', label: 'Tax', value: '6%', note: 'Buys, Sells & Transfers' },
-  { icon: 'sparkle', label: 'Reflections', value: '1%', note: 'Rewarding holders' },
-  { icon: 'cycle', label: 'Liquidity', value: '2%', note: 'Pool support / LP growth' },
-  { icon: 'burn', label: 'Burn Paths $DUMB', value: '3%', note: '2% buy & burn + 1% direct burn' },
+  { icon: 'sparkle', label: 'Reflections', value: '1%', note: 'Rewarding holders', isTaxComponent: true },
+  { icon: 'cycle', label: 'Liquidity', value: '2%', note: 'Pool support / LP growth', isTaxComponent: true },
+  { icon: 'burn', label: 'Burn Paths $DUMB', value: '3%', note: '2% buy & burn + 1% direct burn', isTaxComponent: true },
 ]
 
-const dampTokenomics: { icon: IconKey; label: string; value: string; note?: string }[] = [
+const dampTokenomics: { icon: IconKey; label: string; value: string; note?: string; isTaxComponent?: boolean }[] = [
   { icon: 'coin', label: 'Total Supply', value: '1 Billion' },
   { icon: 'flame', label: 'Initial Burn', value: '300 Million' },
-  { icon: 'tax', label: 'Tax', value: '3%', note: 'Buys, Sells & Transfers' },
-  { icon: 'sparkle', label: 'Reflection', value: '1%', note: 'Rewarding holders' },
-  { icon: 'cycle', label: 'Buy & Burn $DUMB', value: '1%', note: 'Cross-token deflation support' },
-  { icon: 'burn', label: 'Burn $DAMP', value: '1%', note: 'Direct $DAMP supply reduction' },
+  { icon: 'sparkle', label: 'Reflection', value: '1%', note: 'Rewarding holders', isTaxComponent: true },
+  { icon: 'cycle', label: 'Buy & Burn $DUMB', value: '1%', note: 'Cross-token deflation support', isTaxComponent: true },
+  { icon: 'burn', label: 'Burn $DAMP', value: '1%', note: 'Direct $DAMP supply reduction', isTaxComponent: true },
 ]
 
 function StatRow({
@@ -288,12 +286,14 @@ function StatRow({
   value,
   note,
   accent,
+  isTaxComponent,
 }: {
   icon: IconKey
   label: string
   value: string
   note?: string
   accent: 'green' | 'pink'
+  isTaxComponent?: boolean
 }) {
   return (
     <div className={styles.statRow}>
@@ -304,7 +304,7 @@ function StatRow({
           {note && <span className={styles.statNote}> — {note}</span>}
         </span>
       </div>
-      <span className={accent === 'green' ? styles.statValueGreen : styles.statValuePink}>{value}</span>
+      <span className={isTaxComponent ? styles.taxComponentValue : accent === 'green' ? styles.statValueGreen : styles.statValuePink}>{value}</span>
     </div>
   )
 }
@@ -504,8 +504,12 @@ function DumbMoneyPage() {
               </h3>
               <div className={styles.statList}>
                 {dumbTokenomics.map((item, i) => (
-                  <StatRow key={i} icon={item.icon} label={item.label} value={item.value} note={item.note} accent="green" />
+                  <StatRow key={i} icon={item.icon} label={item.label} value={item.value} note={item.note} accent="green" isTaxComponent={item.isTaxComponent} />
                 ))}
+                <div className={styles.totalTaxRow}>
+                  <span>Total Tax</span>
+                  <span className={`${styles.statValueGreen} ${styles.totalTaxValue}`}>6%</span>
+                </div>
               </div>
             </div>
           </article>
@@ -540,8 +544,12 @@ function DumbMoneyPage() {
               </h3>
               <div className={styles.statList}>
                 {dampTokenomics.map((item, i) => (
-                  <StatRow key={i} icon={item.icon} label={item.label} value={item.value} note={item.note} accent="pink" />
+                  <StatRow key={i} icon={item.icon} label={item.label} value={item.value} note={item.note} accent="pink" isTaxComponent={item.isTaxComponent} />
                 ))}
+                <div className={styles.totalTaxRow}>
+                  <span>Total Tax</span>
+                  <span className={`${styles.statValuePink} ${styles.totalTaxValue}`}>3%</span>
+                </div>
               </div>
             </div>
           </article>

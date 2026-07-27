@@ -387,6 +387,32 @@
   border-bottom: none;
 }
 
+.totalTaxRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.13);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(230, 240, 255, 0.9);
+}
+
+.totalTaxValue {
+  font-size: 16px;
+}
+
+.taxComponentValue {
+  flex-shrink: 0;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(180, 200, 255, 0.58);
+}
+
 .statLeft {
   display: flex;
   align-items: center;
