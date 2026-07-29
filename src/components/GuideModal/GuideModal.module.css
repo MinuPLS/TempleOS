@@ -1,4 +1,4 @@
-:root {
+.modalOverlay {
   --modal-bg: rgba(15, 15, 25, 0.92);
   --primary-glow: rgba(139, 92, 246, 0.4);
   --secondary-glow: rgba(139, 92, 246, 0.2);
@@ -87,6 +87,10 @@
   border-radius: 50%;
   transition: all 0.2s ease;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
 }
 
 .closeButton:hover {
@@ -95,14 +99,27 @@
   transform: rotate(90deg);
 }
 
+.closeButton:focus-visible,
+.guideLinkButton:focus-visible {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: 2px;
+}
+
 .modalBody {
   padding: 28px;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 28px;
   scrollbar-width: thin;
   scrollbar-color: var(--secondary-glow) transparent;
+}
+
+.modalBody:focus-visible {
+  outline: 2px solid var(--highlight-color);
+  outline-offset: -3px;
 }
 
 .modalBody::-webkit-scrollbar {
@@ -332,6 +349,8 @@
   font-size: 13px;
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
   padding: 4px 0;
   border-top: 1px solid rgba(255,255,255,0.05);
 }
@@ -341,6 +360,9 @@
 .tokenStat strong {
   color: var(--text-primary);
   font-weight: 600;
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .feeBox {
@@ -490,7 +512,7 @@
   background: rgba(255,255,255,0.02);
 }
 
-.dualStat h5 {
+.dualStat h4 {
   margin: 0 0 6px 0;
   font-size: 14px;
   color: var(--text-primary);
@@ -509,7 +531,7 @@
 
 .step {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -525,6 +547,7 @@
   font-weight: 700;
   font-size: 14px;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .stepTitle {
@@ -583,6 +606,109 @@
   font-weight: 600;
 }
 
+.managerLayerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.managerLayerCard {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.managerLayerHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.managerLayerHeader h4 {
+  min-width: 0;
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.managerLayerIcon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--highlight-color);
+}
+
+.managerLayerCard p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.partnerSettlement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: rgba(139, 92, 246, 0.08);
+}
+
+.partnerSettlement > svg {
+  flex-shrink: 0;
+  color: var(--highlight-color);
+  margin-top: 2px;
+}
+
+.partnerSettlement strong {
+  color: var(--text-primary);
+}
+
+.partnerSettlement p {
+  margin: 4px 0 0;
+}
+
+.guideLinkButton {
+  min-height: 44px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.1);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.guideLinkButton:hover {
+  border-color: var(--highlight-color);
+  background: rgba(139, 92, 246, 0.18);
+  transform: translateY(-1px);
+}
+
+.freshnessNote {
+  color: var(--text-secondary);
+  font-size: 12px;
+  opacity: 0.82;
+}
+
 /* Tooltip Colors */
 .tooltipBlue {
   color: #60a5fa;
@@ -618,11 +744,16 @@
 @media (max-width: 768px) {
   .modal {
     max-height: 95vh;
+    max-height: calc(100dvh - 24px);
     border-radius: 16px;
   }
 
   .modalOverlay {
-    padding: 12px;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
   }
 
   .modalHeader {
@@ -635,7 +766,7 @@
 
   .modalBody {
     padding: 20px;
-    gap: 24px;
+    gap: 20px;
   }
 
   .introTitle {
@@ -658,6 +789,10 @@
     grid-template-columns: 1fr;
   }
 
+  .managerLayerGrid {
+    grid-template-columns: 1fr;
+  }
+
   .tokenDesc {
     min-height: auto;
   }
@@ -668,16 +803,38 @@
   
   .parityRow {
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     text-align: center;
   }
   
   .parityRow svg {
     transform: rotate(90deg);
   }
+
+  .parityRow .flowBlock {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .guideLinkButton {
+    width: 100%;
+    align-self: stretch;
+  }
 }
 
 @media (max-width: 480px) {
+  .modalOverlay {
+    padding:
+      max(6px, env(safe-area-inset-top))
+      max(6px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom))
+      max(6px, env(safe-area-inset-left));
+  }
+  .modal {
+    max-height: calc(100dvh - 12px);
+    border-radius: 14px;
+  }
   .modalHeader {
     padding: 12px 16px;
   }
@@ -686,14 +843,55 @@
     gap: 8px;
   }
   .modalBody {
-    padding: 16px;
+    padding: 14px;
+    gap: 18px;
   }
   .introTitle {
     font-size: 18px;
   }
-  .step {
-    flex-direction: column;
+  .intro {
+    margin-bottom: 4px;
+  }
+  .section {
+    padding: 14px;
+  }
+  .sectionTitle {
+    gap: 10px;
+    line-height: 1.35;
+  }
+  .sectionTitle svg {
+    flex-shrink: 0;
+  }
+  .insightBox,
+  .partnerSettlement {
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 360px) {
+  .tokenStat {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tokenStat strong {
     text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modal {
+    animation: none;
+  }
+
+  .closeButton,
+  .guideLinkButton {
+    transition: none;
+  }
+
+  .closeButton:hover,
+  .guideLinkButton:hover {
+    transform: none;
   }
 }

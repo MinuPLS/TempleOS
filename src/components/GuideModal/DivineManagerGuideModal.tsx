@@ -1,6 +1,19 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X, ChefHat, Sparkles, Activity, Search, Bot, Zap, ShieldCheck, Flame, Target } from 'lucide-react'
+import {
+  ArrowRight,
+  Bot,
+  ChefHat,
+  CheckCircle2,
+  Flame,
+  Radar,
+  Route,
+  Server,
+  ShieldCheck,
+  Target,
+  X,
+  Zap,
+} from 'lucide-react'
 import styles from './GuideModal.module.css'
 
 export interface DivineManagerGuideModalProps {
@@ -8,367 +21,335 @@ export interface DivineManagerGuideModalProps {
   onClose: () => void
 }
 
-const Section: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({
-  title,
-  icon,
-  children,
-}) => (
-  <div className={styles.section}>
-    <h4 className={styles.sectionTitle}>
+const Section: React.FC<{
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+  className?: string
+}> = ({ title, icon, children, className }) => (
+  <section className={`${styles.section} ${className || ''}`}>
+    <h3 className={styles.sectionTitle}>
       {icon}
       <span>{title}</span>
-    </h4>
+    </h3>
     <div className={styles.sectionContent}>{children}</div>
-  </div>
+  </section>
 )
 
+const getFocusableElements = (container: HTMLElement) =>
+  Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => !element.hasAttribute('hidden'))
+
 export const DivineManagerGuideModal: React.FC<DivineManagerGuideModalProps> = ({ isOpen, onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const titleId = useId()
+
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+    if (!isOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    document.body.style.overflow = 'hidden'
+
+    const focusFrame = window.requestAnimationFrame(() => closeButtonRef.current?.focus())
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose()
+        return
+      }
+
+      if (event.key !== 'Tab' || !dialogRef.current) return
+
+      const focusable = getFocusableElements(dialogRef.current)
+      if (focusable.length === 0) {
+        event.preventDefault()
+        dialogRef.current.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const activeElement = document.activeElement
+
+      if (event.shiftKey && (activeElement === first || !dialogRef.current.contains(activeElement))) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
 
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      document.addEventListener('keydown', handleEscape)
-    }
+    document.addEventListener('keydown', handleKeyDown)
 
     return () => {
-      document.body.style.overflow = 'unset'
-      document.removeEventListener('keydown', handleEscape)
+      window.cancelAnimationFrame(focusFrame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
     }
   }, [isOpen, onClose])
 
   if (!isOpen) return null
 
+  const openTokenomicsGuide = () => {
+    onClose()
+    window.requestAnimationFrame(() => window.dispatchEvent(new Event('open-tokenomics-guide')))
+  }
+
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className={styles.modalHeader}>
-          <h2>
-            <ChefHat className={styles.headerIcon} /> The Divine Manager
+          <h2 id={titleId}>
+            <ChefHat className={styles.headerIcon} aria-hidden="true" /> The Divine Manager
           </h2>
-          <button className={styles.closeButton} onClick={onClose} aria-label="Close guide">
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Close Divine Manager guide"
+          >
             <X size={24} />
           </button>
         </div>
 
-        <div className={styles.modalBody}>
+        <div className={styles.modalBody} tabIndex={0} aria-label="Divine Manager guide content">
           <div className={styles.intro}>
-            <h3 className={styles.introTitle}>
-              Divine Manager: automated arb for <span className={styles.tooltipIndigo}>HolyC</span>
-            </h3>
+            <h3 className={styles.introTitle}>The “I’ll Do It For You” Layer</h3>
             <p className={styles.introText}>
-              When I shipped the <strong className={styles.tooltipBlue}>Divine Compiler</strong>, the idea was simple:
-              use a second token (<strong className={styles.tooltipAmber}>JIT</strong>) to make a non-burning{' '}
-              <strong className={styles.tooltipIndigo}>HolyC</strong> coin actually deflationary. The trade-off? Someone
-              still had to run the loop manually — watch the pools, calculate the spread, compile / restore, then click
-              through the trades.
+              The Divine Manager automates qualifying market-gap trades and settles the result on-chain. It is
+              the “I&apos;ll do it for you” layer built on top of HolyC and JIT.
             </p>
             <p className={styles.introText}>
-              The Divine Manager is the “I’ll do it for you” layer on top of that design. It watches{' '}
-              <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span> ↔{' '}
-              <strong className={styles.tooltipBlue}>Compiler</strong> flows, waits for clean price gaps, and only steps
-              in when every fee, burn, and gas check is cleared.
+              JIT is issued against HolyC locked in the Compiler, while both tokens trade independently in the
+              market. Their prices can drift away from the Compiler&apos;s internal rate. At first, people still
+              had to watch those gaps and close the profitable ones by hand.
             </p>
             <p className={styles.introText}>
-              When it fires, it runs the entire cycle on-chain: captures the spread, converts owed fees into extra{' '}
-              <strong className={styles.tooltipIndigo}>HolyC</strong>, sends the burn, and stacks profit as protocol
-              treasury. You don’t need to touch <strong className={styles.tooltipAmber}>JIT</strong>, the{' '}
-              <strong className={styles.tooltipBlue}>Compiler</strong>, or the routes — you simply hold or trade{' '}
-              <strong className={styles.tooltipIndigo}>HolyC</strong> like a normal 0% tax coin while the engine quietly
-              harvests the depeg.
+              That is why I built the <span className={styles.glowText}>Divine Manager</span>. It watches the
+              approved markets, waits for a clean route that clears every cost and safeguard, then handles the
+              cycle and settlement. Holders do not need to track routes, operate the Compiler, or touch{' '}
+              <strong className={styles.tooltipAmber}>JIT</strong>. They can hold or trade{' '}
+              <strong className={styles.tooltipIndigo}>HolyC</strong> like a normal 0% tax token while the
+              Manager handles the complicated work in the background.
             </p>
           </div>
 
-          <Section title="1. What the Divine Manager actually does" icon={<Sparkles size={20} />}>
-            <p>
-              The Divine Manager is a smart contract that lives on top of the{' '}
-              <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span> ↔{' '}
-              <strong className={styles.tooltipBlue}>Compiler</strong> triangle and turns volatility into protocol-owned
-              value. When the route is safe, it:
-            </p>
-            <div className={styles.stepList}>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>1</div>
-                <span>
-                  Turns <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span>{' '}
-                  ↔ <span className={styles.tooltipGreen}>PLS</span> price gaps into profit.
-                </span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>2</div>
-                <span>
-                  Pays every owed compile / restore / transfer fee in{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span> at the end of the loop.
-                </span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>3</div>
-                <span>
-                  Burns that <span className={styles.tooltipIndigo}>HolyC</span> and sends the remainder to the protocol
-                  vault.
-                </span>
-              </div>
-            </div>
-            <p>
-              It doesn’t hold funds in advance, it doesn’t need a manual confirmation, and it doesn’t change{' '}
-              <span className={styles.tooltipIndigo}>HolyC</span>’s 0% tax. It simply monetizes the volatility that
-              already exists between:
-            </p>
-            <ul>
-              <li>
-                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipPurple}>WPLS</span>
-              </li>
-              <li>
-                <span className={styles.tooltipAmber}>JIT</span> / <span className={styles.tooltipPurple}>WPLS</span>
-              </li>
-              <li>
-                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipAmber}>JIT</span>
-              </li>
-              <li>The fixed <strong className={styles.tooltipBlue}>Divine Compiler</strong> rate</li>
-            </ul>
-          </Section>
-
-          <Section title="2. Why there is an opportunity at all" icon={<Activity size={20} />}>
-            <p>
-              The system is built around two different “views” of price: the market price inside{' '}
-              <span className={styles.tooltipPurple}>PulseX</span> pools and the compiler price that stays fixed at 1:1
-              (minus 4% compile / 4% restore) no matter what. Because{' '}
-              <strong className={styles.tooltipAmber}>JIT</strong> burns 2% on every transfer and each token has its own{' '}
-              <span className={styles.tooltipPurple}>WPLS</span> pool, the two drift apart while the{' '}
-              <strong className={styles.tooltipBlue}>Compiler</strong> stubbornly sits in the middle. That gap is where
-              the <span className={styles.tooltipGreen}>profit</span> and <span className={styles.tooltipRed}>burns</span>{' '}
-              come from.
-            </p>
-            <p>
-              Originally, you could do it manually: buy the cheap pool, use the{' '}
-              <strong className={styles.tooltipBlue}>Compiler</strong> to bypass AMM pricing, then sell into the rich
-              pool and pocket the difference. It works — but it’s work. Timing, gas, slippage, fees…it was easy to mess
-              up.
-            </p>
-            <div className={styles.stepList}>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>1</div>
-                <span>Buy the discounted side in the pools.</span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>2</div>
-                <span>
-                  <span className={styles.tooltipBlue}>Compile / restore</span> at the fixed rate to flip the discount.
-                </span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>3</div>
-                <span>Sell back into the richer pool and hope gas + slippage didn’t erase the spread.</span>
-              </div>
-            </div>
-            <p>The Divine Manager turns that “manual depeg harvest” into a background process.</p>
-          </Section>
-
-          <Section title="3. Arb Guardian – the off-chain brain" icon={<Search size={20} />}>
-            <p>
-              The Arb Guardian is an off-chain bot. It never holds funds and never touches the vault. Its entire job is
-              to call the Divine Manager with a route when it is clearly profitable after every safety check.
-            </p>
-            <p>It continuously simulates routes across:</p>
-            <ul>
-              <li>
-                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipPurple}>WPLS</span>
-              </li>
-              <li>
-                <span className={styles.tooltipAmber}>JIT</span> / <span className={styles.tooltipPurple}>WPLS</span>
-              </li>
-              <li>
-                <span className={styles.tooltipIndigo}>HolyC</span> / <span className={styles.tooltipAmber}>JIT</span>
-              </li>
-              <li>
-                The <strong className={styles.tooltipBlue}>Divine Compiler</strong> (compile + restore)
-              </li>
-            </ul>
-            <p>For each candidate loop it includes:</p>
-            <ul>
-              <li>4% compile + 4% restore</li>
-              <li>Every 2% <span className={styles.tooltipAmber}>JIT</span> transfer burn in the route</li>
-              <li>Slippage and gas using live reserves</li>
-            </ul>
-            <p>
-              If net <span className={styles.tooltipIndigo}>HolyC</span> + net{' '}
-              <span className={styles.tooltipAmber}>JIT</span> is still positive after all that, the Guardian greenlights
-              the transaction and calls the Divine Manager.
-            </p>
-            <div className={styles.insightBox}>
-              <Bot size={16} />
-              <span>
-                Scan cadence: roughly hourly (configurable). Execution cadence: event-driven — some hours fire multiple
-                missions, some hours stay quiet and that’s normal.
-              </span>
-            </div>
-          </Section>
-
-          <Section title="4. How the Divine Manager executes a loop" icon={<Zap size={20} />}>
-            <p>Once the Arb Guardian passes a route, the Divine Manager takes over on-chain.</p>
-            <div className={styles.stepList}>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>1</div>
-                <span>
-                  Runs the multi-leg swap fee-exempt: buy the cheap pool, bridge via{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span> ↔ <span className={styles.tooltipAmber}>JIT</span>{' '}
-                  or the <strong className={styles.tooltipBlue}>Compiler</strong>, then sell into the richer pool.
-                </span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>2</div>
-                <span>Keeps track of every owed fee internally instead of burning mid-route.</span>
-              </div>
-              <div className={styles.step}>
-                <div className={styles.stepNumber}>3</div>
-                <span>
-                  Restores the owed <span className={styles.tooltipAmber}>JIT</span> into{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span>, sends that{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span> to the burn, and ships the remaining{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span> profit to the vault.
-                </span>
-              </div>
-            </div>
-            <div className={styles.tokenGrid}>
-              <div className={`${styles.tokenCard} ${styles.holycCard}`}>
-                <h5 className={styles.tokenTitle}>
-                  Circulating <span className={styles.tooltipIndigo}>HolyC</span>
-                </h5>
-                <p className={styles.tokenDesc}>
-                  Burned directly plus indirectly locked through <strong className={styles.tooltipBlue}>Compiler</strong>{' '}
-                  backing.
+          <Section title="How The Divine Manager Is Set Up" icon={<Bot size={20} />}>
+            <p>Three parts work together as one guarded system:</p>
+            <div className={styles.managerLayerGrid}>
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <Server size={17} aria-hidden="true" />
+                  </span>
+                  <h4>Off-Chain Brain</h4>
+                </div>
+                <p>
+                  An off-chain scanner reads each validated new block, discovers possible routes, tests
+                  different sizes, and submits only a strict execution plan with limits. It never holds
+                  treasury funds.
                 </p>
-                <div className={styles.tokenStat}>
-                  <span>Result</span>
-                  <strong>- supply</strong>
-                </div>
-                <div className={styles.tokenStat}>
-                  <span>Why</span>
-                  <strong>Burn + trapped backing</strong>
-                </div>
               </div>
-              <div className={`${styles.tokenCard} ${styles.jitCard}`}>
-                <h5 className={styles.tokenTitle}>Protocol vault</h5>
-                <p className={styles.tokenDesc}>
-                  Keeps the <span className={styles.tooltipIndigo}>HolyC</span> profit as protocol-owned collateral.
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <ShieldCheck size={17} aria-hidden="true" />
+                  </span>
+                  <h4>On-Chain Manager</h4>
+                </div>
+                <p>
+                  The Manager uses protocol inventory and checks the route, reserves, deadline, minimum output,
+                  and policy again before anything moves. The full transaction succeeds or reverts.
                 </p>
-                <div className={styles.tokenStat}>
-                  <span>Result</span>
-                  <strong>
-                    + <span className={styles.tooltipIndigo}>HolyC</span>
-                  </strong>
+              </div>
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <Zap size={17} aria-hidden="true" />
+                  </span>
+                  <h4>Privileged Execution &amp; Burn Settlement</h4>
                 </div>
-                <div className={styles.tokenStat}>
-                  <span>Usage</span>
-                  <strong>Treasury growth</strong>
-                </div>
+                <p>
+                  The Manager runs approved routes with privileged JIT fee handling, so burns do not interrupt
+                  each trade. It tracks the burn fees owed and settles that debt with the required HolyC burn
+                  after the route completes.
+                </p>
               </div>
             </div>
-            <p>
-              You can verify every step through the live “Divine Manager Executes” feed — each mission is transparent and
-              on-chain.
+            <p className={styles.caption}>
+              The off-chain brain chooses a candidate. The on-chain contracts remain the final authority.
             </p>
           </Section>
 
-          <Section title="5. Why MEV and copycats can’t simply steal it" icon={<ShieldCheck size={20} />}>
-            <p>MEV bots see the same transaction, but they don’t get the same economics.</p>
-            <ul>
-              <li>
-                <strong>Fee exemption:</strong> The Divine Manager is whitelisted and runs fee-exempt. Copycats pay{' '}
-                <span className={styles.tooltipAmber}>JIT</span> tax and slippage in real time.
-              </li>
-              <li>
-                <strong>Pre-sized routes:</strong> The Arb Guardian already simulates the exact size that fits available
-                liquidity + gas.
-              </li>
-              <li>
-                <strong>Internal fee accounting:</strong> The protocol restores{' '}
-                <span className={styles.tooltipAmber}>JIT</span> into{' '}
-                <span className={styles.tooltipIndigo}>HolyC</span> and burns after the loop; copy bots bleed value
-                mid-route as each transfer taxes them.
-              </li>
-            </ul>
-            <p>They can mimic the calldata, but they can’t copy the math edge.</p>
+          <Section title="Where The Market Gap Comes From" icon={<Radar size={20} />}>
+            <p>
+              The Compiler links HolyC and JIT at a fixed 1:1 internal rate before configurable fees. PulseX
+              pools use live market prices instead, so they can move away from that internal anchor.
+            </p>
+            <div className={styles.dualStatGrid}>
+              <div className={styles.dualStat}>
+                <h4>The Original Markets</h4>
+                <p>HolyC/WPLS, JIT/WPLS, and HolyC/JIT move independently with trading and liquidity.</p>
+              </div>
+              <div className={styles.dualStat}>
+                <h4>The Wider Route Set</h4>
+                <p>The current system can also use additional approved pools and mixed PulseX V1/V2 routes.</p>
+              </div>
+            </div>
+            <p>
+              A difference in price is not automatically an opportunity. The gap must survive any applicable
+              Compiler fees and JIT burns, plus pool fees, slippage, price impact, gas, and every configured
+              safety margin.
+            </p>
           </Section>
 
-          <Section title="6. When burns happen and what gets burned" icon={<Flame size={20} />}>
-            <p>Burns only happen after profit is locked in.</p>
+          <Section title="From Market Gap To On-Chain Execution" icon={<Route size={20} />}>
             <div className={styles.stepList}>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>1</div>
-                <span>The arb loop completes and the vault profit is secured.</span>
+                <span>
+                  <strong className={styles.stepTitle}>Reads The Market:</strong> The scanner reads approved
+                  pools and the Compiler from the same confirmed block.
+                </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>2</div>
                 <span>
-                  The Manager tallies everything that should have burned (compile + restore +{' '}
-                  <span className={styles.tooltipAmber}>JIT</span> transfer fees).
+                  <strong className={styles.stepTitle}>Proves The Route:</strong> It tests different sizes and
+                  its simulation must show that the complete route clears the required profit floor after
+                  fees, burns, slippage, price impact, and gas.
                 </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>3</div>
                 <span>
-                  The corresponding <span className={styles.tooltipAmber}>JIT</span> is restored back into extra{' '}
-                  <span className={styles.tooltipIndigo}>HolyC</span>.
+                  <strong className={styles.stepTitle}>Executes On-Chain:</strong> The scanner submits one
+                  bounded ticket. The Manager checks it again, then the full route completes atomically or
+                  reverts.
                 </span>
               </div>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>4</div>
                 <span>
-                  That <span className={styles.tooltipIndigo}>HolyC</span> is sent in a single shot to{' '}
-                  <span className={styles.tooltipRed}>0x000...0369</span>.
+                  <strong className={styles.stepTitle}>Settles The Result:</strong> The contracts apply the
+                  configured burn effects, retained treasury value, and partner allocations.
                 </span>
               </div>
             </div>
             <div className={styles.insightBox}>
-              <Flame size={16} />
+              <Radar size={16} aria-hidden="true" />
               <span>
-                <span className={styles.tooltipIndigo}>HolyC</span> supply drops directly through burns and indirectly
-                through <span className={styles.tooltipAmber}>JIT</span> burns that trap{' '}
-                <span className={styles.tooltipIndigo}>HolyC</span> in the{' '}
-                <strong className={styles.tooltipBlue}>Compiler</strong> forever.
+                The scanner follows validated new blocks, but execution is opportunity-driven. Quiet periods
+                are normal because the system does not execute unless the whole route passes every check.
               </span>
             </div>
           </Section>
 
-          <Section title="7. Current mode & what you do as a holder" icon={<Target size={20} />}>
+          <Section title="Where The Value Goes" icon={<Flame size={20} />}>
+            <div className={styles.managerLayerGrid}>
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <Flame size={17} aria-hidden="true" />
+                  </span>
+                  <h4>Burn &amp; Locked Backing</h4>
+                </div>
+                <p>
+                  Direct HolyC burns go to <span className={styles.tooltipRed}>0x000...0369</span>. JIT burns
+                  can also leave excess HolyC permanently locked inside the Compiler.
+                </p>
+              </div>
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <ShieldCheck size={17} aria-hidden="true" />
+                  </span>
+                  <h4>Protocol Treasury</h4>
+                </div>
+                <p>
+                  Retained profit can remain as protocol inventory in HolyC, JIT, or WPLS for future routes
+                  and operations.
+                </p>
+              </div>
+              <div className={styles.managerLayerCard}>
+                <div className={styles.managerLayerHeader}>
+                  <span className={styles.managerLayerIcon}>
+                    <Target size={17} aria-hidden="true" />
+                  </span>
+                  <h4>Partner Buy-And-Burn</h4>
+                </div>
+                <p>
+                  Configured allocations fund partner systems. The documented July 2026 setup includes Briah,
+                  CoinMafia, DUMB, and FUPA.
+                </p>
+              </div>
+            </div>
+            <div className={styles.partnerSettlement}>
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <div>
+                <strong>How The Documented Split Works</strong>
+                <p>
+                  After burns and the protected profit-and-gas floor, the documented July 2026 configuration
+                  allocates 50% of the remaining shareable profit—not 50% of gross route value—using configured
+                  partner weights. A partner&apos;s actual market buy-and-burn can happen in a later transaction.
+                </p>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="How To Verify It" icon={<ShieldCheck size={20} />}>
             <p>
-              Mode: accumulate + burn. Each profitable arb burns part of the haul in{' '}
-              <span className={styles.tooltipIndigo}>HolyC</span> and stacks the rest inside a{' '}
-              <span className={styles.tooltipIndigo}>HolyC</span> vault controlled by the protocol.
+              The website turns Manager activity into a readable feed. It includes current V2 and legacy
+              history, transaction links, leg-by-leg <span className={styles.keyword}>View Flow</span> details,
+              partner burn trackers, and Manager-routed liquidity.
             </p>
-            <p>Design goals (not promises):</p>
             <ul>
-              <li>
-                Use vault <span className={styles.tooltipIndigo}>HolyC</span> in the future for holder rewards, LP
-                incentives, or ecosystem utilities.
-              </li>
-              <li>Keep every burn and payout transparent through the execute feed.</li>
-              <li>
-                Grow protocol-owned <span className={styles.tooltipIndigo}>HolyC</span> as permanent backing for{' '}
-                <span className={styles.tooltipIndigo}>HolyC</span> liquidity.
-              </li>
+              <li>Open an execution in the Divine Manager activity feed.</li>
+              <li>Use View Flow to understand the reconstructed route and settlement.</li>
+              <li>Follow the Otterscan link to inspect the source transaction on-chain.</li>
+              <li>Use each partner tracker to verify its downstream buy-and-burn activity.</li>
             </ul>
             <p>
-              As a <span className={styles.tooltipIndigo}>HolyC</span> holder your role is simple:
+              The website is the readable explanation layer. The on-chain transaction receipt and logs remain
+              the source of truth. “Feeder Bot” is a historical operational label in the activity feed, not a
+              second V2 Manager.
             </p>
-            <ul>
-              <li><span className={styles.tooltipIndigo}>HolyC</span> stays 0% tax.</li>
-              <li>
-                You never have to touch <span className={styles.tooltipAmber}>JIT</span>, the{' '}
-                <strong className={styles.tooltipBlue}>Compiler</strong>, or the Manager.
-              </li>
-              <li>
-                You just hold or trade <span className={styles.tooltipIndigo}>HolyC</span> while the system turns
-                volatility into a lighter float and a deeper vault.
-              </li>
-            </ul>
+            <button type="button" className={styles.guideLinkButton} onClick={openTokenomicsGuide}>
+              Revisit The Tokenomics Guide <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </Section>
+
+          <Section title="What This Means For Holders" icon={<Target size={20} />} className={styles.finalSection}>
+            <p>
+              HolyC remains a 0% tax token. You do not need to use JIT, operate the Compiler, or understand
+              every route to hold or trade it.
+            </p>
+            <p>
+              The Manager is designed to turn qualifying market gaps into burn effects, retained protocol
+              value, and partner activity. It is a mechanism—not a promise of profit, constant execution, or
+              any particular result.
+            </p>
             <p className={styles.finalThought}>
-              <strong>
-                Hold <span className={styles.tooltipIndigo}>HolyC</span>. Let the Manager do the work.
-              </strong>
+              Hold or trade HolyC. Let the Divine Manager handle the complexity.
+            </p>
+            <p className={styles.freshnessNote}>
+              Guide refreshed July 2026. Live routes, safeguards, recipients, and settlement settings can
+              change.
             </p>
           </Section>
         </div>
