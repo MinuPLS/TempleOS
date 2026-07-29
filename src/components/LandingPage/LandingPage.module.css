@@ -1425,11 +1425,11 @@
 
 .liquidityPoolsCard {
   position: relative;
-  flex: 0 0 340px;
-  min-height: 340px;
+  flex: 0 0 420px;
+  min-height: 420px;
   overflow: hidden;
-  gap: 12px;
-  padding: 18px 22px;
+  gap: 8px;
+  padding: 14px 16px 16px;
   border-radius: 24px;
   background: linear-gradient(145deg, rgba(20, 20, 35, 0.95), rgba(12, 17, 34, 0.98));
   border: 1px solid rgba(96, 165, 250, 0.16);
@@ -1451,7 +1451,7 @@
 
 .liquidityPoolsHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex: 0 0 auto;
@@ -1471,15 +1471,81 @@
 }
 
 .liquidityPoolsSubtitle {
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   font-size: 11px;
   color: rgba(203, 213, 225, 0.58);
 }
 
 .liquidityPoolsActions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.liquidityPoolsViewTabs {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid rgba(125, 211, 252, 0.13);
+  border-radius: 9px;
+  background: rgba(2, 6, 23, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.liquidityPoolsTab {
+  appearance: none;
+  border: 0;
+  min-width: 44px;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(203, 213, 225, 0.56);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.liquidityPoolsTab:hover {
+  color: rgba(239, 246, 255, 0.92);
+}
+
+.liquidityPoolsTabActive {
+  color: #f0f9ff;
+  background: rgba(56, 189, 248, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(125, 211, 252, 0.14),
+    0 2px 7px rgba(2, 132, 199, 0.08);
+}
+
+.liquidityPoolsActions .activityRefreshButton {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(203, 213, 225, 0.7);
+}
+
+.liquidityPoolsActions .activityRefreshButton:not(:disabled):hover {
+  transform: none;
+  color: #e0f2fe;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.liquidityPoolsActions .infoButtonActive {
+  border-color: rgba(56, 189, 248, 0.48);
+  background: rgba(56, 189, 248, 0.14);
+  color: #7dd3fc;
 }
 
 .liquidityPoolsError {
@@ -1517,6 +1583,31 @@
   opacity: 1;
 }
 
+.volumePanelHost {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.liquidityViewsGuide {
+  display: flex;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.liquidityViewsGuide .burnInfoList {
+  box-sizing: border-box;
+  width: 100%;
+  line-height: 1.72;
+}
+
+.liquidityViewsGuide .burnInfoList li + li {
+  margin-top: 24px;
+}
+
 .liquidityPoolsViewport {
   height: 100%;
   min-height: 0;
@@ -1529,6 +1620,652 @@
   display: none;
   width: 0;
   height: 0;
+}
+
+.volumePanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.volumeLoading {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(191, 219, 254, 0.84);
+  font-size: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.12);
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 40%, rgba(37, 99, 235, 0.11), transparent 58%), rgba(2, 6, 23, 0.32);
+}
+
+.volumeToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.volumeIntro {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.volumeIntro strong {
+  color: rgba(240, 249, 255, 0.94);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.volumeIntro span {
+  color: rgba(148, 163, 184, 0.6);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.volumeWindows {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: stretch;
+  align-items: center;
+  gap: 8px;
+}
+
+.volumeWindowButton,
+.volumeRefreshButton {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.volumeWindowButton {
+  position: relative;
+  border-radius: 0;
+  min-width: 0;
+  padding: 7px 0 10px;
+  background: transparent;
+  color: rgba(203, 213, 225, 0.52);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  transition: color 130ms ease, background 130ms ease;
+}
+
+.volumeWindowButton:hover {
+  color: #e0f2fe;
+}
+
+.volumeWindowButtonActive {
+  color: #e0f2fe;
+}
+
+.volumeWindowButtonActive::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(56, 189, 248, 0.78);
+}
+
+.volumeRefreshButton {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(191, 219, 254, 0.72);
+  transition: border-color 130ms ease, color 130ms ease, transform 130ms ease;
+}
+
+.volumeRefreshButton:not(:disabled):hover {
+  color: #eff6ff;
+  border-color: rgba(96, 165, 250, 0.44);
+  transform: translateY(-1px);
+}
+
+.volumeRefreshButton:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.volumeRefreshButton.refreshSpinning svg {
+  animation: refreshSpin 0.8s linear infinite;
+}
+
+.volumeSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.volumeSummary > span {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(96, 165, 250, 0.1);
+  border-radius: 9px;
+  background: rgba(8, 15, 31, 0.4);
+}
+
+.volumeSummary strong {
+  color: #f0f9ff;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.volumeSummary small {
+  overflow: hidden;
+  color: rgba(203, 213, 225, 0.55);
+  font-size: 9px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.volumeGraphFrame {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.12);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.1), transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(8, 47, 73, 0.18), transparent 72%),
+    rgba(2, 6, 23, 0.46);
+}
+
+.volumeGraphControls {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  border-radius: 7px;
+  background: rgba(4, 9, 22, 0.72);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(6px);
+  font-size: 7.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  pointer-events: auto;
+}
+
+.volumeGraphWindows {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.volumeGraphControlButton,
+.volumeGraphResetButton {
+  min-height: 19px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(186, 230, 253, 0.52);
+  font: inherit;
+  cursor: pointer;
+  transition: color 130ms ease, background 130ms ease;
+}
+
+.volumeGraphControlButton {
+  min-width: 27px;
+  padding: 2px 5px;
+}
+
+.volumeGraphControlButton:hover,
+.volumeGraphControlButton:focus-visible,
+.volumeGraphResetButton:hover,
+.volumeGraphResetButton:focus-visible {
+  background: rgba(125, 211, 252, 0.1);
+  color: #e0f2fe;
+  outline: none;
+}
+
+.volumeGraphControlButtonActive {
+  background: rgba(56, 189, 248, 0.16);
+  color: rgba(224, 242, 254, 0.96);
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.1);
+}
+
+.volumeGraphResetButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 42px;
+  padding: 2px 5px;
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+  white-space: nowrap;
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 220ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    color 130ms ease,
+    background 130ms ease;
+}
+
+.volumeGraphResetButtonVisible {
+  width: 42px;
+}
+
+.volumeGraphResetButtonHidden {
+  width: 0;
+  margin-left: -3px;
+  padding-right: 0;
+  padding-left: 0;
+  border-left-color: transparent;
+  transform: translateX(6px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.volumeGraphResetButton:disabled {
+  cursor: default;
+}
+
+.volumeGraphHeader {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 11px 0;
+}
+
+.volumeGraphHeader > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.volumeGraphHeader strong {
+  color: rgba(241, 245, 249, 0.94);
+  font-size: 10px;
+}
+
+.volumeGraphHeader > div:first-child > span {
+  overflow: hidden;
+  color: rgba(148, 163, 184, 0.56);
+  font-size: 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.volumeLegend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(148, 163, 184, 0.58);
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.volumeLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.volumeLegend i {
+  width: 10px;
+  height: 2px;
+  border-radius: 2px;
+}
+
+.volumeLegendManager {
+  background: rgba(96, 165, 250, 0.48);
+}
+
+.volumeLegendRoute {
+  background: rgba(192, 132, 252, 0.86);
+}
+
+.volumeGraph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.volumeRouteEdge {
+  fill: none;
+  stroke: var(--route-color, rgb(192, 132, 252));
+  stroke-width: var(--route-width, 1.5px);
+  stroke-opacity: var(--route-opacity, 0.65);
+  stroke-linecap: round;
+  stroke-dasharray: var(--route-dash, 5px 6px);
+  filter: drop-shadow(
+    0 0 var(--route-glow-radius, 2px)
+    rgba(192, 132, 252, var(--route-glow-opacity, 0.12))
+  );
+  pointer-events: none;
+  transition:
+    stroke 360ms ease,
+    stroke-width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    stroke-opacity 420ms ease,
+    stroke-dasharray 420ms ease,
+    filter 420ms ease;
+}
+
+.volumeRouteGroup {
+  cursor: pointer;
+  outline: none;
+  opacity: 1;
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.volumeRouteGroup:focus-visible .volumeRouteEdge {
+  stroke: rgba(224, 242, 254, 0.95);
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(125, 211, 252, 0.55));
+}
+
+.volumeRouteGroup:hover .volumeRouteEdge {
+  stroke: rgb(216, 180, 254);
+  stroke-opacity: 1;
+}
+
+.volumeRouteGroupDominant .volumeRouteEdge {
+  stroke: rgb(209, 164, 255);
+}
+
+.volumeRouteGroupOutsideSelection {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.volumeRouteGroupOutsideSelection .volumeRouteHitArea {
+  pointer-events: none;
+}
+
+.volumeRouteHitArea {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  pointer-events: stroke;
+}
+
+.volumePoolNode {
+  cursor: grab;
+  outline: none;
+  touch-action: none;
+  user-select: none;
+  transition: opacity 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.volumePoolNodeDragging {
+  cursor: grabbing;
+}
+
+.volumePoolNodeVisual {
+  transform: scale(var(--pool-scale, 1));
+  transform-origin: 0 0;
+  pointer-events: none;
+  transition: transform 460ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.volumePoolNodeHitArea {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+
+.volumePoolLogoBase {
+  fill: #111827;
+  stroke: #0b0e1a;
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+.volumePoolLogoImage {
+  pointer-events: none;
+  transition: filter 130ms ease;
+}
+
+.volumePoolNode:hover .volumePoolLogoImage,
+.volumePoolNode:focus-visible .volumePoolLogoImage,
+.volumePoolNodeSelected .volumePoolLogoImage {
+  filter: brightness(1.08) drop-shadow(0 0 7px rgba(56, 189, 248, 0.8));
+}
+
+.volumePoolNodeDragging .volumePoolLogoImage {
+  filter: brightness(1.12) drop-shadow(0 0 10px rgba(56, 189, 248, 0.95));
+}
+
+.volumePoolNodeLabel {
+  fill: #f8fafc;
+  font-size: 14px;
+  font-weight: 850;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(2, 6, 23, 0.96);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
+.volumePoolNode .volumePoolNodeCount {
+  fill: rgba(165, 243, 252, 0.83);
+  font-size: 6.5px;
+  font-weight: 600;
+}
+
+.volumePoolNodeQuiet {
+  opacity: 0.52;
+}
+
+.volumePoolNodeQuiet:hover,
+.volumePoolNodeQuiet:focus-visible {
+  opacity: 0.82;
+}
+
+.volumePoolNodeQuiet.volumePoolNodeSelected {
+  opacity: 1;
+}
+
+.volumePoolNodeOutsideSelection {
+  opacity: 0.2;
+}
+
+.volumePoolNodeOutsideSelection:hover,
+.volumePoolNodeOutsideSelection:focus-visible {
+  opacity: 0.62;
+}
+
+.volumeTooltip {
+  position: fixed;
+  z-index: 2147483647;
+  display: flex;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 10px 11px;
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 8px;
+  background: rgba(4, 8, 20, 0.96);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
+  color: rgba(203, 213, 225, 0.72);
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  flex-direction: column;
+  gap: 2px;
+}
+
+.volumeTooltipBelow {
+  transform: translate(-50%, 14px);
+}
+
+.volumeTooltip strong {
+  margin-bottom: 2px;
+  color: #f0f9ff;
+  font-size: 12px;
+}
+
+.volumeTooltipFlows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(148, 163, 184, 0.13);
+}
+
+.volumeTooltipFlow {
+  display: grid;
+  grid-template-columns: minmax(42px, 1fr) auto auto;
+  align-items: baseline;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.volumeTooltipFlow b {
+  overflow: hidden;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+.volumeTooltipFlow span {
+  min-width: 34px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.volumeTooltipBought {
+  color: #4ade80;
+}
+
+.volumeTooltipSold {
+  color: #fb7185;
+}
+
+.volumeDetail {
+  display: grid;
+  grid-template-columns: minmax(145px, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px 12px;
+  padding: 10px;
+  border: 1px solid rgba(125, 211, 252, 0.15);
+  border-radius: 11px;
+  background: rgba(8, 15, 31, 0.65);
+}
+
+.volumeDetailHeading {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  color: rgba(191, 219, 254, 0.68);
+  font-size: 9px;
+}
+
+.volumeDetailHeading > div {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #f8fafc;
+  font-size: 11px;
+}
+
+.volumeDetailHeading > div > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.volumeDetailHeading small {
+  color: rgba(148, 163, 184, 0.55);
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.volumeDetailStats {
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  gap: 8px !important;
+}
+
+.volumeDetailStats span {
+  color: rgba(148, 163, 184, 0.65);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.volumeDetailStats strong {
+  color: rgba(224, 242, 254, 0.94);
+}
+
+.volumeTokenList,
+.volumeRouteList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.volumeTokenList {
+  align-content: flex-start;
+}
+
+.volumeRouteList {
+  grid-column: 2;
+}
+
+.volumeTokenList span,
+.volumeRouteList span {
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(96, 165, 250, 0.075);
+  color: rgba(203, 213, 225, 0.72);
+  font-size: 9px;
+}
+
+.volumeTokenList strong,
+.volumeRouteList strong {
+  color: rgba(224, 242, 254, 0.96);
+}
+
+.volumeNoActivity {
+  color: rgba(203, 213, 225, 0.45);
+  font-size: 10px;
+}
+
+.volumeFootnote {
+  margin: 0;
+  color: rgba(148, 163, 184, 0.52);
+  font-size: 8px;
+  line-height: 1.35;
 }
 
 .liquidityPoolsGrid {
@@ -2417,6 +3154,7 @@
     min-height: 520px;
     max-height: 760px;
   }
+
 }
 
 @media (max-width: 520px) {
@@ -2425,8 +3163,74 @@
   }
 
   .liquidityPoolsCard {
-    min-height: 560px;
+    height: clamp(590px, 155vw, 680px);
+    min-height: 590px;
     padding-inline: 14px;
+  }
+
+  .liquidityPoolsHeader {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .liquidityPoolsTitle {
+    font-size: 16px;
+  }
+
+  .liquidityPoolsSubtitle {
+    max-width: 132px;
+    line-height: 1.35;
+  }
+
+  .liquidityPoolsActions {
+    gap: 4px;
+  }
+
+  .liquidityPoolsViewTabs {
+    gap: 1px;
+  }
+
+  .liquidityPoolsTab {
+    min-width: 38px;
+    min-height: 28px;
+    padding: 4px 6px;
+  }
+
+  .liquidityPoolsActions .activityRefreshButton {
+    width: 28px;
+    height: 28px;
+  }
+
+  .volumeGraphControls {
+    top: 8px;
+    right: 8px;
+    gap: 2px;
+    padding: 3px;
+    font-size: 9px;
+  }
+
+  .volumeGraphControlButton {
+    min-width: 34px;
+    min-height: 28px;
+    padding: 4px 6px;
+  }
+
+  .volumeGraphResetButton,
+  .volumeGraphResetButtonVisible {
+    width: 48px;
+    min-height: 28px;
+  }
+
+  .volumeGraphResetButtonHidden {
+    width: 0;
+  }
+
+  .volumeRouteHitArea {
+    stroke-width: 18;
+  }
+
+  .volumeTooltip {
+    font-size: 12px;
   }
 }
 

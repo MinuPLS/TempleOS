@@ -11,7 +11,7 @@ import { DivineManagerGuideModal } from './GuideModal/DivineManagerGuideModal'
 import { throttle } from '../lib/performanceOptimizer'
 import styles from './NavBar.module.css'
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen, Coins, Zap, ChevronRight } from 'lucide-react'
+import { BookOpen, Coins, Zap, ChevronRight, House, Trophy } from 'lucide-react'
 
 export function NavBar() {
   const { address, isConnected } = useAccount()
@@ -20,6 +20,7 @@ export function NavBar() {
   const [isDivineGuideOpen, setIsDivineGuideOpen] = useState(false)
   const [isGuidesMenuOpen, setIsGuidesMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isCompactWallet, setIsCompactWallet] = useState(false)
   const [isResizing, setIsResizing] = useState(false)
   const resizeTimeoutRef = useRef<number | null>(null)
   const guidesRef = useRef<HTMLDivElement | null>(null)
@@ -37,6 +38,7 @@ export function NavBar() {
   useEffect(() => {
     const checkMobile = throttle(() => {
       setIsMobile(window.innerWidth <= 900) // Unified breakpoint
+      setIsCompactWallet(window.innerWidth <= 400)
     }, 16) // ~1 frame for 60fps
 
     const handleResizeStart = () => {
@@ -141,8 +143,15 @@ export function NavBar() {
     return `${address.slice(0, 8)}...${address.slice(-6)}`
   }
 
-  const isOnLandingPage = location.pathname === '/' || location.pathname.startsWith('/dashboard')
-  const navSubtitle = isOnLandingPage ? 'HolyC' : 'JustInTimeCompiler'
+  const normalizedPath = location.pathname.toLowerCase()
+  const isPromisesRoute = normalizedPath === '/promises-kept' || normalizedPath === '/roadmap'
+  const isOnLandingPage =
+    location.pathname === '/' || location.pathname.startsWith('/dashboard') || isPromisesRoute
+  const navSubtitle = isPromisesRoute
+    ? 'PromisesKept'
+    : isOnLandingPage
+      ? 'HolyC'
+      : 'JustInTimeCompiler'
   const currentAddress = isOnLandingPage ? HOLY_C_ADDRESS : JIT_ADDRESS
   const compactAddress = formatCompactAddress(currentAddress);
   const tooltipContent = isOnLandingPage
@@ -150,7 +159,10 @@ export function NavBar() {
     : 'The JustInTime Compiler contract this dApp is interating with, verified and opensource'
   const navCta = isOnLandingPage
     ? { label: 'Launch dApp', to: '/compiler' }
-    : { label: 'Overview', to: '/' }
+    : { label: 'Home', to: '/' }
+  const roadmapNavCta = isPromisesRoute
+    ? { label: 'Home', to: '/', ariaLabel: 'Return to the TempleOS home page' }
+    : { label: 'Promises', to: '/promises-kept', ariaLabel: 'View the Promises Kept roadmap' }
 
   const handleCopyAddress = () => {
     const targetAddress = currentAddress
@@ -177,7 +189,7 @@ export function NavBar() {
 
 
   return (
-    <nav className={styles.navbar}>
+    <nav className={`${styles.navbar} ${!isOnLandingPage ? styles.navbarDapp : ''}`}>
       <motion.div 
         className={styles.navbarContent} 
         layout={!isResizing}
@@ -290,10 +302,24 @@ export function NavBar() {
           transition={{ duration: isResizing ? 0 : 0.4, ease: [0.4, 0, 0.2, 1] }}
         >
           <Link
-            to={navCta.to}
-            className={styles.navRouteButton}
+            to={roadmapNavCta.to}
+            className={`${styles.navRouteButton} ${styles.promisesNavButton}`}
+            aria-label={roadmapNavCta.ariaLabel}
           >
-            {navCta.label}
+            {isPromisesRoute ? (
+              <House size={15} aria-hidden="true" />
+            ) : (
+              <Trophy size={15} aria-hidden="true" />
+            )}
+            <span className={styles.promisesNavText}>{roadmapNavCta.label}</span>
+          </Link>
+          <Link
+            to={navCta.to}
+            className={`${styles.navRouteButton} ${!isOnLandingPage ? styles.homeNavButton : ''}`}
+            aria-label={!isOnLandingPage ? 'Return to the TempleOS home page' : undefined}
+          >
+            {!isOnLandingPage && <House size={15} aria-hidden="true" />}
+            <span className={!isOnLandingPage ? styles.homeNavText : undefined}>{navCta.label}</span>
           </Link>
           <div ref={guidesRef} className={styles.guidesWrapper}>
             <button
@@ -302,6 +328,7 @@ export function NavBar() {
               onClick={() => setIsGuidesMenuOpen((prev) => !prev)}
               aria-haspopup="true"
               aria-expanded={isGuidesMenuOpen}
+              aria-label="Open guides"
             >
               <BookOpen size={16} className={styles.guideIcon} />
               <span className={styles.guideButtonText}>Guides</span>
@@ -355,7 +382,7 @@ export function NavBar() {
           </div>
           {!isOnLandingPage && (
             <div className={styles.walletConnectWrapper}>
-              <WalletConnect />
+              <WalletConnect compact={isCompactWallet} />
             </div>
           )}
         </motion.div>

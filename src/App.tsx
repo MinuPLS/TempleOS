@@ -10,6 +10,7 @@ import { useState } from 'react'
 import styles from './App.module.css'
 import LandingPage from './components/LandingPage/LandingPage'
 import DumbMoneyPage from './components/DumbMoneyPage/DumbMoneyPage'
+import PromisesKeptPage from './components/PromisesKeptPage/PromisesKeptPage'
 
 const MainPage = () => {
   useAccount()
@@ -62,6 +63,8 @@ function App() {
         <Route path="/dashboard" element={<LandingPage />} />
         <Route path="/compiler" element={<MainPage />} />
         <Route path="/DumbMoney" element={<DumbMoneyPage />} />
+        <Route path="/promises-kept" element={<PromisesKeptPage />} />
+        <Route path="/roadmap" element={<PromisesKeptPage />} />
       </Routes>
     </div>
   )

@@ -4,6 +4,7 @@ import path from 'node:path'
 const rpcUrl = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
 const feedPath = path.resolve('public/divine-manager-feed.json')
 const outputPath = path.resolve('public/divine-manager-pools.json')
+const volumeOutputPath = path.resolve('public/divine-manager-volume.json')
 const holyCAddress = '0x6c8fdfd2cec0b83d69045074d57a87fa1525225a'
 const jitAddress = '0x57909025ace10d5de114d96e3ec84f282895870c'
 const connectedTokenAddresses = new Set([holyCAddress, jitAddress])
@@ -15,6 +16,7 @@ const ignoredAddresses = new Set([
   jitAddress,
 ])
 const transferTopic = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+const swapTopic = '0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822'
 const selectors = {
   token0: '0x0dfe1681',
   token1: '0xd21220a7',
@@ -76,6 +78,22 @@ const decodeString = (value) => {
     }
 
     return Buffer.from(hex.slice(0, 64), 'hex').toString('utf8').replaceAll('\u0000', '').trim() || null
+  } catch {
+    return null
+  }
+}
+
+const decodeSwapAmounts = (data) => {
+  if (typeof data !== 'string' || !/^0x[0-9a-fA-F]{256}$/.test(data)) return null
+
+  try {
+    const word = (index) => BigInt(`0x${data.slice(2 + index * 64, 2 + (index + 1) * 64)}`)
+    return {
+      amount0In: word(0),
+      amount1In: word(1),
+      amount0Out: word(2),
+      amount1Out: word(3),
+    }
   } catch {
     return null
   }
@@ -161,6 +179,67 @@ const items = pairs
 
 if (items.length === 0) throw new Error('No manager-routed HolyC or JIT pools were found')
 
+// A Swap event is the on-chain source of truth for a V2 pool trade. We keep the
+// source amounts per transaction instead of inventing a common dollar value for
+// exotic tokens. The frontend can then aggregate by a selected time window while
+// retaining exact token-denominated inputs/outputs for every pool and route.
+const pairByAddress = new Map(items.map((pair) => [pair.pairAddress, pair]))
+const feedByHash = new Map(feed.items.map((item) => [String(item.transactionHash || '').toLowerCase(), item]))
+const volumeExecutions = receipts.flatMap((receipt, index) => {
+  if (!receipt || !Array.isArray(receipt.logs)) return []
+
+  const transactionHash = transactionHashes[index]
+  const feedItem = feedByHash.get(transactionHash.toLowerCase())
+  if (!feedItem || !Number.isFinite(Number(feedItem.timestamp))) return []
+
+  const swaps = receipt.logs
+    .flatMap((log) => {
+      const pair = pairByAddress.get(String(log?.address || '').toLowerCase())
+      if (!pair || String(log?.topics?.[0] || '').toLowerCase() !== swapTopic) return []
+
+      const amounts = decodeSwapAmounts(log.data)
+      if (!amounts) return []
+
+      const tokenIn = amounts.amount0In > 0n ? pair.token0 : amounts.amount1In > 0n ? pair.token1 : null
+      const amountIn = amounts.amount0In > 0n ? amounts.amount0In : amounts.amount1In
+      const tokenOut = amounts.amount0Out > 0n ? pair.token0 : amounts.amount1Out > 0n ? pair.token1 : null
+      const amountOut = amounts.amount0Out > 0n ? amounts.amount0Out : amounts.amount1Out
+      if (!tokenIn || !tokenOut || amountIn === 0n || amountOut === 0n) return []
+
+      return [{
+        poolAddress: pair.pairAddress,
+        tokenIn: tokenIn.address,
+        amountIn: amountIn.toString(),
+        tokenOut: tokenOut.address,
+        amountOut: amountOut.toString(),
+        logIndex: Number(log.logIndex || 0),
+      }]
+    })
+    .sort((a, b) => a.logIndex - b.logIndex)
+
+  if (swaps.length === 0) return []
+
+  // Repeated swaps in the same pair are one station in the visual route. They
+  // remain separate in `swaps`, so its token volume is never discarded.
+  const route = swaps.reduce((path, swap) => {
+    if (path[path.length - 1] !== swap.poolAddress) path.push(swap.poolAddress)
+    return path
+  }, [])
+
+  return [{
+    transactionHash,
+    timestamp: Number(feedItem.timestamp),
+    swaps: swaps.map((swap) => ({
+      poolAddress: swap.poolAddress,
+      tokenIn: swap.tokenIn,
+      amountIn: swap.amountIn,
+      tokenOut: swap.tokenOut,
+      amountOut: swap.amountOut,
+    })),
+    route,
+  }]
+})
+
 const snapshot = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
@@ -170,4 +249,16 @@ const snapshot = {
 
 await mkdir(path.dirname(outputPath), { recursive: true })
 await writeFile(outputPath, `${JSON.stringify(snapshot)}\n`)
-console.log(`Wrote ${items.length} manager-routed liquidity pools from ${transactionHashes.length} executions`)
+
+const volumeSnapshot = {
+  schemaVersion: 1,
+  generatedAt: new Date().toISOString(),
+  sourceIndexedThroughBlock: String(feed.indexedThroughBlock || ''),
+  pools: items,
+  executions: volumeExecutions,
+}
+
+await writeFile(volumeOutputPath, `${JSON.stringify(volumeSnapshot)}\n`)
+console.log(
+  `Wrote ${items.length} manager-routed liquidity pools and ${volumeExecutions.length} routed volume executions from ${transactionHashes.length} executions`
+)

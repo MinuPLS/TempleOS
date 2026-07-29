@@ -1,7 +1,11 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Tooltip } from './Tooltip';
 
-export function WalletConnect() {
+type WalletConnectProps = {
+  compact?: boolean;
+};
+
+export function WalletConnect({ compact = false }: WalletConnectProps) {
   return (
     <div className="wallet-connect-wrapper">
       <Tooltip 
@@ -9,7 +13,12 @@ export function WalletConnect() {
         variant="info"
         position="bottom"
       >
-        <ConnectButton showBalance={false} chainStatus="icon" />
+        <ConnectButton
+          accountStatus={{ smallScreen: 'avatar', largeScreen: 'address' }}
+          chainStatus={{ smallScreen: 'none', largeScreen: 'icon' }}
+          label={compact ? 'Connect' : 'Connect Wallet'}
+          showBalance={false}
+        />
       </Tooltip>
     </div>
   );

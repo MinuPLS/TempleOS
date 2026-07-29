@@ -542,7 +542,7 @@ export function LandingPage() {
 
               </div>
 
-              {!isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} /> : null}
+              {!isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} managerExecutions={divineExecutions} /> : null}
             </aside>
             <div className={styles.divineFeedColumn}>
               <DivineManagerActivity
@@ -554,7 +554,7 @@ export function LandingPage() {
                 tokenPrices={tokenPrices}
               />
             </div>
-            {isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} /> : null}
+            {isMobileDivineLayout ? <ConnectedLiquidityPools tokenPrices={tokenPrices} managerExecutions={divineExecutions} /> : null}
           </div>
         </section>
       </div>
