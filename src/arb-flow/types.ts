@@ -57,6 +57,10 @@ export interface ArbFlow {
   inventoryDeltas: InventoryDelta[]
   gross: { asset: AssetRef; amount: bigint } | null
   burnedHolyC: bigint
+  voluntaryHolyCBurn: {
+    amount: bigint
+    fundedWith: AssetRef
+  } | null
   pools: FlowNode[]
   nodes: FlowNode[]
   profitWPLS: bigint

@@ -1,9 +1,20 @@
 import { describe, it, expect } from 'vitest'
-import { buildArbFlow, BuildContext } from '../buildArbFlow'
+import { buildArbFlow, BuildContext, findVoluntaryHolyCBurnPurchase } from '../buildArbFlow'
 import { PoolResolver } from '../resolvePool'
 import { TokenResolver } from '../resolveToken'
-import { loadFixture, FIXTURE_TX_1, FIXTURE_TX_2, FIXTURE_TX_V2 } from './fixtureLoader'
-import { DIVINE_MANAGER_ADDRESS, JIT_ADDRESS } from '@/config/contracts'
+import { decodeExecuteCalldata } from '../decodeCalldata'
+import { decodeSwapPath } from '../decodeSwapPath'
+import { parseReceiptLogs } from '../parseLogs'
+import {
+  loadFixture,
+  FIXTURE_TX_1,
+  FIXTURE_TX_2,
+  FIXTURE_TX_V2,
+  FIXTURE_TX_V2_WPLS_BURN,
+} from './fixtureLoader'
+import { DIVINE_MANAGER_ADDRESS, HOLY_C_ADDRESS, JIT_ADDRESS, WPLS_ADDRESS } from '@/config/contracts'
+import { TRANSFER_TOPIC } from '../abi'
+import { BURN_ADDRESS } from '../types'
 
 const EQUAL_SPLITTER = '0xF40A86C1Edd640e574b6560f155178A2A5267885'
 
@@ -217,6 +228,113 @@ describe('buildArbFlow — tx-a2e9e4 (DivineManagerV2 mixed PulseX JIT cycle)', 
     expect(flow.sinks.some((sink) => sink.kind === 'partner' && div18(sink.amountIn) > 100_000)).toBe(false)
     expect(div18(flow.burnedHolyC)).toBeCloseTo(75.4799603738, 9)
     expect(div18(flow.gross!.amount)).toBeCloseTo(686.3165460725, 9)
+  })
+})
+
+describe('buildArbFlow — tx-ec1b6b (DivineManagerV2 WPLS cycle with voluntary HolyC burn)', () => {
+  const fx = loadFixture(FIXTURE_TX_V2_WPLS_BURN)
+
+  it('shows only the closed economic cycle while retaining the exact burn settlement', async () => {
+    const { flow } = await buildArbFlow(
+      {
+        txHash: fx.hash,
+        blockNumber: fx.blockNumber,
+        timestamp: fx.timestamp,
+        input: fx.input,
+        logs: fx.logs,
+        from: fx.from,
+      },
+      makeV2Ctx()
+    )
+
+    expect(flow.routeLabel).toBe('WPLS_CYCLE')
+    expect(flow.legs.map((leg) => `${leg.tokenIn.symbol}->${leg.tokenOut.symbol}`)).toEqual([
+      'WPLS->FUPA',
+      'FUPA->JIT',
+      'JIT->WPLS',
+    ])
+    expect(flow.legs.some((leg) => leg.tokenIn.symbol === 'HolyC' || leg.tokenOut.symbol === 'HolyC')).toBe(false)
+    expect(flow.startAsset.symbol).toBe('WPLS')
+    expect(flow.endAsset.symbol).toBe('WPLS')
+    expect(flow.targetAsset.symbol).toBe('WPLS')
+    expect(flow.burnedHolyC).toBe(7_087_245_257_950_625_000n)
+    expect(flow.voluntaryHolyCBurn).toEqual({
+      amount: 7_087_245_257_950_625_000n,
+      fundedWith: expect.objectContaining({ symbol: 'WPLS' }),
+    })
+    expect(flow.gross).toEqual({ asset: flow.targetAsset, amount: 438_036_483_467_515_502_123n })
+    expect(
+      flow.sinks.some(
+        (sink) => sink.kind === 'unknown' && sink.tokenIn.symbol === 'WPLS' && sink.amountIn === 5_673_396_631_438_990_000n
+      )
+    ).toBe(false)
+  })
+
+  it('keeps the purchase visible when the receipt does not exactly confirm the ticket burn', async () => {
+    let changedBurn = false
+    const logs = fx.logs.map((log) => {
+      const isHolyCBurn =
+        log.address.toLowerCase() === HOLY_C_ADDRESS.toLowerCase() &&
+        log.topics[0]?.toLowerCase() === TRANSFER_TOPIC &&
+        log.topics[2]?.toLowerCase().endsWith(BURN_ADDRESS.slice(2).toLowerCase())
+      if (!isHolyCBurn) return log
+
+      changedBurn = true
+      return {
+        ...log,
+        data: `0x${(BigInt(log.data) + 1n).toString(16).padStart(64, '0')}`,
+      }
+    })
+    expect(changedBurn).toBe(true)
+
+    const { flow } = await buildArbFlow(
+      {
+        txHash: fx.hash,
+        blockNumber: fx.blockNumber,
+        timestamp: fx.timestamp,
+        input: fx.input,
+        logs,
+        from: fx.from,
+      },
+      makeV2Ctx()
+    )
+
+    expect(flow.legs.map((leg) => `${leg.tokenIn.symbol}->${leg.tokenOut.symbol}`)).toEqual([
+      'WPLS->HolyC',
+      'WPLS->FUPA',
+      'FUPA->JIT',
+      'JIT->WPLS',
+    ])
+    expect(flow.voluntaryHolyCBurn).toBeNull()
+  })
+
+  it('keeps a real WPLS→HolyC leg when it connects into the economic cycle', () => {
+    const { ticket } = decodeExecuteCalldata(fx.input)
+    expect(ticket).not.toBeNull()
+    if (!ticket) return
+
+    const connectedRouteLeg = {
+      ...ticket.legs[1],
+      path: [HOLY_C_ADDRESS, WPLS_ADDRESS],
+    }
+    const connectedTicket = {
+      ...ticket,
+      legs: [ticket.legs[0], connectedRouteLeg],
+    }
+    const decodedPaths = new Map(
+      connectedTicket.legs.map((leg) => [leg, decodeSwapPath(leg.path)] as const)
+    )
+    const { transfers } = parseReceiptLogs(fx.logs)
+
+    expect(
+      findVoluntaryHolyCBurnPurchase(
+        connectedTicket,
+        decodedPaths,
+        transfers,
+        DIVINE_MANAGER_ADDRESS.toLowerCase(),
+        true
+      )
+    ).toBeNull()
   })
 })
 

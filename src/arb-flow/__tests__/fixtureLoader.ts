@@ -48,3 +48,4 @@ export const loadFixture = (id: string): FixtureData =>
 export const FIXTURE_TX_1 = 'tx-34a495'
 export const FIXTURE_TX_2 = 'tx-d1336c'
 export const FIXTURE_TX_V2 = 'tx-a2e9e4-v2'
+export const FIXTURE_TX_V2_WPLS_BURN = 'tx-ec1b6b-v2'

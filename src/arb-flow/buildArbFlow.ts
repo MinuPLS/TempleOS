@@ -13,6 +13,7 @@ import { TokenResolver } from './resolveToken'
 import {
   ArbFlow,
   AssetRef,
+  BURN_ADDRESS,
   FlowEdge,
   FlowNode,
   InventoryDelta,
@@ -93,6 +94,87 @@ const matchTransfer = (
   return null
 }
 
+const isSwapLeg = (leg: TicketLeg): boolean =>
+  leg.key === LEG_SWAP_EXACT || leg.key === LEG_SWAP_SUPPORTING_FOT
+
+const sameAddress = (left: string, right: string): boolean =>
+  left.toLowerCase() === right.toLowerCase()
+
+// The VPS compiler derives these two values through mathematically equivalent
+// floating-point expressions before encoding them independently. That can leave
+// a few wei of dust between the swap minimum and burn liability (500 wei in the
+// first live WPLS example), so compare only within a deliberately tiny bound.
+const matchesCompilerRounding = (left: bigint, right: bigint): boolean => {
+  const difference = left >= right ? left - right : right - left
+  const relativeTolerance = right / 1_000_000_000_000n
+  const tolerance = relativeTolerance > 1_000n ? relativeTolerance : 1_000n
+  return difference <= tolerance
+}
+
+export const findVoluntaryHolyCBurnPurchase = (
+  ticket: ExecutionTicket | null,
+  decodedSwapPaths: ReadonlyMap<TicketLeg, DecodedSwapPath>,
+  transfers: readonly ParsedTransfer[],
+  manager: string,
+  isV2: boolean
+): TicketLeg | null => {
+  if (!isV2 || !ticket || ticket.targetAsset !== ASSET_WPLS || ticket.legs.length < 2) return null
+  if (ticket.burn.owedHolyC <= 0n || ticket.burn.owedJIT !== 0n) return null
+
+  const [candidate, ...routeLegs] = ticket.legs
+  if (candidate.key !== LEG_SWAP_EXACT || candidate.path.length !== 2) return null
+
+  const candidatePath = decodedSwapPaths.get(candidate)?.tokens
+  if (
+    !candidatePath ||
+    candidatePath.length !== 2 ||
+    !sameAddress(candidatePath[0], WPLS_ADDRESS) ||
+    !sameAddress(candidatePath[1], HOLY_C_ADDRESS) ||
+    !matchesCompilerRounding(candidate.amountOutMin, ticket.burn.owedHolyC)
+  ) {
+    return null
+  }
+
+  // The burn itself is the authoritative receipt-level link between the
+  // otherwise disconnected purchase and the ticket's BurnInstruction.
+  const settledExactly = transfers.some(
+    (transfer) =>
+      sameAddress(transfer.tokenAddress, HOLY_C_ADDRESS) &&
+      sameAddress(transfer.from, manager) &&
+      sameAddress(transfer.to, BURN_ADDRESS) &&
+      transfer.value === ticket.burn.owedHolyC
+  )
+  if (!settledExactly) return null
+
+  // After removing the sidecar purchase, the remaining ticket must still be a
+  // connected WPLS→…→WPLS cycle. This preserves any future economic route that
+  // genuinely uses a WPLS→HolyC leg as part of its own connected path.
+  let expectedInput = WPLS_ADDRESS
+  for (const leg of routeLegs) {
+    if (!isSwapLeg(leg)) return null
+    const path = decodedSwapPaths.get(leg)?.tokens
+    if (!path || path.length < 2 || !sameAddress(path[0], expectedInput)) return null
+    expectedInput = path[path.length - 1]
+  }
+  if (!sameAddress(expectedInput, WPLS_ADDRESS)) return null
+
+  // If another ticket leg also looks linked to the same burn liability, the
+  // evidence is ambiguous; retain the full flow rather than hiding a real swap.
+  const matchingLegs = ticket.legs.filter((leg) => {
+    if (leg.key !== LEG_SWAP_EXACT || leg.path.length !== 2) return false
+    const path = decodedSwapPaths.get(leg)?.tokens
+    return Boolean(
+      path &&
+        path.length === 2 &&
+        sameAddress(path[0], WPLS_ADDRESS) &&
+        sameAddress(path[1], HOLY_C_ADDRESS) &&
+        matchesCompilerRounding(leg.amountOutMin, ticket.burn.owedHolyC)
+    )
+  })
+
+  return matchingLegs.length === 1 && matchingLegs[0] === candidate ? candidate : null
+}
+
 const classifyRoute = (ticket: ExecutionTicket | null, legs: FlowEdge[]): string => {
   if (!ticket) {
     const target = legs.length > 0 ? legs[legs.length - 1].tokenOut.symbol : 'arb'
@@ -158,6 +240,18 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
     const ref = await ctx.tokenResolver.resolve(addr)
     tokenMap.set(addr, ref)
   }
+
+  const voluntaryHolyCBurnPurchase = findVoluntaryHolyCBurnPurchase(
+    ticket,
+    decodedSwapPaths,
+    transfers,
+    manager,
+    isV2
+  )
+  const voluntaryHolyCBurn =
+    voluntaryHolyCBurnPurchase && ticket
+      ? { amount: ticket.burn.owedHolyC, fundedWith: WPLS_REF }
+      : null
 
   // Pre-discover pools from Swap logs (tier-2 inference) + resolve them.
   for (const swap of parsed.swaps) {
@@ -411,7 +505,7 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
     return inLower
   }
 
-  const buildSwapLeg = async (leg: TicketLeg): Promise<void> => {
+  const buildSwapLeg = async (leg: TicketLeg, visible = true): Promise<void> => {
     const decodedPath = decodedSwapPaths.get(leg)
     if (!decodedPath) return
     const path = decodedPath.tokens
@@ -437,11 +531,6 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
         token1: tokenOut,
       })
       const poolId = toNodeId('pool', poolInfo.address)
-      if (!pools.has(poolId)) {
-        const node = poolInfoToNode(poolInfo)
-        pools.set(poolId, node)
-        nodes.set(poolId, node)
-      }
 
       // amountIn: transfer of tokenIn to the pool (from manager or prev pool)
       const inMatch = matchTransfer(
@@ -466,6 +555,17 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
       // For mid-hops, the out transfer is the next hop's in — don't consume it here
       // so the next hop can match it as its `to`. We only consume the final hop's out.
       if (outMatch && hop === path.length - 2) consumed.add(outMatch.index)
+
+      // Settlement-only swaps still have to consume their receipt transfers;
+      // otherwise they reappear later as unknown sinks. They are simply omitted
+      // from the economic route spine.
+      if (!visible) continue
+
+      if (!pools.has(poolId)) {
+        const node = poolInfoToNode(poolInfo)
+        pools.set(poolId, node)
+        nodes.set(poolId, node)
+      }
 
       const fromId = ensureAssetNode(tokenIn)
       const toId = ensureAssetNode(tokenOut)
@@ -494,7 +594,7 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
       } else if (leg.key === LEG_RESTORE) {
         await buildRestoreLeg(leg)
       } else if (leg.key === LEG_SWAP_EXACT || leg.key === LEG_SWAP_SUPPORTING_FOT) {
-        await buildSwapLeg(leg)
+        await buildSwapLeg(leg, leg !== voluntaryHolyCBurnPurchase)
       }
     }
   } else {
@@ -744,6 +844,7 @@ export const buildArbFlow = async (input: BuildInput, ctx: BuildContext): Promis
     inventoryDeltas,
     gross,
     burnedHolyC,
+    voluntaryHolyCBurn,
     pools: Array.from(pools.values()),
     nodes: Array.from(nodes.values()),
     profitWPLS: ticket?.minProfitWPLS ?? 0n,

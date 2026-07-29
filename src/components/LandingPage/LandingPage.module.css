@@ -3904,6 +3904,10 @@
   background: rgba(59, 130, 246, 0.16);
 }
 
+.sourceBadgeManagerV2 {
+  text-transform: none;
+}
+
 .sourceBadgeFeeder {
   color: #fde68a;
   background: rgba(245, 158, 11, 0.16);
