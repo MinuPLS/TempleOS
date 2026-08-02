@@ -1,4 +1,16 @@
-# React + Vite
+# TempleOS frontend
+
+## Shared archive deployment
+
+Archive views load their data from the public R2 manifest configured through
+`VITE_DATA_MANIFEST_URL`. See [the Cloudflare archive Worker](./cloudflare-archive-worker/README.md)
+for the D1/R2 setup, cutover seeding, and seven-day parallel validation process.
+
+The GitHub snapshot workflow and committed `public/*.json` files remain in place
+until that validation is complete. Do not deploy this frontend with the new
+archive hooks until `VITE_DATA_MANIFEST_URL` points at the seeded R2 manifest.
+
+## React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

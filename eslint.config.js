@@ -14,6 +14,7 @@ export default tseslint.config(
       'dist',
       'node_modules',
       '.vite',
+      'cloudflare-archive-worker',
       'vite.config.ts.timestamp*',
     ],
   },

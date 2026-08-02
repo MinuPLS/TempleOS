@@ -1,10 +1,14 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import path from 'node:path'
 
 const rpcUrl = process.env.PULSECHAIN_RPC_URL || 'https://rpc.pulsechain.com'
+const snapshotOutputDirectory = path.resolve(process.env.DIVINE_MANAGER_SNAPSHOT_OUTPUT_DIRECTORY || 'public')
 const feedPath = path.resolve('public/divine-manager-feed.json')
-const outputPath = path.resolve('public/divine-manager-pools.json')
-const volumeOutputPath = path.resolve('public/divine-manager-volume.json')
+const feedRef = process.env.DIVINE_MANAGER_FEED_REF?.trim()
+const outputPath = path.join(snapshotOutputDirectory, 'divine-manager-pools.json')
+const volumeOutputPath = path.join(snapshotOutputDirectory, 'divine-manager-volume.json')
 const holyCAddress = '0x6c8fdfd2cec0b83d69045074d57a87fa1525225a'
 const jitAddress = '0x57909025ace10d5de114d96e3ec84f282895870c'
 const connectedTokenAddresses = new Set([holyCAddress, jitAddress])
@@ -25,6 +29,7 @@ const selectors = {
 }
 
 let requestId = 0
+const executeFile = promisify(execFile)
 
 const rpcBatch = async (calls, batchSize = 75) => {
   const results = []
@@ -99,7 +104,9 @@ const decodeSwapAmounts = (data) => {
   }
 }
 
-const feed = JSON.parse(await readFile(feedPath, 'utf8'))
+const feed = feedRef
+  ? JSON.parse((await executeFile('git', ['show', `${feedRef}:public/divine-manager-feed.json`], { maxBuffer: 20 * 1024 * 1024 })).stdout)
+  : JSON.parse(await readFile(feedPath, 'utf8'))
 if (!feed.historicalComplete || !Array.isArray(feed.items)) {
   throw new Error('Divine Manager feed snapshot is incomplete or invalid')
 }

@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "divine-manager-feed",
+  "main": "src/index.js",
+  "compatibility_date": "2024-11-24",
+  "workers_dev": true,
+  "triggers": {
+    "crons": ["* * * * *", "0 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "divine-manager-feed",
+      "database_id": "5cfdbf9b-a6a0-443e-bf48-501f01a0656e"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PUBLIC_ARCHIVES",
+      "bucket_name": "templeos-public-archives"
+    }
+  ],
+  "vars": {
+    "RPC_URL": "https://rpc.pulsechain.com",
+    "REORG_OVERLAP_BLOCKS": "8",
+    "HISTORICAL_BATCH_SIZE": "25"
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "persist": true
+    }
+  }
+}

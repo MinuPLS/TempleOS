@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "id": "expire-current-snapshots-after-14-days",
+      "enabled": true,
+      "conditions": { "prefix": "v2/current/" },
+      "deleteObjectsTransition": {
+        "condition": { "type": "Age", "maxAge": 1209600 }
+      }
+    },
+    {
+      "id": "expire-open-chunks-after-14-days",
+      "enabled": true,
+      "conditions": { "prefix": "v2/open/" },
+      "deleteObjectsTransition": {
+        "condition": { "type": "Age", "maxAge": 1209600 }
+      }
+    }
+  ]
+}

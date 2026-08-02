@@ -1,0 +1,24 @@
+name: Validate shared archive
+
+on:
+  schedule:
+    - cron: '12 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    # Enable only after the R2 manifest has been seeded. A failed comparison
+    # fails the scheduled check and provides the requested operational alert.
+    if: vars.SHARED_ARCHIVE_VALIDATION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/validate-shared-archive.mjs
+        env:
+          SHARED_ARCHIVE_MANIFEST_URL: ${{ vars.SHARED_ARCHIVE_MANIFEST_URL }}

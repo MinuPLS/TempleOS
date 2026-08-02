@@ -1,0 +1,5 @@
+{
+  "name": "divine-manager-feed-worker",
+  "private": true,
+  "type": "module"
+}

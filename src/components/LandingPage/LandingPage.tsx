@@ -11,8 +11,8 @@ import { useTokenStats } from '../StatsDashboard/hooks/useTokenStats'
 import HolyCLogo from '../../assets/TokenLogos/HolyC.png'
 import JITLogo from '../../assets/TokenLogos/JIT.png'
 import PulseXLogo from '../../assets/TokenLogos/PulseX.png'
+import { getSharedArchiveClient } from '@/lib/sharedArchive'
 
-const EFFECTIVE_BURN_STATS_URL = `${import.meta.env.BASE_URL}effective-burn-stats.json`
 const MOBILE_DIVINE_LAYOUT_QUERY = '(max-width: 900px)'
 const TOKEN_DECIMALS = 18n
 const DECIMAL_DIVISOR = 10n ** TOKEN_DECIMALS
@@ -107,11 +107,7 @@ export function LandingPage() {
       setBurnError(null)
     }
     try {
-      const response = await fetch(EFFECTIVE_BURN_STATS_URL, { cache: 'no-store' })
-      if (!response.ok) {
-        throw new Error(`Burn API error ${response.status}`)
-      }
-      const data: EffectiveBurnStats = await response.json()
+      const { value: data } = await getSharedArchiveClient().loadCurrent<EffectiveBurnStats>('effectiveBurn')
       setBurnStats((prev) => data || prev)
     } catch (error) {
       console.error('Failed to fetch JIT burn stats', error)
